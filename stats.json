@@ -1,0 +1,40 @@
+{
+    "table": [],
+    "player": {
+        "tomatoCollected": {
+            "id": 10,
+            "name": "Tomato cards collected",
+            "type": "int"
+        },
+        "normalTosses": {
+            "id": 11,
+            "name": "Normal tosses",
+            "type": "int"
+        },
+        "quickTossAttempts": {
+            "id": 12,
+            "name": "Quick toss attempts",
+            "type": "int"
+        },
+        "quickTossSuccesses": {
+            "id": 13,
+            "name": "Successful quick tosses",
+            "type": "int"
+        },
+        "pattern111": {
+            "id": 14,
+            "name": "Turns with 1-1-1 placement pattern",
+            "type": "int"
+        },
+        "pattern21": {
+            "id": 15,
+            "name": "Turns with 2-1 placement pattern",
+            "type": "int"
+        },
+        "pattern3": {
+            "id": 16,
+            "name": "Turns with 3 placement pattern",
+            "type": "int"
+        }
+    }
+}
