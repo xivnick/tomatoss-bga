@@ -14,16 +14,16 @@ $gameinfos = [
     'game_name' => "Tomatoss",
 
     // Game publisher (use empty string if there is no publisher)
-    'publisher' => '',
+    'publisher' => 'Korea Boardgames',
 
     // Url of game publisher website
-    'publisher_website' => '',
+    'publisher_website' => 'https://www.koreaboardgames.com/',
 
     // Board Game Geek ID of the publisher
-    'publisher_bgg_id' => 0,
+    'publisher_bgg_id' => 8291,
 
     // Board game geek ID of the game
-    'bgg_id' => 0,
+    'bgg_id' => 452321,
 
     // Players configuration that can be played (ex: 2 to 4 players)
     'players' => [2, 3, 4],
