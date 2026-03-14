@@ -30,7 +30,7 @@ class PlayerTurn {
     }
 
     onLeavingState() {
-        this.game.unbindPlayerTurnInteractions();
+        this.game.unbindInteractions();
         this.bga.statusBar.removeActionButtons();
         this.game.setStateNote('');
     }
@@ -61,20 +61,11 @@ class DiscardDown {
             : _('${actplayer} must discard down to the hand limit')
         );
 
-        if (!isCurrentPlayerActive) {
-            return;
-        }
-
-        const fallbackCard = Array.isArray(args.playerHand) && args.playerHand.length > 0 ? args.playerHand[0] : null;
-        if (fallbackCard) {
-            this.bga.statusBar.addActionButton(
-                _('Discard one card'),
-                () => this.bga.actions.performAction('actDiscardCard', { cardValue: fallbackCard.value })
-            );
-        }
+        this.game.bindDiscardInteractions(isCurrentPlayerActive);
     }
 
     onLeavingState() {
+        this.game.unbindInteractions();
         this.bga.statusBar.removeActionButtons();
     }
 }
@@ -188,7 +179,7 @@ export class Game {
     }
 
     bindPlayerTurnInteractions(isCurrentPlayerActive) {
-        this.unbindPlayerTurnInteractions();
+        this.unbindInteractions();
         if (!isCurrentPlayerActive) {
             return;
         }
@@ -232,7 +223,23 @@ export class Game {
         });
     }
 
-    unbindPlayerTurnInteractions() {
+    bindDiscardInteractions(isCurrentPlayerActive) {
+        this.unbindInteractions();
+        if (!isCurrentPlayerActive) {
+            return;
+        }
+
+        document.querySelectorAll('.hand-card').forEach(button => {
+            const handler = () => {
+                const cardValue = Number(button.dataset.value);
+                this.bga.actions.performAction('actDiscardCard', { cardValue });
+            };
+            button.addEventListener('click', handler);
+            this.boundInteractions.push({ element: button, handler });
+        });
+    }
+
+    unbindInteractions() {
         this.boundInteractions.forEach(({ element, handler }) => element.removeEventListener('click', handler));
         this.boundInteractions = [];
     }
@@ -258,6 +265,21 @@ export class Game {
                 this.gamedatas.boardTargets = [...this.gamedatas.boardTargets];
                 this.gamedatas.boardTargets[slotIndex] = args.newTarget;
             }
+            this.clearSelection();
+            this.renderState(this.gamedatas);
+        }
+    }
+
+    async notif_resolveBonus(args) {
+        if (args.bonusCard) {
+            this.gamedatas.playerHand = [...this.gamedatas.playerHand, args.bonusCard];
+            this.renderState(this.gamedatas);
+        }
+    }
+
+    async notif_discardCard(args) {
+        if (Array.isArray(args.remainingHand)) {
+            this.gamedatas.playerHand = args.remainingHand;
             this.clearSelection();
             this.renderState(this.gamedatas);
         }

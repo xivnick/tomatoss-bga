@@ -215,6 +215,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function finishTurnAndAdvance(): string
     {
+        static::DbQuery('DELETE FROM `turn_action`');
         $this->setGameStateValue(self::G_ACTION_INDEX, 0);
         $this->setGameStateValue(self::G_TURN_NO, $this->getTurnNo() + 1);
 
@@ -328,6 +329,73 @@ class Game extends \Bga\GameFramework\Table
             . 'WHERE `turn_no` = ' . $this->getTurnNo() . ' '
             . 'ORDER BY `action_index` ASC'
         ));
+    }
+
+    public function resolveTurnBonus(int $playerId): array
+    {
+        $actions = $this->getCurrentTurnActionLog();
+        $spaces = array_map(static fn(array $action): int => (int) $action['space'], $actions);
+        $counts = array_count_values($spaces);
+
+        $result = [
+            'pattern' => '111',
+            'bonusCard' => null,
+            'basketFull' => $this->isBasketFull($playerId),
+        ];
+
+        if (in_array(3, $counts, true)) {
+            $result['pattern'] = '3';
+            $bonusCard = $this->drawCard('tomato', 'tomato_deck', 'hand', $playerId);
+            if ($bonusCard !== null) {
+                $result['bonusCard'] = [
+                    'id' => (int) $bonusCard['id'],
+                    'value' => (int) $bonusCard['typeArg'],
+                ];
+            }
+        } elseif (in_array(2, $counts, true)) {
+            $result['pattern'] = '21';
+            if ($this->isBasketFull($playerId)) {
+                $this->setBasketFull($playerId, false);
+                $bonusCard = $this->drawCard('tomato', 'tomato_deck', 'hand', $playerId);
+                if ($bonusCard !== null) {
+                    $result['bonusCard'] = [
+                        'id' => (int) $bonusCard['id'],
+                        'value' => (int) $bonusCard['typeArg'],
+                    ];
+                }
+            } else {
+                $this->setBasketFull($playerId, true);
+            }
+            $result['basketFull'] = $this->isBasketFull($playerId);
+        }
+
+        return $result;
+    }
+
+    public function discardCardByValue(int $playerId, int $cardValue): array
+    {
+        $card = $this->getObjectFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
+            . "FROM `card` "
+            . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
+            . "AND `card_type_arg` = $cardValue "
+            . 'ORDER BY `card_id` ASC LIMIT 1'
+        );
+        if (!$card) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('You do not have that card'));
+        }
+
+        static::DbQuery(
+            "UPDATE `card` SET `card_location` = 'tomato_discard', `card_location_arg` = 0 WHERE `card_id` = " . (int) $card['id']
+        );
+
+        return [
+            'discarded' => [
+                'id' => (int) $card['id'],
+                'value' => (int) $card['value'],
+            ],
+            'remainingHand' => $this->getHandForPlayer($playerId),
+        ];
     }
 
     public function tossToTarget(int $playerId, int $slot, array $cardIds, bool $quickToss): array
@@ -626,6 +694,20 @@ class Game extends \Bga\GameFramework\Table
         return array_merge(
             array_slice($playerIds, $firstIndex),
             array_slice($playerIds, 0, $firstIndex)
+        );
+    }
+
+    private function isBasketFull(int $playerId): bool
+    {
+        return (int) $this->getUniqueValueFromDb(
+            "SELECT `player_basket_full` FROM `player` WHERE `player_id` = $playerId"
+        ) === 1;
+    }
+
+    private function setBasketFull(int $playerId, bool $basketFull): void
+    {
+        static::DbQuery(
+            "UPDATE `player` SET `player_basket_full` = " . ($basketFull ? 1 : 0) . " WHERE `player_id` = $playerId"
         );
     }
 }

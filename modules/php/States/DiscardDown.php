@@ -35,14 +35,15 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             throw new UserException(clienttranslate('Invalid discard choice'));
         }
 
-        // TODO: validate that the active player actually holds this card and still exceeds hand limit.
+        $result = $this->game->discardCardByValue($activePlayerId, $cardValue);
         $this->bga->notify->all('discardCard', clienttranslate('${player_name} discards a card'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'cardValue' => $cardValue,
+            'remainingHand' => $result['remainingHand'],
         ]);
 
-        return NextPlayer::class;
+        return $this->game->shouldEnterDiscardDown($activePlayerId) ? DiscardDown::class : NextPlayer::class;
     }
 
     public function zombie(int $playerId)
