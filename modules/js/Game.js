@@ -17,28 +17,19 @@ class PlayerTurn {
             : _('${actplayer} must place a marker')
         );
 
+        this.game.renderState(args);
+        this.game.bindTomatoSlotClicks(isCurrentPlayerActive);
+
         if (!isCurrentPlayerActive) {
             return;
         }
 
         const remaining = args.placementsRemaining ?? 0;
-        this.bga.statusBar.addActionButton(
-            _('Collect tomato'),
-            () => this.bga.actions.performAction('actCollectTomato', { slot: 0 })
-        );
-        this.bga.statusBar.addActionButton(
-            _('Normal toss'),
-            () => this.bga.actions.performAction('actTossToTarget', { slot: 3, cardsJson: '[]', quickToss: false })
-        );
-        this.bga.statusBar.addActionButton(
-            _('Quick toss'),
-            () => this.bga.actions.performAction('actTossToTarget', { slot: 3, cardsJson: '[]', quickToss: true })
-        );
-
         this.game.setStateNote(_('Placements remaining: ${count}').replace('${count}', remaining));
     }
 
     onLeavingState() {
+        this.game.unbindTomatoSlotClicks();
         this.bga.statusBar.removeActionButtons();
         this.game.setStateNote('');
     }
@@ -50,9 +41,8 @@ class ResolveBonus {
         this.bga = bga;
     }
 
-    onEnteringState(args, isCurrentPlayerActive) {
-        void args;
-        void isCurrentPlayerActive;
+    onEnteringState(args) {
+        this.game.renderState(args);
         this.bga.statusBar.setTitle(_('Resolving bonus'));
     }
 }
@@ -64,6 +54,7 @@ class DiscardDown {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        this.game.renderState(args);
         this.bga.statusBar.setTitle(isCurrentPlayerActive
             ? _('${you} must discard down to the hand limit')
             : _('${actplayer} must discard down to the hand limit')
@@ -73,11 +64,13 @@ class DiscardDown {
             return;
         }
 
-        const fallbackValue = Array.isArray(args.playerHand) && args.playerHand.length > 0 ? args.playerHand[0] : 1;
-        this.bga.statusBar.addActionButton(
-            _('Discard one card'),
-            () => this.bga.actions.performAction('actDiscardCard', { cardValue: fallbackValue })
-        );
+        const fallbackCard = Array.isArray(args.playerHand) && args.playerHand.length > 0 ? args.playerHand[0] : null;
+        if (fallbackCard) {
+            this.bga.statusBar.addActionButton(
+                _('Discard one card'),
+                () => this.bga.actions.performAction('actDiscardCard', { cardValue: fallbackCard.value })
+            );
+        }
     }
 
     onLeavingState() {
@@ -88,6 +81,7 @@ class DiscardDown {
 export class Game {
     constructor(bga) {
         this.bga = bga;
+        this.boundTomatoClicks = [];
 
         this.playerTurn = new PlayerTurn(this, bga);
         this.resolveBonus = new ResolveBonus(this, bga);
@@ -110,7 +104,7 @@ export class Game {
             </div>
         `);
 
-        this.renderStaticState();
+        this.renderState(gamedatas);
         this.setupNotifications();
     }
 
@@ -121,17 +115,92 @@ export class Game {
         }
     }
 
-    renderStaticState() {
-        const tomatoSlots = document.getElementById('tomato-slots');
-        const targetSlots = document.getElementById('target-slots');
-        const handArea = document.getElementById('hand-area');
+    renderState(source) {
+        const data = {
+            boardTomatoes: source.boardTomatoes ?? this.gamedatas.boardTomatoes ?? [null, null, null],
+            boardTargets: source.boardTargets ?? this.gamedatas.boardTargets ?? [null, null, null],
+            playerHand: source.playerHand ?? this.gamedatas.playerHand ?? [],
+        };
 
-        tomatoSlots.innerHTML = '<h3>Tomatoes</h3><div class="slot-row"><div class="slot">1</div><div class="slot">2</div><div class="slot">3</div></div>';
-        targetSlots.innerHTML = '<h3>Targets</h3><div class="slot-row"><div class="slot">A</div><div class="slot">B</div><div class="slot">C</div></div>';
-        handArea.innerHTML = `<h3>Your hand</h3><div class="hand-count">${this.gamedatas.playerHand.length} cards</div>`;
+        this.gamedatas.boardTomatoes = data.boardTomatoes;
+        this.gamedatas.boardTargets = data.boardTargets;
+        this.gamedatas.playerHand = data.playerHand;
+
+        this.renderTomatoSlots(data.boardTomatoes);
+        this.renderTargetSlots(data.boardTargets);
+        this.renderHand(data.playerHand);
+    }
+
+    renderTomatoSlots(slots) {
+        const tomatoSlots = document.getElementById('tomato-slots');
+        tomatoSlots.innerHTML = `
+            <h3>Tomatoes</h3>
+            <div class="slot-row">
+                ${slots.map((slot, index) => `
+                    <button class="slot tomato-slot" data-slot="${index}" ${slot ? '' : 'disabled'}>
+                        ${slot ? slot.value : '-'}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderTargetSlots(slots) {
+        const targetSlots = document.getElementById('target-slots');
+        targetSlots.innerHTML = `
+            <h3>Targets</h3>
+            <div class="target-grid">
+                ${slots.map((slot, index) => `
+                    <div class="target-card ${slot ? '' : 'is-empty'}" data-slot="${index}">
+                        ${slot ? `<div class="target-desc">${slot.desc}</div><div class="target-score">${slot.base} / ${slot.toss}</div>` : '-'}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderHand(cards) {
+        const handArea = document.getElementById('hand-area');
+        handArea.innerHTML = `
+            <h3>Your hand</h3>
+            <div class="card-row">
+                ${cards.map(card => `<div class="hand-card" data-card-id="${card.id}">${card.value}</div>`).join('')}
+            </div>
+        `;
+    }
+
+    bindTomatoSlotClicks(isCurrentPlayerActive) {
+        this.unbindTomatoSlotClicks();
+        if (!isCurrentPlayerActive) {
+            return;
+        }
+
+        document.querySelectorAll('.tomato-slot').forEach(button => {
+            const handler = () => {
+                const slot = Number(button.dataset.slot);
+                this.bga.actions.performAction('actCollectTomato', { slot });
+            };
+            button.addEventListener('click', handler);
+            this.boundTomatoClicks.push({ button, handler });
+        });
+    }
+
+    unbindTomatoSlotClicks() {
+        this.boundTomatoClicks.forEach(({ button, handler }) => button.removeEventListener('click', handler));
+        this.boundTomatoClicks = [];
     }
 
     setupNotifications() {
         this.bga.notifications.setupPromiseNotifications({});
+    }
+
+    async notif_turnAction(args) {
+        if (args.collected && args.refill !== undefined) {
+            const slotIndex = Number(args.slot_no) - 1;
+            this.gamedatas.playerHand = [...this.gamedatas.playerHand, args.collected];
+            this.gamedatas.boardTomatoes = [...this.gamedatas.boardTomatoes];
+            this.gamedatas.boardTomatoes[slotIndex] = args.refill;
+            this.renderState(this.gamedatas);
+        }
     }
 }

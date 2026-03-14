@@ -39,6 +39,7 @@ class PlayerTurn extends GameState
             throw new UserException(clienttranslate('Invalid tomato slot'));
         }
 
+        $result = $this->game->collectTomatoFromSlot($activePlayerId, $slot);
         $this->game->recordTurnAction($activePlayerId, $slot, 'collect');
         $this->bga->playerStats->inc('tomatoCollected', 1, $activePlayerId);
 
@@ -46,6 +47,8 @@ class PlayerTurn extends GameState
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'slot_no' => $slot + 1,
+            'collected' => $result['collected'],
+            'refill' => $result['refill'],
         ]);
 
         return $this->game->shouldResolveBonus() ? ResolveBonus::class : PlayerTurn::class;

@@ -82,6 +82,66 @@
     width: 72px;
 }
 
+.slot:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+
+.tomato-slot {
+    cursor: pointer;
+}
+
+.target-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.target-card {
+    background: #ffe7bf;
+    border: 2px solid #b65a38;
+    border-radius: 12px;
+    min-height: 72px;
+    padding: 10px;
+}
+
+.target-card.is-empty {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    opacity: 0.45;
+}
+
+.target-desc {
+    color: #5a2a0d;
+    font-weight: 700;
+}
+
+.target-score {
+    color: #8a4a22;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.card-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.hand-card {
+    align-items: center;
+    background: #f3b35a;
+    border: 2px solid #8e3b20;
+    border-radius: 10px;
+    color: #4f1d09;
+    display: flex;
+    font-weight: 700;
+    height: 48px;
+    justify-content: center;
+    width: 40px;
+}
+
 .hand-count {
     color: #5a2a0d;
     font-size: 16px;

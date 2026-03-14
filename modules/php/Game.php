@@ -329,6 +329,35 @@ class Game extends \Bga\GameFramework\Table
         ));
     }
 
+    public function collectTomatoFromSlot(int $playerId, int $slot): array
+    {
+        $card = $this->getObjectFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
+            . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'board_tomato' AND `card_location_arg` = $slot"
+        );
+        if (!$card) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('That tomato slot is empty'));
+        }
+
+        $cardId = (int) $card['id'];
+        static::DbQuery(
+            "UPDATE `card` SET `card_location` = 'hand', `card_location_arg` = $playerId WHERE `card_id` = $cardId"
+        );
+
+        $refill = $this->drawCard('tomato', 'tomato_deck', 'board_tomato', $slot);
+
+        return [
+            'collected' => [
+                'id' => $cardId,
+                'value' => (int) $card['value'],
+            ],
+            'refill' => $refill === null ? null : [
+                'id' => (int) $refill['id'],
+                'value' => (int) $refill['typeArg'],
+            ],
+        ];
+    }
+
     private function seedTomatoDeck(): void
     {
         $cards = [];
