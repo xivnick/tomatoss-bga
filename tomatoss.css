@@ -41,25 +41,48 @@
 
 /********* You can start writing your CSS below this line: **********/
 
+#tomatoss-layout {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 1fr;
+    margin: 16px 0;
+}
 
-/*
-    Example of CSS sprites (a black token and a white token, 20x20px each, embedded in the same "tokens.png" 40x20px image):
+#tomatoss-state-note {
+    color: #6a3a13;
+    font-weight: 700;
+    min-height: 24px;
+}
 
-    .white_token {
-        background-image: url('img/tokens.png');
-        background-position: 0px 0px;
-    }
-    .black_token {
-        background-image: url('img/tokens.png');
-        background-position: -20px 0px;
-    }
-    .token {
-        width: 20px;
-        height: 20px;
-        background-repeat: none;
-    }
-*/
+#tomato-slots,
+#target-slots,
+#hand-area {
+    background: #fff4e8;
+    border: 2px solid #d3a26a;
+    border-radius: 14px;
+    padding: 12px;
+}
 
+.slot-row {
+    display: flex;
+    gap: 12px;
+}
 
+.slot {
+    align-items: center;
+    background: #f8d27a;
+    border: 2px solid #b65a38;
+    border-radius: 12px;
+    color: #5a2a0d;
+    display: flex;
+    font-size: 18px;
+    font-weight: 700;
+    height: 72px;
+    justify-content: center;
+    width: 72px;
+}
 
-
+.hand-count {
+    color: #5a2a0d;
+    font-size: 16px;
+}
