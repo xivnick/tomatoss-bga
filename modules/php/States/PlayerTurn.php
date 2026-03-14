@@ -35,10 +35,6 @@ class PlayerTurn extends GameState
     #[PossibleAction]
     public function actCollectTomato(int $slot, int $activePlayerId)
     {
-        if ($slot < 0 || $slot > 2) {
-            throw new UserException(clienttranslate('Invalid tomato slot'));
-        }
-
         $result = $this->game->collectTomatoFromSlot($activePlayerId, $slot);
         $this->game->recordTurnAction($activePlayerId, $slot, 'collect');
         $this->bga->playerStats->inc('tomatoCollected', 1, $activePlayerId);
@@ -57,10 +53,6 @@ class PlayerTurn extends GameState
     #[PossibleAction]
     public function actTossToTarget(int $slot, string $cardsJson, bool $quickToss, int $activePlayerId)
     {
-        if ($slot < 3 || $slot > 5) {
-            throw new UserException(clienttranslate('Invalid target slot'));
-        }
-
         $cardIds = json_decode($cardsJson, true);
         if (!is_array($cardIds)) {
             throw new UserException(clienttranslate('Invalid card selection'));

@@ -189,6 +189,76 @@ class Game extends \Bga\GameFramework\Table
         return max(0, 3 - $this->getActionIndex());
     }
 
+    public function assertCanCollectTomato(int $slot): void
+    {
+        if ($this->getPlacementsRemaining() <= 0) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('No placements remaining this turn'));
+        }
+
+        if ($slot < 0 || $slot > 2) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('Invalid tomato slot'));
+        }
+
+        $exists = (int) $this->getUniqueValueFromDb(
+            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'board_tomato' AND `card_location_arg` = $slot"
+        );
+        if ($exists === 0) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('That tomato slot is empty'));
+        }
+    }
+
+    public function assertCanTossToTarget(int $playerId, int $slot, array $cardIds, bool $quickToss): void
+    {
+        if ($this->getPlacementsRemaining() <= 0) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('No placements remaining this turn'));
+        }
+
+        if ($slot < 3 || $slot > 5) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('Invalid target slot'));
+        }
+
+        $targetSlot = $slot - 3;
+        $targetCard = $this->getObjectFromDb(
+            "SELECT `card_type_arg` AS `targetId` FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'board_target' AND `card_location_arg` = $targetSlot"
+        );
+        if (!$targetCard) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('That target slot is empty'));
+        }
+
+        $selectedCards = $this->loadPlayerHandCardsByIds($playerId, $cardIds);
+        $values = array_map(static fn(array $card): int => (int) $card['value'], $selectedCards);
+        $targetId = (int) $targetCard['targetId'];
+
+        if ($quickToss) {
+            foreach (range(1, 7) as $nextCard) {
+                $checkCards = $values;
+                $checkCards[] = $nextCard;
+                if ($this->targetMatches($targetId, $checkCards)) {
+                    return;
+                }
+            }
+            throw new \Bga\GameFramework\UserException(clienttranslate('That quick toss cannot succeed with any reveal card'));
+        }
+
+        if (!$this->targetMatches($targetId, $values)) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('Selected cards do not satisfy the target'));
+        }
+    }
+
+    public function assertCanDiscard(int $playerId, int $cardValue): void
+    {
+        if (!$this->shouldEnterDiscardDown($playerId)) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('You do not need to discard now'));
+        }
+
+        $count = (int) $this->getUniqueValueFromDb(
+            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId AND `card_type_arg` = $cardValue"
+        );
+        if ($count === 0) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('You do not have that card'));
+        }
+    }
+
     public function recordTurnAction(
         int $playerId,
         int $space,
@@ -374,6 +444,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function discardCardByValue(int $playerId, int $cardValue): array
     {
+        $this->assertCanDiscard($playerId, $cardValue);
         $card = $this->getObjectFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
             . "FROM `card` "
@@ -439,6 +510,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function tossToTarget(int $playerId, int $slot, array $cardIds, bool $quickToss): array
     {
+        $this->assertCanTossToTarget($playerId, $slot, $cardIds, $quickToss);
         $targetSlot = $slot - 3;
         $targetCard = $this->getObjectFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `targetId` "
@@ -508,6 +580,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function collectTomatoFromSlot(int $playerId, int $slot): array
     {
+        $this->assertCanCollectTomato($slot);
         $card = $this->getObjectFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
             . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'board_tomato' AND `card_location_arg` = $slot"
