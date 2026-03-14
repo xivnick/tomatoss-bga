@@ -398,6 +398,45 @@ class Game extends \Bga\GameFramework\Table
         ];
     }
 
+    public function finalizeScores(): array
+    {
+        $players = array_values($this->getCollectionFromDb(
+            'SELECT `player_id` AS `id`, `player_score` AS `score` FROM `player`'
+        ));
+
+        $bestScore = null;
+        $bestHandSum = null;
+        $winnerIds = [];
+
+        foreach ($players as $player) {
+            $playerId = (int) $player['id'];
+            $score = (int) $player['score'];
+            $handSum = $this->getPlayerHandSum($playerId);
+
+            $this->bga->playerScoreAux->set($playerId, $handSum);
+
+            if ($bestScore === null || $score > $bestScore) {
+                $bestScore = $score;
+                $bestHandSum = $handSum;
+                $winnerIds = [$playerId];
+                continue;
+            }
+
+            if ($score === $bestScore) {
+                if ($bestHandSum === null || $handSum > $bestHandSum) {
+                    $bestHandSum = $handSum;
+                    $winnerIds = [$playerId];
+                } elseif ($handSum === $bestHandSum) {
+                    $winnerIds[] = $playerId;
+                }
+            }
+        }
+
+        return [
+            'winnerIds' => $winnerIds,
+        ];
+    }
+
     public function tossToTarget(int $playerId, int $slot, array $cardIds, bool $quickToss): array
     {
         $targetSlot = $slot - 3;
@@ -694,6 +733,14 @@ class Game extends \Bga\GameFramework\Table
         return array_merge(
             array_slice($playerIds, $firstIndex),
             array_slice($playerIds, 0, $firstIndex)
+        );
+    }
+
+    private function getPlayerHandSum(int $playerId): int
+    {
+        return (int) $this->getUniqueValueFromDb(
+            "SELECT COALESCE(SUM(`card_type_arg`), 0) FROM `card` "
+            . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId"
         );
     }
 

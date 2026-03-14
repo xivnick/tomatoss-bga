@@ -21,7 +21,12 @@ class EndScore extends \Bga\GameFramework\States\GameState
 
     public function onEnteringState()
     {
-        // TODO: compute winner and aux score from final hand sum.
+        $result = $this->game->finalizeScores();
+
+        $this->bga->notify->all('gameEndSummary', clienttranslate('Game end'), [
+            'winnerIds' => $result['winnerIds'],
+        ]);
+
         return ST_END_GAME;
     }
 }
