@@ -18,7 +18,7 @@ class PlayerTurn {
         );
 
         this.game.renderState(args);
-        this.game.bindTomatoSlotClicks(isCurrentPlayerActive);
+        this.game.bindPlayerTurnInteractions(isCurrentPlayerActive);
 
         if (!isCurrentPlayerActive) {
             return;
@@ -26,10 +26,11 @@ class PlayerTurn {
 
         const remaining = args.placementsRemaining ?? 0;
         this.game.setStateNote(_('Placements remaining: ${count}').replace('${count}', remaining));
+        this.bga.statusBar.addActionButton(_('Clear selection'), () => this.game.clearSelection(), { color: 'secondary' });
     }
 
     onLeavingState() {
-        this.game.unbindTomatoSlotClicks();
+        this.game.unbindPlayerTurnInteractions();
         this.bga.statusBar.removeActionButtons();
         this.game.setStateNote('');
     }
@@ -81,7 +82,8 @@ class DiscardDown {
 export class Game {
     constructor(bga) {
         this.bga = bga;
-        this.boundTomatoClicks = [];
+        this.boundInteractions = [];
+        this.selectedCardIds = [];
 
         this.playerTurn = new PlayerTurn(this, bga);
         this.resolveBonus = new ResolveBonus(this, bga);
@@ -113,6 +115,11 @@ export class Game {
         if (note) {
             note.textContent = text;
         }
+    }
+
+    clearSelection() {
+        this.selectedCardIds = [];
+        document.querySelectorAll('.hand-card').forEach(card => card.classList.remove('is-selected'));
     }
 
     renderState(source) {
@@ -152,7 +159,14 @@ export class Game {
             <div class="target-grid">
                 ${slots.map((slot, index) => `
                     <div class="target-card ${slot ? '' : 'is-empty'}" data-slot="${index}">
-                        ${slot ? `<div class="target-desc">${slot.desc}</div><div class="target-score">${slot.base} / ${slot.toss}</div>` : '-'}
+                        ${slot ? `
+                            <div class="target-desc">${slot.desc}</div>
+                            <div class="target-score">${slot.base} / ${slot.toss}</div>
+                            <div class="target-actions">
+                                <button class="target-action" data-action="normal" data-slot="${index}">Toss</button>
+                                <button class="target-action" data-action="quick" data-slot="${index}">Quick</button>
+                            </div>
+                        ` : '-'}
                     </div>
                 `).join('')}
             </div>
@@ -164,13 +178,17 @@ export class Game {
         handArea.innerHTML = `
             <h3>Your hand</h3>
             <div class="card-row">
-                ${cards.map(card => `<div class="hand-card" data-card-id="${card.id}">${card.value}</div>`).join('')}
+                ${cards.map(card => `
+                    <button class="hand-card ${this.selectedCardIds.includes(card.id) ? 'is-selected' : ''}" data-card-id="${card.id}" data-value="${card.value}">
+                        ${card.value}
+                    </button>
+                `).join('')}
             </div>
         `;
     }
 
-    bindTomatoSlotClicks(isCurrentPlayerActive) {
-        this.unbindTomatoSlotClicks();
+    bindPlayerTurnInteractions(isCurrentPlayerActive) {
+        this.unbindPlayerTurnInteractions();
         if (!isCurrentPlayerActive) {
             return;
         }
@@ -181,13 +199,42 @@ export class Game {
                 this.bga.actions.performAction('actCollectTomato', { slot });
             };
             button.addEventListener('click', handler);
-            this.boundTomatoClicks.push({ button, handler });
+            this.boundInteractions.push({ element: button, handler });
+        });
+
+        document.querySelectorAll('.hand-card').forEach(button => {
+            const handler = () => {
+                const cardId = Number(button.dataset.cardId);
+                if (this.selectedCardIds.includes(cardId)) {
+                    this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
+                    button.classList.remove('is-selected');
+                } else {
+                    this.selectedCardIds = [...this.selectedCardIds, cardId];
+                    button.classList.add('is-selected');
+                }
+            };
+            button.addEventListener('click', handler);
+            this.boundInteractions.push({ element: button, handler });
+        });
+
+        document.querySelectorAll('.target-action').forEach(button => {
+            const handler = () => {
+                const slot = Number(button.dataset.slot) + 3;
+                const quickToss = button.dataset.action === 'quick';
+                this.bga.actions.performAction('actTossToTarget', {
+                    slot,
+                    cardsJson: JSON.stringify(this.selectedCardIds),
+                    quickToss,
+                });
+            };
+            button.addEventListener('click', handler);
+            this.boundInteractions.push({ element: button, handler });
         });
     }
 
-    unbindTomatoSlotClicks() {
-        this.boundTomatoClicks.forEach(({ button, handler }) => button.removeEventListener('click', handler));
-        this.boundTomatoClicks = [];
+    unbindPlayerTurnInteractions() {
+        this.boundInteractions.forEach(({ element, handler }) => element.removeEventListener('click', handler));
+        this.boundInteractions = [];
     }
 
     setupNotifications() {
@@ -200,6 +247,18 @@ export class Game {
             this.gamedatas.playerHand = [...this.gamedatas.playerHand, args.collected];
             this.gamedatas.boardTomatoes = [...this.gamedatas.boardTomatoes];
             this.gamedatas.boardTomatoes[slotIndex] = args.refill;
+            this.renderState(this.gamedatas);
+            return;
+        }
+
+        if (Array.isArray(args.remainingHand)) {
+            const slotIndex = Number(args.slot_no) - 1;
+            this.gamedatas.playerHand = args.remainingHand;
+            if (args.newTarget !== undefined) {
+                this.gamedatas.boardTargets = [...this.gamedatas.boardTargets];
+                this.gamedatas.boardTargets[slotIndex] = args.newTarget;
+            }
+            this.clearSelection();
             this.renderState(this.gamedatas);
         }
     }

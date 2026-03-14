@@ -123,6 +123,23 @@
     margin-top: 6px;
 }
 
+.target-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.target-action {
+    background: #fff4e8;
+    border: 1px solid #b65a38;
+    border-radius: 8px;
+    color: #5a2a0d;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 8px;
+}
+
 .card-row {
     display: flex;
     flex-wrap: wrap;
@@ -140,6 +157,12 @@
     height: 48px;
     justify-content: center;
     width: 40px;
+}
+
+.hand-card.is-selected {
+    background: #d9483b;
+    color: #fff4e8;
+    transform: translateY(-2px);
 }
 
 .hand-count {

@@ -139,6 +139,7 @@ class Game extends \Bga\GameFramework\Table
 
         $this->reattributeColorsBasedOnPreferences($players, $gameinfos['player_colors']);
         $this->reloadPlayersBasicInfos();
+        $this->bga->playerScore->setAll(0, null);
 
         $firstPlayerId = (int) $this->activeNextPlayer();
         $this->setGameStateInitialValue(self::G_TURN_NO, 1);
@@ -329,6 +330,75 @@ class Game extends \Bga\GameFramework\Table
         ));
     }
 
+    public function tossToTarget(int $playerId, int $slot, array $cardIds, bool $quickToss): array
+    {
+        $targetSlot = $slot - 3;
+        $targetCard = $this->getObjectFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `targetId` "
+            . "FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'board_target' AND `card_location_arg` = $targetSlot"
+        );
+        if (!$targetCard) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('That target slot is empty'));
+        }
+
+        $selectedCards = $this->loadPlayerHandCardsByIds($playerId, $cardIds);
+        $values = array_map(static fn(array $card): int => (int) $card['value'], $selectedCards);
+
+        $revealed = null;
+        $checkCards = $values;
+        if ($quickToss) {
+            $revealed = $this->drawCard('tomato', 'tomato_deck', 'tomato_discard', 0);
+            if ($revealed !== null) {
+                $checkCards[] = (int) $revealed['typeArg'];
+            }
+        }
+
+        $targetId = (int) $targetCard['targetId'];
+        $success = $this->targetMatches($targetId, $checkCards);
+
+        $this->moveCardsToDiscard($cardIds);
+
+        $scoreGained = 0;
+        $newTarget = null;
+        if ($success) {
+            $scoreGained = $quickToss ? self::TARGET_DEFS[$targetId]['toss'] : self::TARGET_DEFS[$targetId]['base'];
+            $this->bga->playerScore->inc($playerId, $scoreGained);
+
+            static::DbQuery(
+                "UPDATE `player` SET `player_captured_count` = `player_captured_count` + 1 WHERE `player_id` = $playerId"
+            );
+            static::DbQuery(
+                "UPDATE `card` SET `card_location` = 'captured', `card_location_arg` = $playerId WHERE `card_id` = " . (int) $targetCard['id']
+            );
+
+            $replacement = $this->drawCard('target', 'target_deck', 'board_target', $targetSlot);
+            if ($replacement !== null) {
+                $replacementTargetId = (int) $replacement['typeArg'];
+                $newTarget = [
+                    'id' => (int) $replacement['id'],
+                    'targetId' => $replacementTargetId,
+                    'desc' => self::TARGET_DEFS[$replacementTargetId]['desc'],
+                    'base' => self::TARGET_DEFS[$replacementTargetId]['base'],
+                    'toss' => self::TARGET_DEFS[$replacementTargetId]['toss'],
+                ];
+            }
+        }
+
+        return [
+            'selectedCards' => $selectedCards,
+            'revealed' => $revealed === null ? null : [
+                'id' => (int) $revealed['id'],
+                'value' => (int) $revealed['typeArg'],
+            ],
+            'success' => $success,
+            'scoreGained' => $scoreGained,
+            'targetId' => $targetId,
+            'newTarget' => $newTarget,
+            'remainingHand' => $this->getHandForPlayer($playerId),
+            'publicDiscardCount' => $this->getPublicDiscardCount(),
+        ];
+    }
+
     public function collectTomatoFromSlot(int $playerId, int $slot): array
     {
         $card = $this->getObjectFromDb(
@@ -428,6 +498,10 @@ class Game extends \Bga\GameFramework\Table
 
     private function drawCard(string $cardType, string $fromLocation, string $toLocation, int $toArg): ?array
     {
+        if ($cardType === 'tomato' && $fromLocation === 'tomato_deck') {
+            $this->recycleTomatoDiscardIntoDeckIfNeeded();
+        }
+
         $card = $this->getObjectFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `typeArg` "
             . "FROM `card` "
@@ -449,6 +523,96 @@ class Game extends \Bga\GameFramework\Table
             'id' => (int) $card['id'],
             'typeArg' => (int) $card['typeArg'],
         ];
+    }
+
+    private function recycleTomatoDiscardIntoDeckIfNeeded(): void
+    {
+        $deckCount = (int) $this->getUniqueValueFromDb(
+            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_deck'"
+        );
+        if ($deckCount > 0) {
+            return;
+        }
+
+        $discardCards = array_values($this->getCollectionFromDb(
+            "SELECT `card_id` AS `id` FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_discard'"
+        ));
+        if ($discardCards === []) {
+            return;
+        }
+
+        shuffle($discardCards);
+        foreach ($discardCards as $index => $card) {
+            static::DbQuery(
+                "UPDATE `card` SET `card_location` = 'tomato_deck', `card_location_arg` = $index WHERE `card_id` = " . (int) $card['id']
+            );
+        }
+    }
+
+    private function loadPlayerHandCardsByIds(int $playerId, array $cardIds): array
+    {
+        $cardIds = array_values(array_map('intval', $cardIds));
+        if ($cardIds === []) {
+            return [];
+        }
+
+        $sqlIds = implode(',', $cardIds);
+        $rows = array_values($this->getCollectionFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
+            . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
+            . "AND `card_id` IN ($sqlIds)"
+        ));
+
+        if (count($rows) !== count($cardIds)) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('Invalid hand selection'));
+        }
+
+        usort($rows, static fn(array $a, array $b): int => (int) $a['id'] <=> (int) $b['id']);
+        return array_map(static fn(array $row): array => [
+            'id' => (int) $row['id'],
+            'value' => (int) $row['value'],
+        ], $rows);
+    }
+
+    private function moveCardsToDiscard(array $cardIds): void
+    {
+        foreach (array_values(array_map('intval', $cardIds)) as $cardId) {
+            static::DbQuery(
+                "UPDATE `card` SET `card_location` = 'tomato_discard', `card_location_arg` = 0 WHERE `card_id` = $cardId"
+            );
+        }
+    }
+
+    private function targetMatches(int $targetId, array $cards): bool
+    {
+        sort($cards);
+        $count = count($cards);
+        $sum = array_sum($cards);
+
+        return match ($targetId) {
+            1, 2 => $count === 1 && $cards[0] === 3,
+            3, 4 => $count === 2 && $cards[0] === $cards[1],
+            5 => $count === 3 && $cards[0] === $cards[1] && $cards[1] < $cards[2],
+            6 => $count === 3 && $cards[0] === $cards[1] && $cards[1] === $cards[2],
+            7, 8 => $count === 1 && in_array($cards[0], [5, 6, 7], true),
+            9 => $count === 1 && in_array($cards[0], [1, 2], true),
+            10, 11 => 8 <= $sum && $sum <= 9,
+            12 => 8 <= $sum && $sum <= 9 && !in_array(3, $cards, true),
+            13, 14 => $count === 1 && in_array($cards[0], [2, 4, 6], true),
+            15, 16 => 6 <= $sum && $sum <= 8,
+            17 => 6 <= $sum && $sum <= 8 && !in_array(3, $cards, true),
+            18 => $count === 2 && $sum === 10,
+            19 => $count === 1 && in_array($cards[0], [6, 7], true),
+            20, 21 => $count === 2 && abs($cards[0] - $cards[1]) === 1,
+            22, 23 => 11 <= $sum && $sum <= 13,
+            24 => 11 <= $sum && $sum <= 13 && !in_array(3, $cards, true),
+            25 => $count === 1 && in_array($cards[0], [4, 5], true),
+            26 => $count === 1 && $cards[0] === 5,
+            27 => 7 <= $sum && $sum <= 11,
+            28 => 7 <= $sum && $sum <= 11 && !in_array(3, $cards, true),
+            29, 30 => $count === 2 && 4 <= abs($cards[0] - $cards[1]) && abs($cards[0] - $cards[1]) <= 6,
+            default => false,
+        };
     }
 
     private function getPlayerIdsInTurnOrder(array $players, int $firstPlayerId): array

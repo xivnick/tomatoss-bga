@@ -61,31 +61,58 @@ class PlayerTurn extends GameState
             throw new UserException(clienttranslate('Invalid target slot'));
         }
 
-        $cards = json_decode($cardsJson, true);
-        if (!is_array($cards)) {
+        $cardIds = json_decode($cardsJson, true);
+        if (!is_array($cardIds)) {
             throw new UserException(clienttranslate('Invalid card selection'));
         }
 
         $actionKind = $quickToss ? 'quick_toss' : 'normal_toss';
-        $this->game->recordTurnAction($activePlayerId, $slot, $actionKind, $cards, $quickToss);
+        $result = $this->game->tossToTarget($activePlayerId, $slot, $cardIds, $quickToss);
+        $cardValues = array_map(static fn(array $card): int => (int) $card['value'], $result['selectedCards']);
+        $this->game->recordTurnAction(
+            $activePlayerId,
+            $slot,
+            $actionKind,
+            $cardValues,
+            $quickToss,
+            $result['revealed']['value'] ?? null,
+            $result['scoreGained']
+        );
 
         if ($quickToss) {
             $this->bga->playerStats->inc('quickTossAttempts', 1, $activePlayerId);
+            if ($result['success']) {
+                $this->bga->playerStats->inc('quickTossSuccesses', 1, $activePlayerId);
+            }
         } else {
             $this->bga->playerStats->inc('normalTosses', 1, $activePlayerId);
         }
 
         $this->bga->notify->all(
             'turnAction',
-            $quickToss
-                ? clienttranslate('${player_name} makes a quick toss to target slot ${slot_no}')
-                : clienttranslate('${player_name} makes a toss to target slot ${slot_no}'),
+            $result['success']
+                ? (
+                    $quickToss
+                        ? clienttranslate('${player_name} succeeds with a quick toss on target slot ${slot_no}')
+                        : clienttranslate('${player_name} succeeds on target slot ${slot_no}')
+                )
+                : (
+                    $quickToss
+                        ? clienttranslate('${player_name} fails a quick toss on target slot ${slot_no}')
+                        : clienttranslate('${player_name} fails on target slot ${slot_no}')
+                ),
             [
                 'player_id' => $activePlayerId,
                 'player_name' => $this->game->getPlayerNameById($activePlayerId),
                 'slot_no' => $slot - 2,
-                'cards' => array_values($cards),
+                'cards' => $cardValues,
                 'quickToss' => $quickToss,
+                'success' => $result['success'],
+                'revealed' => $result['revealed'],
+                'scoreGained' => $result['scoreGained'],
+                'newTarget' => $result['newTarget'],
+                'remainingHand' => $result['remainingHand'],
+                'publicDiscardCount' => $result['publicDiscardCount'],
             ]
         );
 
