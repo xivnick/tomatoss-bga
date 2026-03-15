@@ -28,8 +28,13 @@ class PlayerTurn extends GameState
             'placementsRemaining' => $this->game->getPlacementsRemaining(),
             'boardTomatoes' => $this->game->getBoardTomatoSlots(),
             'boardTargets' => $this->game->getBoardTargetSlots(),
+            'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
+            'targetDeckCount' => $this->game->getTargetDeckCount(),
+            'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
             'playerHand' => $this->game->getHandForPlayer($activePlayerId),
+            'handCountsByPlayer' => $this->game->getHandCountsByPlayer(),
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
+            'capturedTargetsByPlayer' => $this->game->getCapturedTargetsByPlayer(),
         ];
     }
 
@@ -46,6 +51,7 @@ class PlayerTurn extends GameState
             'slot_no' => $slot + 1,
             'collected' => $result['collected'],
             'refill' => $result['refill'],
+            'tomatoDeckCount' => $result['tomatoDeckCount'],
         ]);
 
         return $this->game->shouldResolveBonus() ? ResolveBonus::class : PlayerTurn::class;

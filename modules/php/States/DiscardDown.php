@@ -29,6 +29,11 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             'placementsRemaining' => $this->game->getPlacementsRemaining(),
             'boardTomatoes' => $this->game->getBoardTomatoSlots(),
             'boardTargets' => $this->game->getBoardTargetSlots(),
+            'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
+            'targetDeckCount' => $this->game->getTargetDeckCount(),
+            'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
+            'handCountsByPlayer' => $this->game->getHandCountsByPlayer(),
+            'capturedTargetsByPlayer' => $this->game->getCapturedTargetsByPlayer(),
         ];
     }
 
@@ -45,6 +50,7 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'cardValue' => $cardValue,
             'remainingHand' => $result['remainingHand'],
+            'latestDiscardTomato' => $result['latestDiscardTomato'],
         ]);
 
         return $this->game->shouldEnterDiscardDown($activePlayerId) ? DiscardDown::class : NextPlayer::class;
