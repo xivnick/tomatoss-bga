@@ -72,7 +72,6 @@ export class Game {
         this.bga = bga;
         this.boundInteractions = [];
         this.selectedCardIds = [];
-        this.resizeObserver = null;
 
         this.playerTurn = new PlayerTurn(this, bga);
         this.resolveBonus = new ResolveBonus(this, bga);
@@ -99,12 +98,15 @@ export class Game {
                     <div id="deck-strip"></div>
                 </div>
                 <div id="hand-area"></div>
+                <div id="player-zones"></div>
             </div>
         `);
 
+        const playerZones = document.getElementById('player-zones');
         Object.values(this.gamedatas.players).forEach(player => {
-            this.bga.playerPanels.getElement(player.id).insertAdjacentHTML('beforeend', `
+            playerZones.insertAdjacentHTML('beforeend', `
                 <div class="player-zone" id="player-zone-${player.id}">
+                    <div class="player-zone__name">${player.name ?? `P${player.id}`}</div>
                     <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
                     <div class="player-board" id="player-board-${player.id}">
                         <div class="player-hand-stack" id="player-hand-stack-${player.id}"></div>
@@ -114,10 +116,6 @@ export class Game {
                 </div>
             `);
         });
-
-        const stage = document.getElementById('festival-stage');
-        this.resizeObserver = new ResizeObserver(() => this.updateBoardScale());
-        this.resizeObserver.observe(stage);
 
         this.renderState(gamedatas);
         this.setupNotifications();
@@ -147,13 +145,12 @@ export class Game {
     }
 
     getScale() {
-        const stage = document.getElementById('festival-stage');
-        if (!stage) {
+        const board = document.getElementById('festival-board');
+        if (!board) {
             return 1;
         }
 
-        const raw = getComputedStyle(stage).getPropertyValue('--board-scale').trim();
-        return raw ? Number(raw) : 1;
+        return board.clientWidth / 1138;
     }
 
     missionCardStyle(targetId, scale) {
