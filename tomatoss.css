@@ -59,6 +59,15 @@
     position: absolute;
 }
 
+#festival-slot-layer {
+    z-index: 2;
+}
+
+#festival-token-layer {
+    pointer-events: none;
+    z-index: 3;
+}
+
 .board-token-slot {
     background: rgba(217, 72, 59, 0.22);
     border: 2px solid rgba(176, 38, 31, 0.55);
