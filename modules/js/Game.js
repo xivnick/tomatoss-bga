@@ -5,13 +5,13 @@
  * -----
  */
 
-const SLOT_LAYOUT = [
-    { side: 'target', left: 17.8, top: 22.0 },
-    { side: 'target', left: 50.0, top: 22.0 },
-    { side: 'target', left: 82.2, top: 22.0 },
-    { side: 'tomato', left: 6.5, top: 62.5 },
-    { side: 'tomato', left: 39.0, top: 62.5 },
-    { side: 'tomato', left: 71.5, top: 62.5 },
+const BOARD_TOKEN_SLOTS = [
+    { space: 3, left: 20.4, top: 22.3, side: 'target' },
+    { space: 4, left: 51.2, top: 22.3, side: 'target' },
+    { space: 5, left: 82.3, top: 22.3, side: 'target' },
+    { space: 0, left: 7.7, top: 63.2, side: 'tomato' },
+    { space: 1, left: 39.2, top: 63.2, side: 'tomato' },
+    { space: 2, left: 70.8, top: 63.2, side: 'tomato' },
 ];
 
 class PlayerTurn {
@@ -21,21 +21,16 @@ class PlayerTurn {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
-        this.bga.statusBar.setTitle(isCurrentPlayerActive
-            ? _('${you} must place a marker')
-            : _('${actplayer} must place a marker')
-        );
-
         this.game.renderState(args);
         this.game.bindPlayerTurnInteractions(isCurrentPlayerActive);
 
         if (!isCurrentPlayerActive) {
+            this.bga.statusBar.setTitle(_('${actplayer} must place a tomato token'));
             return;
         }
 
-        const remaining = args.placementsRemaining ?? 0;
-        this.game.setStateNote(_('Placements remaining: ${count}').replace('${count}', remaining));
-        this.bga.statusBar.addActionButton(_('Clear selection'), () => this.game.clearSelection(), { color: 'secondary' });
+        this.game.renderTurnModeButtons();
+        this.game.updateTurnPrompt();
     }
 
     onLeavingState() {
@@ -84,6 +79,7 @@ export class Game {
         this.bga = bga;
         this.boundInteractions = [];
         this.selectedCardIds = [];
+        this.tossMode = 'normal';
 
         this.playerTurn = new PlayerTurn(this, bga);
         this.resolveBonus = new ResolveBonus(this, bga);
@@ -100,28 +96,50 @@ export class Game {
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
             <div id="tomatoss-layout">
                 <div id="tomatoss-state-note"></div>
-                <div id="tomatoss-main-board">
+                <div id="festival-stage">
+                    <div id="mission-row" class="festival-card-row"></div>
                     <div id="festival-board">
                         <div id="festival-slot-layer"></div>
                         <div id="festival-token-layer"></div>
                     </div>
-                    <div id="turn-token-tray"></div>
+                    <div id="tomato-row" class="festival-card-row"></div>
                 </div>
+                <div id="turn-token-tray"></div>
                 <div id="hand-area"></div>
             </div>
         `);
 
         Object.values(this.gamedatas.players).forEach(player => {
             this.bga.playerPanels.getElement(player.id).insertAdjacentHTML('beforeend', `
-                <div class="player-board-summary" id="player-board-summary-${player.id}">
-                    <div class="basket-status" id="basket-status-${player.id}"></div>
-                    <div class="captured-count" id="captured-count-${player.id}"></div>
+                <div class="player-board-panel" id="player-board-panel-${player.id}">
+                    <div class="captured-strip left" id="captured-left-${player.id}"></div>
+                    <div class="captured-strip right" id="captured-right-${player.id}"></div>
+                    <div class="basket-anchor" id="basket-anchor-${player.id}"></div>
                 </div>
             `);
         });
 
         this.renderState(gamedatas);
         this.setupNotifications();
+    }
+
+    renderTurnModeButtons() {
+        this.bga.statusBar.removeActionButtons();
+        this.bga.statusBar.addActionButton(_('Normal toss'), () => {
+            this.tossMode = 'normal';
+            this.updateTurnPrompt();
+        });
+        this.bga.statusBar.addActionButton(_('Quick toss'), () => {
+            this.tossMode = 'quick';
+            this.updateTurnPrompt();
+        });
+        this.bga.statusBar.addActionButton(_('Clear selection'), () => this.clearSelection(), { color: 'secondary' });
+    }
+
+    updateTurnPrompt() {
+        const remaining = Number(this.gamedatas.placementsRemaining ?? 0);
+        this.bga.statusBar.setTitle(_('${you} must place a tomato token'));
+        this.setStateNote(`Placements remaining: ${remaining} | Toss mode: ${this.tossMode === 'quick' ? 'Quick' : 'Normal'}`);
     }
 
     setStateNote(text) {
@@ -137,30 +155,14 @@ export class Game {
     }
 
     renderState(source) {
-        const normalizedActions = (source.currentTurnActions ?? this.gamedatas.currentTurnActions ?? []).map(action => {
-            const kind = action.actionKind ?? action.action_kind ?? '';
-            const rawSpace = Number(action.space);
-            let normalizedSpace = rawSpace;
-
-            if (kind === 'collect' && rawSpace < 3) {
-                normalizedSpace = rawSpace + 3;
-            } else if ((kind === 'normal_toss' || kind === 'quick_toss') && rawSpace >= 3) {
-                normalizedSpace = rawSpace - 3;
-            }
-
-            return {
-                ...action,
-                space: normalizedSpace,
-            };
-        });
-
         const data = {
             players: source.players ?? this.gamedatas.players ?? {},
             boardTomatoes: source.boardTomatoes ?? this.gamedatas.boardTomatoes ?? [null, null, null],
             boardTargets: source.boardTargets ?? this.gamedatas.boardTargets ?? [null, null, null],
             playerHand: source.playerHand ?? this.gamedatas.playerHand ?? [],
-            currentTurnActions: normalizedActions,
+            currentTurnActions: source.currentTurnActions ?? this.gamedatas.currentTurnActions ?? [],
             placementsRemaining: source.placementsRemaining ?? this.gamedatas.placementsRemaining ?? 3,
+            capturedTargetsByPlayer: source.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer ?? {},
         };
 
         this.gamedatas.players = data.players;
@@ -169,82 +171,87 @@ export class Game {
         this.gamedatas.playerHand = data.playerHand;
         this.gamedatas.currentTurnActions = data.currentTurnActions;
         this.gamedatas.placementsRemaining = data.placementsRemaining;
+        this.gamedatas.capturedTargetsByPlayer = data.capturedTargetsByPlayer;
 
-        this.renderFestivalBoard(data.boardTargets, data.boardTomatoes, data.currentTurnActions);
+        this.renderMissionRow(data.boardTargets);
+        this.renderFestivalBoard(data.currentTurnActions);
+        this.renderTomatoRow(data.boardTomatoes);
         this.renderTokenTray(data.placementsRemaining);
         this.renderHand(data.playerHand);
         this.renderPlayerPanels();
     }
 
-    renderFestivalBoard(targets, tomatoes, actions) {
+    missionSpriteStyle(targetId, scale) {
+        const width = 315 * scale;
+        const height = 440 * scale;
+        const col = (targetId - 1) % 6;
+        const row = Math.floor((targetId - 1) / 6);
+        return `
+            width:${width}px;
+            height:${height}px;
+            background-image:url('img/mission_cards.png');
+            background-repeat:no-repeat;
+            background-size:${1890 * scale}px ${2200 * scale}px;
+            background-position:-${col * width}px -${row * height}px;
+        `;
+    }
+
+    tomatoCardSpriteStyle(value, scale) {
+        const width = 310 * scale;
+        const height = 440 * scale;
+        return `
+            width:${width}px;
+            height:${height}px;
+            background-image:url('img/tomato_cards.png');
+            background-repeat:no-repeat;
+            background-size:${2170 * scale}px ${440 * scale}px;
+            background-position:-${(value - 1) * width}px 0;
+        `;
+    }
+
+    renderMissionRow(targets) {
+        const row = document.getElementById('mission-row');
+        row.innerHTML = targets.map((target, index) => `
+            <div class="festival-card-slot target ${target ? '' : 'is-empty'}">
+                ${target ? `<div class="mission-card-large" data-slot="${index}" style="${this.missionSpriteStyle(Number(target.targetId), 0.4)}"></div>` : '<div class="festival-card-slot__empty">-</div>'}
+            </div>
+        `).join('');
+    }
+
+    renderTomatoRow(tomatoes) {
+        const row = document.getElementById('tomato-row');
+        row.innerHTML = tomatoes.map((card, index) => `
+            <div class="festival-card-slot tomato ${card ? '' : 'is-empty'}">
+                ${card ? `<div class="tomato-card-large" data-slot="${index}" style="${this.tomatoCardSpriteStyle(Number(card.value), 0.28)}"></div>` : '<div class="festival-card-slot__empty">-</div>'}
+            </div>
+        `).join('');
+    }
+
+    renderFestivalBoard(actions) {
         const slotLayer = document.getElementById('festival-slot-layer');
         const tokenLayer = document.getElementById('festival-token-layer');
 
-        const allSlots = [...targets, ...tomatoes];
-        slotLayer.innerHTML = allSlots.map((slot, index) => {
-            const layout = SLOT_LAYOUT[index];
-            const classes = ['festival-slot', layout.side];
-            if (!slot) {
-                classes.push('is-empty');
-            }
-
-            const content = layout.side === 'target'
-                ? this.renderMissionCard(slot, index)
-                : this.renderTomatoCard(slot, index - 3);
-
-            return `
-                <div class="${classes.join(' ')}" data-slot="${index}" style="left:${layout.left}%; top:${layout.top}%;">
-                    ${content}
-                </div>
-            `;
-        }).join('');
+        slotLayer.innerHTML = BOARD_TOKEN_SLOTS.map(slot => `
+            <button
+                class="board-token-slot ${slot.side}"
+                data-space="${slot.space}"
+                style="left:${slot.left}%; top:${slot.top}%;">
+            </button>
+        `).join('');
 
         tokenLayer.innerHTML = actions.map((action, index) => {
-            const slotIndex = Number(action.space);
-            const layout = SLOT_LAYOUT[slotIndex];
-            const tokenType = slotIndex < 3 ? 'splat' : 'whole';
+            const slot = BOARD_TOKEN_SLOTS.find(item => Number(item.space) === Number(action.space));
+            if (!slot) {
+                return '';
+            }
 
+            const tokenType = action.actionKind === 'collect' ? 'whole' : 'splat';
             return `
-                <div class="placed-token ${tokenType}" data-token-index="${index}" style="left:${layout.left + 8}%; top:${layout.top + 11}%;">
+                <div class="placed-token ${tokenType}" style="left:${slot.left}%; top:${slot.top}%;">
                     <div class="placed-token__index">${index + 1}</div>
                 </div>
             `;
         }).join('');
-    }
-
-    renderMissionCard(slot, index) {
-        if (!slot) {
-            return '<div class="festival-slot__empty">-</div>';
-        }
-
-        const zeroBased = Number(slot.targetId) - 1;
-        const col = zeroBased % 6;
-        const row = Math.floor(zeroBased / 6);
-        const posX = col * 315;
-        const posY = row * 440;
-
-        return `
-            <div class="mission-card">
-                <div class="mission-card__art" style="background-position:-${posX}px -${posY}px;"></div>
-                <div class="mission-card__actions">
-                    <button class="target-action" data-action="normal" data-slot="${index}">Toss</button>
-                    <button class="target-action" data-action="quick" data-slot="${index}">Quick</button>
-                </div>
-            </div>
-        `;
-    }
-
-    renderTomatoCard(slot, index) {
-        if (!slot) {
-            return '<div class="festival-slot__empty">-</div>';
-        }
-
-        const posX = Number(slot.value - 1) * 310;
-        return `
-            <button class="tomato-card tomato-slot" data-slot="${index}">
-                <div class="tomato-card__art" style="background-position:-${posX}px 0;"></div>
-            </button>
-        `;
     }
 
     renderTokenTray(placementsRemaining) {
@@ -264,31 +271,38 @@ export class Game {
         handArea.innerHTML = `
             <h3>Your hand</h3>
             <div class="card-row">
-                ${cards.map(card => {
-                    const posX = Number(card.value - 1) * 310;
-                    return `
-                        <button class="hand-card ${this.selectedCardIds.includes(card.id) ? 'is-selected' : ''}" data-card-id="${card.id}" data-value="${card.value}">
-                            <div class="hand-card__art" style="background-position:-${posX}px 0;"></div>
-                        </button>
-                    `;
-                }).join('')}
+                ${cards.map(card => `
+                    <button class="hand-card ${this.selectedCardIds.includes(card.id) ? 'is-selected' : ''}" data-card-id="${card.id}" data-value="${card.value}">
+                        <div class="hand-card__art" style="${this.tomatoCardSpriteStyle(Number(card.value), 0.3)}"></div>
+                    </button>
+                `).join('')}
             </div>
         `;
     }
 
     renderPlayerPanels() {
+        const capturedByPlayer = this.gamedatas.capturedTargetsByPlayer ?? {};
         Object.values(this.gamedatas.players).forEach(player => {
-            const basket = document.getElementById(`basket-status-${player.id}`);
-            const captured = document.getElementById(`captured-count-${player.id}`);
-            if (!basket || !captured) {
-                return;
+            const basketAnchor = document.getElementById(`basket-anchor-${player.id}`);
+            const leftStrip = document.getElementById(`captured-left-${player.id}`);
+            const rightStrip = document.getElementById(`captured-right-${player.id}`);
+            const captured = capturedByPlayer[player.id] ?? { normal: [], quick: [] };
+
+            if (basketAnchor) {
+                basketAnchor.innerHTML = `<div class="basket-token ${player.basketFull ? 'full' : 'empty'}"></div>`;
             }
 
-            basket.innerHTML = `
-                <div class="basket-token ${player.basketFull ? 'full' : 'empty'}"></div>
-                <span>${player.basketFull ? 'Basket full' : 'Basket empty'}</span>
-            `;
-            captured.textContent = `Captured targets: ${player.capturedCount}`;
+            if (leftStrip) {
+                leftStrip.innerHTML = captured.normal.map((card, index) => `
+                    <div class="captured-mission normal" style="${this.missionSpriteStyle(Number(card.targetId), 0.17)} left:${index * 16}px;"></div>
+                `).join('');
+            }
+
+            if (rightStrip) {
+                rightStrip.innerHTML = captured.quick.map((card, index) => `
+                    <div class="captured-mission quick" style="${this.missionSpriteStyle(Number(card.targetId), 0.17)} right:${index * 16}px;"></div>
+                `).join('');
+            }
         });
     }
 
@@ -298,10 +312,18 @@ export class Game {
             return;
         }
 
-        document.querySelectorAll('.tomato-slot').forEach(button => {
+        document.querySelectorAll('.board-token-slot').forEach(button => {
             const handler = () => {
-                const slot = Number(button.dataset.slot);
-                this.bga.actions.performAction('actCollectTomato', { slot });
+                const space = Number(button.dataset.space);
+                if (space < 3) {
+                    this.bga.actions.performAction('actCollectTomato', { slot: space });
+                } else {
+                    this.bga.actions.performAction('actTossToTarget', {
+                        slot: space,
+                        cardsJson: JSON.stringify(this.selectedCardIds),
+                        quickToss: this.tossMode === 'quick',
+                    });
+                }
             };
             button.addEventListener('click', handler);
             this.boundInteractions.push({ element: button, handler });
@@ -317,20 +339,6 @@ export class Game {
                     this.selectedCardIds = [...this.selectedCardIds, cardId];
                     button.classList.add('is-selected');
                 }
-            };
-            button.addEventListener('click', handler);
-            this.boundInteractions.push({ element: button, handler });
-        });
-
-        document.querySelectorAll('.target-action').forEach(button => {
-            const handler = () => {
-                const slot = Number(button.dataset.slot) + 3;
-                const quickToss = button.dataset.action === 'quick';
-                this.bga.actions.performAction('actTossToTarget', {
-                    slot,
-                    cardsJson: JSON.stringify(this.selectedCardIds),
-                    quickToss,
-                });
             };
             button.addEventListener('click', handler);
             this.boundInteractions.push({ element: button, handler });
@@ -370,7 +378,9 @@ export class Game {
     }
 
     async notif_turnAction(args) {
-        this.appendTurnAction(Number(args.slot_no) - 1 + (args.collected ? 3 : 0), args.quickToss ? 'quick_toss' : (args.collected ? 'collect' : 'normal_toss'));
+        const actionKind = args.collected ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss');
+        const actualSpace = args.collected ? Number(args.slot_no) - 1 : Number(args.slot_no) + 2;
+        this.appendTurnAction(actualSpace, actionKind);
 
         if (args.collected && args.refill !== undefined) {
             const slotIndex = Number(args.slot_no) - 1;
@@ -387,6 +397,9 @@ export class Game {
             if (args.newTarget !== undefined) {
                 this.gamedatas.boardTargets = [...this.gamedatas.boardTargets];
                 this.gamedatas.boardTargets[slotIndex] = args.newTarget;
+            }
+            if (args.capturedTargetsByPlayer) {
+                this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer;
             }
             const player = this.gamedatas.players?.[args.player_id];
             if (player && args.success) {

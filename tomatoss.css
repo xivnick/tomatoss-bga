@@ -17,10 +17,45 @@
     min-height: 24px;
 }
 
-#tomatoss-main-board {
+#festival-stage {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     justify-items: center;
+}
+
+.festival-card-row {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(3, minmax(0, auto));
+    justify-content: center;
+    width: 100%;
+    max-width: 1138px;
+}
+
+.festival-card-slot {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-height: 124px;
+    min-width: 112px;
+}
+
+.festival-card-slot.target {
+    min-height: 198px;
+    min-width: 142px;
+}
+
+.festival-card-slot__empty {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px dashed rgba(155, 88, 57, 0.7);
+    border-radius: 16px;
+    color: #6e3f1d;
+    display: flex;
+    font-weight: 700;
+    height: 110px;
+    justify-content: center;
+    width: 78px;
 }
 
 #festival-board {
@@ -40,119 +75,51 @@
     position: absolute;
 }
 
-.festival-slot {
+.board-token-slot {
+    background: rgba(255, 255, 255, 0.02);
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    height: 92px;
     position: absolute;
     transform: translate(-50%, -50%);
+    width: 92px;
 }
 
-.festival-slot.target {
-    width: 158px;
+.board-token-slot:hover {
+    box-shadow: 0 0 0 4px rgba(217, 72, 59, 0.22);
 }
 
-.festival-slot.tomato {
-    width: 108px;
-}
-
-.festival-slot__empty {
-    align-items: center;
-    background: rgba(255, 255, 255, 0.55);
-    border: 2px dashed rgba(155, 88, 57, 0.7);
-    border-radius: 16px;
-    color: #6e3f1d;
-    display: flex;
-    font-weight: 700;
-    height: 110px;
-    justify-content: center;
-}
-
-.mission-card {
-    display: grid;
-    gap: 6px;
-    justify-items: center;
-}
-
-.mission-card__art {
-    background-image: url('img/mission_cards.png');
+.mission-card-large,
+.tomato-card-large,
+.hand-card__art,
+.captured-mission {
     background-repeat: no-repeat;
-    background-size: 1890px 2200px;
     border-radius: 12px;
     box-shadow: 0 6px 18px rgba(53, 31, 20, 0.24);
-    height: 220px;
-    width: 157.5px;
 }
 
-.mission-card__actions {
-    display: flex;
-    gap: 6px;
+.mission-card-large {
+    box-shadow: 0 8px 18px rgba(53, 31, 20, 0.2);
 }
 
-.target-action {
-    background: rgba(255, 244, 232, 0.96);
-    border: 1px solid #b65a38;
-    border-radius: 8px;
-    color: #5a2a0d;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 6px 8px;
-}
-
-.tomato-card,
-.hand-card {
-    background: none;
-    border: 0;
-    cursor: pointer;
-    padding: 0;
-}
-
-.tomato-card__art {
-    background-image: url('img/tomato_cards.png');
-    background-repeat: no-repeat;
-    background-size: 2170px 440px;
+.tomato-card-large {
     border-radius: 10px;
-    box-shadow: 0 4px 14px rgba(53, 31, 20, 0.2);
-    height: 110px;
-    width: 77.5px;
-}
-
-.hand-card {
-    border-radius: 14px;
-    transition: transform 120ms ease;
-}
-
-.hand-card.is-selected {
-    transform: translateY(-6px);
-}
-
-.hand-card__art {
-    background-image: url('img/tomato_cards.png');
-    background-repeat: no-repeat;
-    background-size: 2170px 440px;
-    border: 2px solid transparent;
-    border-radius: 10px;
-    box-shadow: 0 4px 14px rgba(53, 31, 20, 0.2);
-    height: 132px;
-    width: 93px;
-}
-
-.hand-card.is-selected .hand-card__art {
-    border-color: #d9483b;
-    box-shadow: 0 8px 18px rgba(109, 32, 20, 0.32);
 }
 
 .placed-token,
 .tray-token,
 .basket-token {
+    background-image: url('img/tomato_tokens.png');
     background-repeat: no-repeat;
+    background-size: 112px 56px;
 }
 
 .placed-token {
-    background-image: url('img/tomato_tokens.png');
-    background-size: 300px 150px;
-    height: 50px;
+    height: 56px;
     position: absolute;
     transform: translate(-50%, -50%) rotate(-8deg);
-    width: 50px;
+    width: 56px;
 }
 
 .placed-token.whole,
@@ -162,7 +129,7 @@
 
 .placed-token.splat,
 .tray-token.is-spent {
-    background-position: -150px 0;
+    background-position: -56px 0;
 }
 
 .placed-token__index {
@@ -189,6 +156,7 @@
     border-radius: 14px;
     display: flex;
     gap: 14px;
+    justify-content: center;
     padding: 10px 14px;
 }
 
@@ -204,10 +172,8 @@
 }
 
 .tray-token {
-    background-image: url('img/tomato_tokens.png');
-    background-size: 300px 150px;
-    height: 40px;
-    width: 40px;
+    height: 56px;
+    width: 56px;
 }
 
 #hand-area {
@@ -223,23 +189,44 @@
     gap: 10px;
 }
 
-.player-board-summary {
-    display: grid;
-    gap: 8px;
-    margin-top: 8px;
+.hand-card {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 120ms ease;
 }
 
-.basket-status {
-    align-items: center;
-    display: flex;
-    gap: 8px;
+.hand-card.is-selected {
+    transform: translateY(-6px);
+}
+
+.hand-card.is-selected .hand-card__art {
+    box-shadow: 0 10px 20px rgba(109, 32, 20, 0.32);
+    outline: 3px solid #d9483b;
+}
+
+.player-board-panel {
+    background-image: url('img/player_board.png');
+    background-size: cover;
+    height: 220px;
+    margin-top: 8px;
+    position: relative;
+    width: 220px;
+}
+
+.basket-anchor {
+    left: 50%;
+    position: absolute;
+    top: 72%;
+    transform: translate(-50%, -50%);
 }
 
 .basket-token {
     background-image: url('img/basket_tokens.png');
-    background-size: 300px 120px;
-    height: 40px;
-    width: 100px;
+    background-size: 150px 60px;
+    height: 60px;
+    width: 75px;
 }
 
 .basket-token.empty {
@@ -247,13 +234,26 @@
 }
 
 .basket-token.full {
-    background-position: -150px 0;
+    background-position: -75px 0;
 }
 
-.captured-count {
-    color: #5a2a0d;
-    font-size: 12px;
-    font-weight: 700;
+.captured-strip {
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+}
+
+.captured-mission {
+    position: absolute;
+    top: 128px;
+}
+
+.captured-mission.normal {
+    transform: translateX(-66%);
+}
+
+.captured-mission.quick {
+    transform: translateX(66%);
 }
 
 @media (max-width: 900px) {
@@ -261,21 +261,14 @@
         height: 255px;
     }
 
-    .festival-slot.target {
-        width: 128px;
+    .board-token-slot {
+        height: 72px;
+        width: 72px;
     }
 
-    .mission-card__art {
-        height: 176px;
-        width: 126px;
-    }
-
-    .festival-slot.tomato {
-        width: 88px;
-    }
-
-    .tomato-card__art {
-        height: 88px;
-        width: 62px;
+    .placed-token,
+    .tray-token {
+        height: 48px;
+        width: 48px;
     }
 }

@@ -79,7 +79,7 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $captured = (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'captured'"
+            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'target' AND `card_location` IN ('captured_normal', 'captured_quick')"
         );
 
         return (int) round($captured / $totalTargets * 100);
@@ -108,6 +108,7 @@ class Game extends \Bga\GameFramework\Table
             'publicDiscardCount' => $this->getPublicDiscardCount(),
             'playerHand' => $this->getHandForPlayer($currentPlayerId),
             'currentTurnActions' => $this->getCurrentTurnActionLog(),
+            'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
         ];
     }
 
@@ -546,8 +547,9 @@ class Game extends \Bga\GameFramework\Table
             static::DbQuery(
                 "UPDATE `player` SET `player_captured_count` = `player_captured_count` + 1 WHERE `player_id` = $playerId"
             );
+            $capturedLocation = $quickToss ? 'captured_quick' : 'captured_normal';
             static::DbQuery(
-                "UPDATE `card` SET `card_location` = 'captured', `card_location_arg` = $playerId WHERE `card_id` = " . (int) $targetCard['id']
+                "UPDATE `card` SET `card_location` = '$capturedLocation', `card_location_arg` = $playerId WHERE `card_id` = " . (int) $targetCard['id']
             );
 
             $replacement = $this->drawCard('target', 'target_deck', 'board_target', $targetSlot);
@@ -575,6 +577,7 @@ class Game extends \Bga\GameFramework\Table
             'newTarget' => $newTarget,
             'remainingHand' => $this->getHandForPlayer($playerId),
             'publicDiscardCount' => $this->getPublicDiscardCount(),
+            'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
         ];
     }
 
@@ -815,6 +818,40 @@ class Game extends \Bga\GameFramework\Table
             "SELECT COALESCE(SUM(`card_type_arg`), 0) FROM `card` "
             . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId"
         );
+    }
+
+    private function getCapturedTargetsByPlayer(): array
+    {
+        $rows = array_values($this->getCollectionFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `targetId`, `card_location` AS `location`, `card_location_arg` AS `playerId` "
+            . "FROM `card` WHERE `card_type` = 'target' AND `card_location` IN ('captured_normal', 'captured_quick') "
+            . 'ORDER BY `card_id` ASC'
+        ));
+
+        $result = [];
+        foreach ($rows as $row) {
+            $playerId = (int) $row['playerId'];
+            if (!isset($result[$playerId])) {
+                $result[$playerId] = [
+                    'normal' => [],
+                    'quick' => [],
+                ];
+            }
+
+            $targetId = (int) $row['targetId'];
+            $entry = [
+                'id' => (int) $row['id'],
+                'targetId' => $targetId,
+            ];
+
+            if ($row['location'] === 'captured_quick') {
+                $result[$playerId]['quick'][] = $entry;
+            } else {
+                $result[$playerId]['normal'][] = $entry;
+            }
+        }
+
+        return $result;
     }
 
     private function isBasketFull(int $playerId): bool
