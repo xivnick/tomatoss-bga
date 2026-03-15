@@ -204,22 +204,29 @@
     background: #fff4e8;
     border: 2px solid #d3a26a;
     border-radius: 14px;
+    overflow-x: auto;
     padding: 12px;
 }
 
 .hand-row {
+    align-items: flex-end;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 6px;
+    min-width: 100%;
+    width: max-content;
 }
 
 .hand-card {
     background: none;
     border: 0;
     cursor: pointer;
+    display: block;
     flex: 0 0 auto;
+    max-width: none;
     padding: 0;
     transition: transform 120ms ease;
+    width: auto;
 }
 
 .hand-card.is-selected {

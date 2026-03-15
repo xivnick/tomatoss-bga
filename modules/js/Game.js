@@ -254,7 +254,7 @@ export class Game {
     }
 
     renderTomatoRow() {
-        const scale = this.getScale() * 0.305;
+        const scale = this.getScale() * 0.365;
         const row = document.getElementById('tomato-row');
         const cards = this.gamedatas.boardTomatoes ?? [];
         row.innerHTML = `
@@ -311,7 +311,7 @@ export class Game {
     }
 
     renderHand() {
-        const scale = 0.285;
+        const scale = 0.24;
         const handArea = document.getElementById('hand-area');
         const cards = this.gamedatas.playerHand ?? [];
         handArea.innerHTML = `
