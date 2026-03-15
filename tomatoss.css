@@ -22,7 +22,7 @@
     display: grid;
     gap: calc(8px * var(--board-scale));
     justify-self: center;
-    width: min(100%, 860px);
+    width: min(100%, 720px);
 }
 
 .board-row {
@@ -158,7 +158,7 @@
 .tray-token {
     background-image: url('img/tomato_tokens.png');
     background-repeat: no-repeat;
-    background-size: calc(112px * var(--board-scale)) calc(56px * var(--board-scale));
+    background-size: 200% 100%;
 }
 
 .placed-token {
@@ -175,7 +175,7 @@
 
 .placed-token.splat,
 .tray-token.is-spent {
-    background-position: calc(-56px * var(--board-scale)) 0;
+    background-position: 100% 0;
 }
 
 .placed-token__index {
@@ -230,7 +230,7 @@
     outline: 3px solid #d9483b;
 }
 
-.player-zone {
+.tomatoss-player-zone {
     align-items: center;
     background: #fff4e8;
     border: 2px solid #d3a26a;
@@ -242,7 +242,7 @@
     position: relative;
 }
 
-.player-zone__name {
+.tomatoss-player-zone__name {
     color: #5a2a0d;
     font-size: 13px;
     font-weight: 700;
@@ -257,7 +257,7 @@
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
-.player-board {
+.tomatoss-player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
     flex: 0 0 auto;
@@ -266,7 +266,7 @@
     width: 144px;
 }
 
-.player-hand-stack {
+.tomatoss-player-hand-stack {
     align-items: center;
     display: grid;
     gap: 2px;
@@ -286,7 +286,7 @@
 .basket-token {
     background-image: url('img/basket_tokens.png');
     background-repeat: no-repeat;
-    background-size: 72px 29px;
+    background-size: 200% 100%;
     height: 29px;
     width: 36px;
 }
@@ -296,7 +296,7 @@
 }
 
 .basket-token.full {
-    background-position: -45px 0;
+    background-position: 100% 0;
 }
 
 .captured-stack {
@@ -320,7 +320,7 @@
 
 @media (max-width: 900px) {
     #festival-stage {
-        width: min(100%, 720px);
+        width: min(100%, 620px);
     }
 
     #player-zones {
@@ -328,7 +328,7 @@
         grid-template-columns: 1fr;
     }
 
-    .player-zone {
+    .tomatoss-player-zone {
         gap: 2px;
         padding: 10px;
     }
@@ -337,7 +337,7 @@
         width: 60px;
     }
 
-    .player-board {
+    .tomatoss-player-board {
         height: 128px;
         width: 128px;
     }

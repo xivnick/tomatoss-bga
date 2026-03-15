@@ -91,7 +91,7 @@ export class Game {
                 return;
             }
 
-            panel.querySelectorAll('.player-board-summary, .player-zone, [id^="player-zone-"], [id^="player-board-"], [id^="basket-anchor-"], [id^="captured-normal-"], [id^="captured-quick-"], [id^="player-hand-stack-"]').forEach(element => element.remove());
+            panel.querySelectorAll('.player-board-summary, .tomatoss-player-zone, [id^="player-zone-"], [id^="player-board-"], [id^="basket-anchor-"], [id^="captured-normal-"], [id^="captured-quick-"], [id^="player-hand-stack-"]').forEach(element => element.remove());
         });
 
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
@@ -113,18 +113,18 @@ export class Game {
 
         const playerZones = document.getElementById('player-zones');
         document.querySelectorAll('.player-board-summary').forEach(element => element.remove());
-        document.querySelectorAll('.player-zone').forEach(element => {
+        document.querySelectorAll('.tomatoss-player-zone').forEach(element => {
             if (element.closest('#player-zones') === null) {
                 element.remove();
             }
         });
         Object.values(this.gamedatas.players).forEach(player => {
             playerZones.insertAdjacentHTML('beforeend', `
-                <div class="player-zone" id="player-zone-${player.id}">
-                    <div class="player-zone__name">${player.name ?? `P${player.id}`}</div>
+                <div class="tomatoss-player-zone" id="player-zone-${player.id}">
+                    <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
                     <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
-                    <div class="player-board" id="player-board-${player.id}">
-                        <div class="player-hand-stack" id="player-hand-stack-${player.id}"></div>
+                    <div class="tomatoss-player-board" id="player-board-${player.id}">
+                        <div class="tomatoss-player-hand-stack" id="player-hand-stack-${player.id}"></div>
                         <div class="basket-anchor" id="basket-anchor-${player.id}"></div>
                     </div>
                     <div class="captured-stack quick" id="captured-quick-${player.id}"></div>
