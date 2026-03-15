@@ -22,14 +22,16 @@
     display: grid;
     gap: calc(8px * var(--board-scale));
     justify-self: center;
-    width: min(100%, 720px);
+    width: min(100%, 640px);
 }
 
 .board-row {
     align-items: end;
     display: flex;
     gap: calc(8px * var(--board-scale));
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 0 6px 4px;
     width: 100%;
 }
 
@@ -73,10 +75,10 @@
     border: 2px solid rgba(176, 38, 31, 0.55);
     border-radius: 999px;
     cursor: pointer;
-    height: calc(74px * var(--board-scale));
+    height: calc(94px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%);
-    width: calc(74px * var(--board-scale));
+    width: calc(94px * var(--board-scale));
 }
 
 .board-token-slot:hover {
@@ -337,7 +339,7 @@
 
 @media (max-width: 900px) {
     #festival-stage {
-        width: min(100%, 620px);
+        width: min(100%, 560px);
     }
 
     #player-zones {
