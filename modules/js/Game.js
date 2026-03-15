@@ -6,12 +6,12 @@
  */
 
 const TOKEN_SLOTS = [
-    { space: 3, left: 20.6, top: 22.2 },
-    { space: 4, left: 51.1, top: 22.2 },
-    { space: 5, left: 82.0, top: 22.2 },
-    { space: 0, left: 7.8, top: 63.0 },
-    { space: 1, left: 39.0, top: 63.0 },
-    { space: 2, left: 70.5, top: 63.0 },
+    { space: 3, left: 21.7, top: 26.8 },
+    { space: 4, left: 59.0, top: 26.1 },
+    { space: 5, left: 90.1, top: 26.4 },
+    { space: 0, left: 5.8, top: 60.1 },
+    { space: 1, left: 44.0, top: 61.8 },
+    { space: 2, left: 74.2, top: 60.6 },
 ];
 
 class PlayerTurn {
@@ -85,6 +85,15 @@ export class Game {
     setup(gamedatas) {
         this.gamedatas = gamedatas;
 
+        Object.values(this.gamedatas.players ?? {}).forEach(player => {
+            const panel = this.bga.playerPanels?.getElement?.(player.id);
+            if (!panel) {
+                return;
+            }
+
+            panel.querySelectorAll('.player-board-summary, .player-zone, [id^="player-zone-"], [id^="player-board-"], [id^="basket-anchor-"], [id^="captured-normal-"], [id^="captured-quick-"], [id^="player-hand-stack-"]').forEach(element => element.remove());
+        });
+
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
             <div id="tomatoss-layout">
                 <div id="tomatoss-state-note"></div>
@@ -103,6 +112,12 @@ export class Game {
         `);
 
         const playerZones = document.getElementById('player-zones');
+        document.querySelectorAll('.player-board-summary').forEach(element => element.remove());
+        document.querySelectorAll('.player-zone').forEach(element => {
+            if (element.closest('#player-zones') === null) {
+                element.remove();
+            }
+        });
         Object.values(this.gamedatas.players).forEach(player => {
             playerZones.insertAdjacentHTML('beforeend', `
                 <div class="player-zone" id="player-zone-${player.id}">
@@ -150,7 +165,7 @@ export class Game {
             return 1;
         }
 
-        return board.clientWidth / 1138;
+        return Math.min(1, board.clientWidth / 1138);
     }
 
     missionCardStyle(targetId, scale) {
@@ -222,7 +237,7 @@ export class Game {
     }
 
     renderMissionRow() {
-        const scale = this.getScale() * 0.44;
+        const scale = this.getScale() * 0.315;
         const row = document.getElementById('mission-row');
         const cards = this.gamedatas.boardTargets ?? [];
         row.innerHTML = `
@@ -239,7 +254,7 @@ export class Game {
     }
 
     renderTomatoRow() {
-        const scale = this.getScale() * 0.38;
+        const scale = this.getScale() * 0.305;
         const row = document.getElementById('tomato-row');
         const cards = this.gamedatas.boardTomatoes ?? [];
         row.innerHTML = `
@@ -296,7 +311,7 @@ export class Game {
     }
 
     renderHand() {
-        const scale = 0.34;
+        const scale = 0.285;
         const handArea = document.getElementById('hand-area');
         const cards = this.gamedatas.playerHand ?? [];
         handArea.innerHTML = `

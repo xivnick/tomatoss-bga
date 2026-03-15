@@ -20,15 +20,15 @@
 #festival-stage {
     --board-scale: 1;
     display: grid;
-    gap: calc(10px * var(--board-scale));
+    gap: calc(8px * var(--board-scale));
     justify-self: center;
-    width: min(100%, 1138px);
+    width: min(100%, 860px);
 }
 
 .board-row {
     align-items: end;
     display: flex;
-    gap: calc(12px * var(--board-scale));
+    gap: calc(8px * var(--board-scale));
     justify-content: center;
     width: 100%;
 }
@@ -64,10 +64,10 @@
     border: 2px solid rgba(176, 38, 31, 0.55);
     border-radius: 999px;
     cursor: pointer;
-    height: calc(96px * var(--board-scale));
+    height: calc(74px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%);
-    width: calc(96px * var(--board-scale));
+    width: calc(74px * var(--board-scale));
 }
 
 .board-token-slot:hover {
@@ -92,13 +92,13 @@
     background: rgba(255, 255, 255, 0.55);
     border: 2px dashed rgba(155, 88, 57, 0.7);
     border-radius: 12px;
-    height: calc(120px * var(--board-scale));
-    width: calc(84px * var(--board-scale));
+    height: calc(96px * var(--board-scale));
+    width: calc(68px * var(--board-scale));
 }
 
 .board-card-empty.small {
-    height: calc(78px * var(--board-scale));
-    width: calc(56px * var(--board-scale));
+    height: calc(64px * var(--board-scale));
+    width: calc(46px * var(--board-scale));
 }
 
 .tomato-deck-slot {
@@ -109,7 +109,7 @@
 }
 
 .discard-preview {
-    min-height: calc(82px * var(--board-scale));
+    min-height: calc(68px * var(--board-scale));
 }
 
 .deck-count,
@@ -139,8 +139,8 @@
     border: 2px solid #d3a26a;
     border-radius: 14px;
     display: flex;
-    gap: 14px;
-    padding: 8px 12px;
+    gap: 10px;
+    padding: 6px 10px;
 }
 
 .turn-token-tray__label {
@@ -210,7 +210,7 @@
 .hand-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 .hand-card {
@@ -254,15 +254,16 @@
 #player-zones {
     display: grid;
     gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
     flex: 0 0 auto;
-    height: 176px;
+    height: 144px;
     position: relative;
-    width: 176px;
+    width: 144px;
 }
 
 .player-hand-stack {
@@ -278,16 +279,16 @@
 .basket-anchor {
     left: 50%;
     position: absolute;
-    top: 76%;
+    top: 80%;
     transform: translate(-50%, -50%);
 }
 
 .basket-token {
     background-image: url('img/basket_tokens.png');
     background-repeat: no-repeat;
-    background-size: 90px 36px;
-    height: 36px;
-    width: 45px;
+    background-size: 72px 29px;
+    height: 29px;
+    width: 36px;
 }
 
 .basket-token.empty {
@@ -299,14 +300,14 @@
 }
 
 .captured-stack {
-    height: 176px;
+    height: 144px;
     position: relative;
-    width: 86px;
+    width: 72px;
 }
 
 .captured-mission {
     position: absolute;
-    top: 72px;
+    top: 56px;
 }
 
 .captured-mission.normal {
@@ -318,15 +319,30 @@
 }
 
 @media (max-width: 900px) {
+    #festival-stage {
+        width: min(100%, 720px);
+    }
+
     #player-zones {
         gap: 10px;
+        grid-template-columns: 1fr;
     }
 
     .player-zone {
         gap: 2px;
+        padding: 10px;
     }
 
     .captured-stack {
-        width: 66px;
+        width: 60px;
+    }
+
+    .player-board {
+        height: 128px;
+        width: 128px;
+    }
+
+    .basket-anchor {
+        top: 81%;
     }
 }
