@@ -25,6 +25,10 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
 
         return [
             'playerHand' => $this->game->getHandForPlayer($activePlayerId),
+            'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
+            'placementsRemaining' => $this->game->getPlacementsRemaining(),
+            'boardTomatoes' => $this->game->getBoardTomatoSlots(),
+            'boardTargets' => $this->game->getBoardTargetSlots(),
         ];
     }
 

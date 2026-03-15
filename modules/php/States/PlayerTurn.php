@@ -29,6 +29,7 @@ class PlayerTurn extends GameState
             'boardTomatoes' => $this->game->getBoardTomatoSlots(),
             'boardTargets' => $this->game->getBoardTargetSlots(),
             'playerHand' => $this->game->getHandForPlayer($activePlayerId),
+            'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
         ];
     }
 

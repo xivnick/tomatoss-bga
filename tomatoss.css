@@ -2,49 +2,12 @@
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
  * tomatoss implementation : © <Your name here> <Your email address here>
- *
- * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
- * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
  */
 
-/*
-    This is the CSS stylesheet of your game User Interface.
-    
-    Styles defined on this file will be applied to HTML elements you create (in Game.js).
-    
-    Usually, you are using CSS to:
-    
-    1°) define the overall layout of your game
-        (ex: place the board on the top left, place player's hand beside, place the deck on the right, ...).
-
-    2°) create your CSS-sprites:
-        All images of your games should be gathered into a small number of image files. Then, using
-        background-image and background-position CSS properties, you create HTML blocks that can 
-        display these images correctly (see example below).
-    
-    3°) ... anything else:
-        It is really easy to add and remove CSS classes dynamically from your Javascript with
-        dojo.addClass and dojo.removeClass. It is also easy to check if an element has a class
-        (dojo.hasClass) or to get all elements with a specific class (dojo.query). This is why,
-        very often, using CSS classes for the logic of your user interface allow you to do complex
-        thing easily.
-        
-        
-     Note: on the production platform, this file will be compressed and comments will be removed.
-           Consequently, don't hesitate to put as many comments as necessary.
-*/
-
-
-/* Note: you must not use any @import directive */
-
-
-/********* You can start writing your CSS below this line: **********/
-
 #tomatoss-layout {
     display: grid;
-    gap: 16px;
-    grid-template-columns: 1fr;
+    gap: 18px;
     margin: 16px 0;
 }
 
@@ -54,83 +17,77 @@
     min-height: 24px;
 }
 
-#tomato-slots,
-#target-slots,
-#hand-area {
-    background: #fff4e8;
-    border: 2px solid #d3a26a;
-    border-radius: 14px;
-    padding: 12px;
-}
-
-.slot-row {
-    display: flex;
-    gap: 12px;
-}
-
-.slot {
-    align-items: center;
-    background: #f8d27a;
-    border: 2px solid #b65a38;
-    border-radius: 12px;
-    color: #5a2a0d;
-    display: flex;
-    font-size: 18px;
-    font-weight: 700;
-    height: 72px;
-    justify-content: center;
-    width: 72px;
-}
-
-.slot:disabled {
-    cursor: default;
-    opacity: 0.45;
-}
-
-.tomato-slot {
-    cursor: pointer;
-}
-
-.target-grid {
+#tomatoss-main-board {
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-items: center;
 }
 
-.target-card {
-    background: #ffe7bf;
-    border: 2px solid #b65a38;
-    border-radius: 12px;
-    min-height: 72px;
-    padding: 10px;
+#festival-board {
+    background-image: url('img/festival_board.png');
+    background-size: cover;
+    border: 2px solid #50332b;
+    border-radius: 18px;
+    height: 323px;
+    position: relative;
+    width: 100%;
+    max-width: 1138px;
 }
 
-.target-card.is-empty {
+#festival-slot-layer,
+#festival-token-layer {
+    inset: 0;
+    position: absolute;
+}
+
+.festival-slot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+}
+
+.festival-slot.target {
+    width: 158px;
+}
+
+.festival-slot.tomato {
+    width: 108px;
+}
+
+.festival-slot__empty {
     align-items: center;
+    background: rgba(255, 255, 255, 0.55);
+    border: 2px dashed rgba(155, 88, 57, 0.7);
+    border-radius: 16px;
+    color: #6e3f1d;
     display: flex;
-    justify-content: center;
-    opacity: 0.45;
-}
-
-.target-desc {
-    color: #5a2a0d;
     font-weight: 700;
+    height: 110px;
+    justify-content: center;
 }
 
-.target-score {
-    color: #8a4a22;
-    font-size: 13px;
-    margin-top: 6px;
+.mission-card {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
 }
 
-.target-actions {
+.mission-card__art {
+    background-image: url('img/mission_cards.png');
+    background-repeat: no-repeat;
+    background-size: 1890px 2200px;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(53, 31, 20, 0.24);
+    height: 220px;
+    width: 157.5px;
+}
+
+.mission-card__actions {
     display: flex;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 6px;
 }
 
 .target-action {
-    background: #fff4e8;
+    background: rgba(255, 244, 232, 0.96);
     border: 1px solid #b65a38;
     border-radius: 8px;
     color: #5a2a0d;
@@ -140,32 +97,185 @@
     padding: 6px 8px;
 }
 
+.tomato-card,
+.hand-card {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+}
+
+.tomato-card__art {
+    background-image: url('img/tomato_cards.png');
+    background-repeat: no-repeat;
+    background-size: 2170px 440px;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(53, 31, 20, 0.2);
+    height: 110px;
+    width: 77.5px;
+}
+
+.hand-card {
+    border-radius: 14px;
+    transition: transform 120ms ease;
+}
+
+.hand-card.is-selected {
+    transform: translateY(-6px);
+}
+
+.hand-card__art {
+    background-image: url('img/tomato_cards.png');
+    background-repeat: no-repeat;
+    background-size: 2170px 440px;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(53, 31, 20, 0.2);
+    height: 132px;
+    width: 93px;
+}
+
+.hand-card.is-selected .hand-card__art {
+    border-color: #d9483b;
+    box-shadow: 0 8px 18px rgba(109, 32, 20, 0.32);
+}
+
+.placed-token,
+.tray-token,
+.basket-token {
+    background-repeat: no-repeat;
+}
+
+.placed-token {
+    background-image: url('img/tomato_tokens.png');
+    background-size: 300px 150px;
+    height: 50px;
+    position: absolute;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    width: 50px;
+}
+
+.placed-token.whole,
+.tray-token {
+    background-position: 0 0;
+}
+
+.placed-token.splat,
+.tray-token.is-spent {
+    background-position: -150px 0;
+}
+
+.placed-token__index {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid #8e3b20;
+    border-radius: 999px;
+    color: #6e2c14;
+    display: flex;
+    font-size: 11px;
+    font-weight: 700;
+    height: 18px;
+    justify-content: center;
+    position: absolute;
+    right: -4px;
+    top: -6px;
+    width: 18px;
+}
+
+#turn-token-tray {
+    align-items: center;
+    background: #fff4e8;
+    border: 2px solid #d3a26a;
+    border-radius: 14px;
+    display: flex;
+    gap: 14px;
+    padding: 10px 14px;
+}
+
+.turn-token-tray__label {
+    color: #5a2a0d;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.turn-token-tray__tokens {
+    display: flex;
+    gap: 8px;
+}
+
+.tray-token {
+    background-image: url('img/tomato_tokens.png');
+    background-size: 300px 150px;
+    height: 40px;
+    width: 40px;
+}
+
+#hand-area {
+    background: #fff4e8;
+    border: 2px solid #d3a26a;
+    border-radius: 14px;
+    padding: 12px;
+}
+
 .card-row {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
 }
 
-.hand-card {
+.player-board-summary {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.basket-status {
     align-items: center;
-    background: #f3b35a;
-    border: 2px solid #8e3b20;
-    border-radius: 10px;
-    color: #4f1d09;
     display: flex;
-    font-weight: 700;
-    height: 48px;
-    justify-content: center;
-    width: 40px;
+    gap: 8px;
 }
 
-.hand-card.is-selected {
-    background: #d9483b;
-    color: #fff4e8;
-    transform: translateY(-2px);
+.basket-token {
+    background-image: url('img/basket_tokens.png');
+    background-size: 300px 120px;
+    height: 40px;
+    width: 100px;
 }
 
-.hand-count {
+.basket-token.empty {
+    background-position: 0 0;
+}
+
+.basket-token.full {
+    background-position: -150px 0;
+}
+
+.captured-count {
     color: #5a2a0d;
-    font-size: 16px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    #festival-board {
+        height: 255px;
+    }
+
+    .festival-slot.target {
+        width: 128px;
+    }
+
+    .mission-card__art {
+        height: 176px;
+        width: 126px;
+    }
+
+    .festival-slot.tomato {
+        width: 88px;
+    }
+
+    .tomato-card__art {
+        height: 88px;
+        width: 62px;
+    }
 }
