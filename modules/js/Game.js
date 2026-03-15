@@ -186,27 +186,28 @@ export class Game {
     tomatoCardStyle(value, scale) {
         const w = 310 * scale;
         const h = 440 * scale;
+        const position = ((value - 1) / 6) * 100;
         return `
             width:${w}px;
             height:${h}px;
             background-image:url('${g_gamethemeurl}img/tomato_cards.png');
             background-repeat:no-repeat;
-            background-size:${2170 * scale}px ${440 * scale}px;
-            background-position:-${(value - 1) * w}px 0;
+            background-size:700% 100%;
+            background-position:${position}% 0;
         `;
     }
 
     cardBackStyle(kind, scale) {
         const w = 310 * scale;
         const h = 440 * scale;
-        const offset = kind === 'mission' ? w : 0;
+        const position = kind === 'mission' ? 100 : 0;
         return `
             width:${w}px;
             height:${h}px;
             background-image:url('${g_gamethemeurl}img/card_backs.png');
             background-repeat:no-repeat;
-            background-size:${620 * scale}px ${440 * scale}px;
-            background-position:-${offset}px 0;
+            background-size:200% 100%;
+            background-position:${position}% 0;
         `;
     }
 
