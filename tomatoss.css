@@ -227,19 +227,19 @@
     border: 2px solid #d3a26a;
     border-radius: 14px;
     display: flex;
-    gap: 10px;
-    padding: 7px 10px;
+    gap: 14px;
+    padding: 10px 14px;
 }
 
 .turn-token-tray__label {
     color: #5a2a0d;
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
 }
 
 .turn-token-tray__tokens {
     display: flex;
-    gap: 8px;
+    gap: 12px;
 }
 
 .placed-token,
@@ -273,19 +273,19 @@
     border-radius: 999px;
     color: #6e2c14;
     display: flex;
-    font-size: calc(11px * var(--board-scale));
+    font-size: calc(20px * var(--board-scale));
     font-weight: 700;
-    height: calc(18px * var(--board-scale));
+    height: calc(34px * var(--board-scale));
     justify-content: center;
     position: absolute;
-    right: calc(-4px * var(--board-scale));
-    top: calc(-6px * var(--board-scale));
-    width: calc(18px * var(--board-scale));
+    right: calc(-10px * var(--board-scale));
+    top: calc(-10px * var(--board-scale));
+    width: calc(34px * var(--board-scale));
 }
 
 .tray-token {
-    height: calc(42px * var(--board-scale));
-    width: calc(42px * var(--board-scale));
+    height: calc(58px * var(--board-scale));
+    width: calc(58px * var(--board-scale));
 }
 
 #hand-area {
