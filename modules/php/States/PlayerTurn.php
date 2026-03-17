@@ -22,8 +22,6 @@ class PlayerTurn extends GameState
 
     public function getArgs(): array
     {
-        $activePlayerId = (int) $this->game->getActivePlayerId();
-
         return [
             'placementsRemaining' => $this->game->getPlacementsRemaining(),
             'boardTomatoes' => $this->game->getBoardTomatoSlots(),
@@ -31,7 +29,6 @@ class PlayerTurn extends GameState
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
             'targetDeckCount' => $this->game->getTargetDeckCount(),
             'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
-            'playerHand' => $this->game->getHandForPlayer($activePlayerId),
             'handCountsByPlayer' => $this->game->getHandCountsByPlayer(),
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
             'capturedTargetsByPlayer' => $this->game->getCapturedTargetsByPlayer(),

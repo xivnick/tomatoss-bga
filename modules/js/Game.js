@@ -119,8 +119,9 @@ export class Game {
             }
         });
         Object.values(this.gamedatas.players).forEach(player => {
+            const isSelf = Number(player.id) === Number(this.bga.player_id);
             playerZones.insertAdjacentHTML('beforeend', `
-                <div class="tomatoss-player-zone" id="player-zone-${player.id}">
+                <div class="tomatoss-player-zone ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
                     <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
                     <div class="tomatoss-player-board" id="player-board-${player.id}">
@@ -363,13 +364,13 @@ export class Game {
 
             if (normal) {
                 normal.innerHTML = captured.normal.map((card, index) => `
-                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), 0.18)} left:${index * 18}px;"></div>
+                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), 0.27)} left:${index * 28}px;"></div>
                 `).join('');
             }
 
             if (quick) {
                 quick.innerHTML = captured.quick.map((card, index) => `
-                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), 0.18)} right:${index * 18}px;"></div>
+                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), 0.27)} right:${index * 28}px;"></div>
                 `).join('');
             }
         });
