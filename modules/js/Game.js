@@ -6,12 +6,12 @@
  */
 
 const TOKEN_SLOTS = [
-    { space: 3, left: 22.6, top: 27.8 },
-    { space: 4, left: 59.8, top: 27.0 },
-    { space: 5, left: 89.2, top: 27.3 },
-    { space: 0, left: 7.2, top: 60.4 },
-    { space: 1, left: 44.8, top: 62.2 },
-    { space: 2, left: 74.8, top: 60.9 },
+    { space: 3, left: 25.58, top: 34.37 },
+    { space: 4, left: 58.20, top: 34.37 },
+    { space: 5, left: 90.86, top: 34.37 },
+    { space: 0, left: 9.14, top: 65.79 },
+    { space: 1, left: 41.85, top: 65.79 },
+    { space: 2, left: 74.51, top: 65.79 },
 ];
 
 class PlayerTurn {
