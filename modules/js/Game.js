@@ -6,12 +6,12 @@
  */
 
 const TOKEN_SLOTS = [
-    { space: 3, left: 21.7, top: 26.8 },
-    { space: 4, left: 59.0, top: 26.1 },
-    { space: 5, left: 90.1, top: 26.4 },
-    { space: 0, left: 5.8, top: 60.1 },
-    { space: 1, left: 44.0, top: 61.8 },
-    { space: 2, left: 74.2, top: 60.6 },
+    { space: 3, left: 22.6, top: 27.8 },
+    { space: 4, left: 59.8, top: 27.0 },
+    { space: 5, left: 89.2, top: 27.3 },
+    { space: 0, left: 7.2, top: 60.4 },
+    { space: 1, left: 44.8, top: 62.2 },
+    { space: 2, left: 74.8, top: 60.9 },
 ];
 
 class PlayerTurn {
@@ -120,7 +120,7 @@ export class Game {
                         <div id="deck-strip"></div>
                     </div>
                 </div>
-                <div id="hand-area"></div>
+                <div id="hand-area" class="whiteblock"></div>
                 <div id="player-zones"></div>
             </div>
         `);
@@ -135,7 +135,7 @@ export class Game {
         Object.values(this.gamedatas.players).forEach(player => {
             const isSelf = Number(player.id) === Number(globalThis.player_id ?? this.bga.player_id);
             playerZones.insertAdjacentHTML('beforeend', `
-                <div class="tomatoss-player-zone ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
+                <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
                     <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
                     <div class="tomatoss-player-board" id="player-board-${player.id}">
