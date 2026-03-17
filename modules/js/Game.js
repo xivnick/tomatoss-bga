@@ -85,7 +85,7 @@ export class Game {
     setup(gamedatas) {
         this.gamedatas = gamedatas;
         if (this.bga.gameui && 'interface_min_width' in this.bga.gameui) {
-            this.bga.gameui.interface_min_width = 640;
+            this.bga.gameui.interface_min_width = 600;
         }
 
         Object.values(this.gamedatas.players ?? {}).forEach(player => {
@@ -174,12 +174,12 @@ export class Game {
 
     getBoardWidth() {
         const board = document.getElementById('festival-board');
-        return board?.clientWidth ?? 560;
+        return board?.clientWidth ?? 520;
     }
 
     getBoardCardScale(kind) {
         const boardWidth = this.getBoardWidth();
-        const targetWidth = boardWidth / 4.4;
+        const targetWidth = boardWidth / 5;
         const sourceWidth = kind === 'mission' ? 315 : 310;
         return targetWidth / sourceWidth;
     }
@@ -328,7 +328,7 @@ export class Game {
     }
 
     renderHand() {
-        const scale = 0.2;
+        const scale = 0.17;
         const handArea = document.getElementById('hand-area');
         const cards = this.gamedatas.playerHand ?? [];
         handArea.innerHTML = `
