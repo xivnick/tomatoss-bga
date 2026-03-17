@@ -347,7 +347,7 @@
 #player-zones {
     display: grid;
     gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 
 .tomatoss-player-zone__top {
@@ -378,7 +378,7 @@
     align-items: end;
     display: flex;
     justify-content: center;
-    min-height: 180px;
+    min-height: 210px;
     position: relative;
 }
 
@@ -407,9 +407,9 @@
 
 .captured-stack {
     bottom: -10px;
-    height: 106px;
+    height: 148px;
     position: relative;
-    width: 124px;
+    width: 168px;
     z-index: 1;
 }
 
@@ -433,7 +433,7 @@
     left: 50%;
     position: absolute;
     transform: translateX(-50%);
-    width: 240px;
+    width: 340px;
     z-index: 1;
 }
 
@@ -453,12 +453,17 @@
     }
 
     .captured-stack {
-        width: 100px;
+        height: 124px;
+        width: 132px;
     }
 
     .tomatoss-player-board {
         height: 124px;
         width: 124px;
+    }
+
+    .captured-band {
+        width: 268px;
     }
 
     .basket-anchor {
