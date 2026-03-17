@@ -318,6 +318,7 @@
 }
 
 .tomatoss-player-zone {
+    --player-zone-scale: 0.336;
     align-items: stretch;
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(0, 0, 0, 0.12);
@@ -367,18 +368,17 @@
 .tomatoss-player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
-    flex: 0 0 auto;
-    height: 148px;
-    position: relative;
-    width: 148px;
+    bottom: 0;
+    height: calc(440px * var(--player-zone-scale));
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: calc(440px * var(--player-zone-scale));
     z-index: 3;
 }
 
 .tomatoss-player-zone__bottom {
-    align-items: end;
-    display: flex;
-    justify-content: center;
-    min-height: 210px;
+    min-height: calc(520px * var(--player-zone-scale));
     position: relative;
 }
 
@@ -406,16 +406,16 @@
 }
 
 .captured-stack {
-    bottom: -10px;
-    height: 148px;
-    position: relative;
-    width: 168px;
+    bottom: 0;
+    height: calc(440px * var(--player-zone-scale));
+    position: absolute;
+    width: calc(220px * var(--player-zone-scale));
     z-index: 1;
 }
 
 .captured-mission {
+    bottom: 0;
     position: absolute;
-    top: 0;
 }
 
 .captured-mission.normal {
@@ -427,14 +427,21 @@
 }
 
 .captured-band {
-    bottom: -8px;
-    display: flex;
-    justify-content: space-between;
+    bottom: 0;
     left: 50%;
+    min-height: calc(440px * var(--player-zone-scale));
     position: absolute;
     transform: translateX(-50%);
-    width: 340px;
+    width: calc(780px * var(--player-zone-scale));
     z-index: 1;
+}
+
+.captured-stack.normal {
+    left: 0;
+}
+
+.captured-stack.quick {
+    right: 0;
 }
 
 @media (max-width: 900px) {

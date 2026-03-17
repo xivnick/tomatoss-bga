@@ -372,6 +372,7 @@ export class Game {
         const handCounts = this.gamedatas.handCountsByPlayer ?? {};
 
         Object.values(this.gamedatas.players ?? {}).forEach(player => {
+            const zone = document.getElementById(`player-zone-${player.id}`);
             const basketAnchor = document.getElementById(`basket-anchor-${player.id}`);
             const normal = document.getElementById(`captured-normal-${player.id}`);
             const quick = document.getElementById(`captured-quick-${player.id}`);
@@ -397,16 +398,17 @@ export class Game {
 
             const playerBoard = document.getElementById(`player-board-${player.id}`);
             const playerAreaScale = (playerBoard?.clientWidth ?? 148) / 440;
+            zone?.style.setProperty('--player-zone-scale', String(playerAreaScale));
 
             if (normal) {
                 normal.innerHTML = captured.normal.map((card, index) => `
-                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} right:${index * 28}px;"></div>
+                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} right:${index * 32 * playerAreaScale}px; z-index:${captured.normal.length - index};"></div>
                 `).join('');
             }
 
             if (quick) {
                 quick.innerHTML = captured.quick.map((card, index) => `
-                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} left:${index * 28}px;"></div>
+                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} left:${index * 32 * playerAreaScale}px; z-index:${captured.quick.length - index};"></div>
                 `).join('');
             }
         });
