@@ -371,6 +371,7 @@
     height: 148px;
     position: relative;
     width: 148px;
+    z-index: 3;
 }
 
 .tomatoss-player-zone__bottom {
@@ -409,6 +410,7 @@
     height: 106px;
     position: relative;
     width: 124px;
+    z-index: 1;
 }
 
 .captured-mission {
@@ -432,6 +434,7 @@
     position: absolute;
     transform: translateX(-50%);
     width: 240px;
+    z-index: 1;
 }
 
 @media (max-width: 900px) {

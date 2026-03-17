@@ -384,25 +384,29 @@ export class Game {
 
             if (handStack) {
                 const count = handCounts[player.id] ?? 0;
+                const handBackScale = 0.12;
                 handStack.innerHTML = `
                     <div class="player-hand-fan">
                         ${Array.from({ length: count }, (_, index) => `
-                            <div class="player-hand-back" style="${this.cardBackStyle('tomato', 0.16)} margin-left:${index === 0 ? 0 : -22}px;"></div>
+                            <div class="player-hand-back" style="${this.cardBackStyle('tomato', handBackScale)} margin-left:${index === 0 ? 0 : -16}px;"></div>
                         `).join('')}
                     </div>
                     <div class="player-hand-count">${count}</div>
                 `;
             }
 
+            const playerBoard = document.getElementById(`player-board-${player.id}`);
+            const playerAreaScale = (playerBoard?.clientWidth ?? 148) / 440;
+
             if (normal) {
                 normal.innerHTML = captured.normal.map((card, index) => `
-                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), 0.24)} left:${index * 20}px;"></div>
+                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} left:${index * 18}px;"></div>
                 `).join('');
             }
 
             if (quick) {
                 quick.innerHTML = captured.quick.map((card, index) => `
-                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), 0.24)} right:${index * 20}px;"></div>
+                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} right:${index * 18}px;"></div>
                 `).join('');
             }
         });
