@@ -137,12 +137,16 @@ export class Game {
             playerZones.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
-                    <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
-                    <div class="tomatoss-player-board" id="player-board-${player.id}">
-                        <div class="tomatoss-player-hand-stack" id="player-hand-stack-${player.id}"></div>
-                        <div class="basket-anchor" id="basket-anchor-${player.id}"></div>
+                    <div class="tomatoss-player-zone__top" id="player-hand-stack-${player.id}"></div>
+                    <div class="tomatoss-player-zone__bottom">
+                        <div class="tomatoss-player-board" id="player-board-${player.id}">
+                            <div class="basket-anchor" id="basket-anchor-${player.id}"></div>
+                        </div>
+                        <div class="captured-band" id="captured-band-${player.id}">
+                            <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
+                            <div class="captured-stack quick" id="captured-quick-${player.id}"></div>
+                        </div>
                     </div>
-                    <div class="captured-stack quick" id="captured-quick-${player.id}"></div>
                 </div>
             `);
         });
@@ -316,7 +320,8 @@ export class Game {
             <button class="board-token-slot" data-space="${slot.space}" style="left:${slot.left}%; top:${slot.top}%"></button>
         `).join('');
 
-        tokenLayer.innerHTML = actions.map((action, index) => {
+        const slotCounts = new Map();
+        tokenLayer.innerHTML = actions.map(action => {
             const slot = TOKEN_SLOTS.find(item => item.space === Number(action.space));
             if (!slot) {
                 return '';
@@ -324,9 +329,10 @@ export class Game {
 
             const kind = action.actionKind ?? action.action_kind;
             const tokenType = kind === 'collect' ? 'whole' : 'splat';
+            const stackIndex = slotCounts.get(slot.space) ?? 0;
+            slotCounts.set(slot.space, stackIndex + 1);
             return `
-                <div class="placed-token ${tokenType}" style="left:${slot.left}%; top:${slot.top}%;">
-                    <div class="placed-token__index">${index + 1}</div>
+                <div class="placed-token ${tokenType}" style="left:${slot.left}%; top:calc(${slot.top}% - ${stackIndex * 16}px);">
                 </div>
             `;
         }).join('');
@@ -377,21 +383,26 @@ export class Game {
             }
 
             if (handStack) {
+                const count = handCounts[player.id] ?? 0;
                 handStack.innerHTML = `
-                    <div class="player-hand-back" style="${this.cardBackStyle('tomato', 0.18)}"></div>
-                    <div class="player-hand-count">${handCounts[player.id] ?? 0}</div>
+                    <div class="player-hand-fan">
+                        ${Array.from({ length: count }, (_, index) => `
+                            <div class="player-hand-back" style="${this.cardBackStyle('tomato', 0.16)} margin-left:${index === 0 ? 0 : -22}px;"></div>
+                        `).join('')}
+                    </div>
+                    <div class="player-hand-count">${count}</div>
                 `;
             }
 
             if (normal) {
                 normal.innerHTML = captured.normal.map((card, index) => `
-                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), 0.27)} left:${index * 28}px;"></div>
+                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), 0.24)} left:${index * 20}px;"></div>
                 `).join('');
             }
 
             if (quick) {
                 quick.innerHTML = captured.quick.map((card, index) => `
-                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), 0.27)} right:${index * 28}px;"></div>
+                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), 0.24)} right:${index * 20}px;"></div>
                 `).join('');
             }
         });

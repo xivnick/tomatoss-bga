@@ -87,7 +87,7 @@
 }
 
 #deck-strip {
-    bottom: 0;
+    bottom: -54px;
     left: 50%;
     position: absolute;
     transform: translateX(-50%);
@@ -269,20 +269,7 @@
 }
 
 .placed-token__index {
-    align-items: center;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid #8e3b20;
-    border-radius: 999px;
-    color: #6e2c14;
-    display: flex;
-    font-size: calc(20px * var(--board-scale));
-    font-weight: 700;
-    height: calc(34px * var(--board-scale));
-    justify-content: center;
-    position: absolute;
-    right: calc(-10px * var(--board-scale));
-    top: calc(-10px * var(--board-scale));
-    width: calc(34px * var(--board-scale));
+    display: none;
 }
 
 .tray-token {
@@ -331,14 +318,14 @@
 }
 
 .tomatoss-player-zone {
-    align-items: center;
+    align-items: stretch;
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 24px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-    display: flex;
-    gap: 12px;
-    justify-content: center;
+    display: grid;
+    gap: 10px;
+    justify-content: stretch;
     padding: 18px 18px 16px;
     position: relative;
 }
@@ -363,6 +350,20 @@
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.tomatoss-player-zone__top {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 18px;
+    min-height: 48px;
+}
+
+.player-hand-fan {
+    align-items: center;
+    display: flex;
+}
+
 .tomatoss-player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
@@ -372,14 +373,12 @@
     width: 148px;
 }
 
-.tomatoss-player-hand-stack {
-    align-items: center;
-    display: grid;
-    gap: 4px;
-    justify-items: center;
-    position: absolute;
-    right: 10px;
-    top: 10px;
+.tomatoss-player-zone__bottom {
+    align-items: end;
+    display: flex;
+    justify-content: center;
+    min-height: 180px;
+    position: relative;
 }
 
 .basket-anchor {
@@ -406,22 +405,33 @@
 }
 
 .captured-stack {
-    height: 148px;
+    bottom: -10px;
+    height: 106px;
     position: relative;
-    width: 74px;
+    width: 124px;
 }
 
 .captured-mission {
     position: absolute;
-    top: 20px;
+    top: 0;
 }
 
 .captured-mission.normal {
-    transform: translateX(-68%);
+    transform: translateX(0);
 }
 
 .captured-mission.quick {
-    transform: translateX(68%);
+    transform: translateX(0);
+}
+
+.captured-band {
+    bottom: -8px;
+    display: flex;
+    justify-content: space-between;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 240px;
 }
 
 @media (max-width: 900px) {
@@ -435,12 +445,12 @@
     }
 
     .tomatoss-player-zone {
-        gap: 2px;
+        gap: 6px;
         padding: 10px;
     }
 
     .captured-stack {
-        width: 56px;
+        width: 100px;
     }
 
     .tomatoss-player-board {
