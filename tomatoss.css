@@ -63,26 +63,26 @@
 
 #discard-slot {
     left: 81%;
-    top: 31%;
+    top: 24%;
 }
 
 #tomato-slot-0 {
-    left: 0%;
+    left: 3%;
     top: 62%;
 }
 
 #tomato-slot-1 {
-    left: 19%;
+    left: 22%;
     top: 62%;
 }
 
 #tomato-slot-2 {
-    left: 39%;
+    left: 41%;
     top: 62%;
 }
 
 #tomato-deck-slot {
-    left: 59%;
+    left: 61%;
     top: 62%;
 }
 
@@ -137,10 +137,10 @@
     border: 2px solid rgba(176, 38, 31, 0.55);
     border-radius: 999px;
     cursor: pointer;
-    height: calc(78px * var(--board-scale));
+    height: calc(94px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%);
-    width: calc(78px * var(--board-scale));
+    width: calc(94px * var(--board-scale));
 }
 
 .board-token-slot:hover {
@@ -202,6 +202,19 @@
     padding: 0 calc(8px * var(--board-scale));
 }
 
+.stage-deck .deck-count,
+#discard-slot .deck-count {
+    font-size: 16px;
+    height: 38px;
+    left: 50%;
+    min-width: 38px;
+    padding: 0 10px;
+    position: absolute;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+}
+
 #deck-strip {
     display: flex;
     justify-content: center;
@@ -214,13 +227,13 @@
     border: 2px solid #d3a26a;
     border-radius: 14px;
     display: flex;
-    gap: 6px;
-    padding: 4px 7px;
+    gap: 10px;
+    padding: 7px 10px;
 }
 
 .turn-token-tray__label {
     color: #5a2a0d;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -271,8 +284,8 @@
 }
 
 .tray-token {
-    height: calc(30px * var(--board-scale));
-    width: calc(30px * var(--board-scale));
+    height: calc(42px * var(--board-scale));
+    width: calc(42px * var(--board-scale));
 }
 
 #hand-area {
