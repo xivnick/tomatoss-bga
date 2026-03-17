@@ -119,7 +119,7 @@ export class Game {
             }
         });
         Object.values(this.gamedatas.players).forEach(player => {
-            const isSelf = Number(player.id) === Number(this.bga.player_id);
+            const isSelf = Number(player.id) === Number(globalThis.player_id ?? this.bga.player_id);
             playerZones.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
@@ -536,32 +536,26 @@ export class Game {
     }
 
     async notif_turnAction(args) {
-        const isLocalPlayer = Number(args.player_id) === Number(this.bga.player_id);
-        const actualSpace = args.collected ? Number(args.slot_no) - 1 : Number(args.slot_no) + 2;
-        const actionKind = args.collected ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss');
+        const isCollect = Number(args.slot_no) <= 3 && Object.prototype.hasOwnProperty.call(args, 'refill');
+        const actualSpace = isCollect ? Number(args.slot_no) - 1 : Number(args.slot_no) + 2;
+        const actionKind = isCollect ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss');
         this.appendTurnAction(actualSpace, actionKind);
 
-        if (args.collected) {
+        if (isCollect) {
             const slotIndex = Number(args.slot_no) - 1;
-            if (isLocalPlayer) {
-                this.gamedatas.playerHand = [...(this.gamedatas.playerHand ?? []), args.collected];
-            }
             this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
             this.gamedatas.boardTomatoes[slotIndex] = args.refill;
             this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
             this.gamedatas.handCountsByPlayer = {
                 ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1,
+                [args.player_id]: args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1),
             };
             this.renderState(this.gamedatas);
             return;
         }
 
-        if (Array.isArray(args.remainingHand)) {
+        {
             const slotIndex = Number(args.slot_no) - 1;
-            if (isLocalPlayer) {
-                this.gamedatas.playerHand = args.remainingHand;
-            }
             this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
             if (args.newTarget !== undefined) {
                 this.gamedatas.boardTargets[slotIndex] = args.newTarget;
@@ -572,48 +566,45 @@ export class Game {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
             this.gamedatas.handCountsByPlayer = {
                 ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: args.remainingHand.length,
+                [args.player_id]: args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
             };
-            if (isLocalPlayer) {
-                this.clearSelection();
-            }
             this.renderState(this.gamedatas);
         }
     }
 
     async notif_resolveBonus(args) {
-        const isLocalPlayer = Number(args.player_id) === Number(this.bga.player_id);
         const player = this.gamedatas.players?.[args.player_id];
         if (player) {
             player.basketFull = args.basketFull;
         }
 
-        if (args.bonusCard && isLocalPlayer) {
-            this.gamedatas.playerHand = [...(this.gamedatas.playerHand ?? []), args.bonusCard];
-            this.gamedatas.handCountsByPlayer = {
-                ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1,
-            };
-        }
+        this.gamedatas.handCountsByPlayer = {
+            ...(this.gamedatas.handCountsByPlayer ?? {}),
+            [args.player_id]: args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
+        };
 
         this.renderState(this.gamedatas);
     }
 
     async notif_discardCard(args) {
-        const isLocalPlayer = Number(args.player_id) === Number(this.bga.player_id);
-        if (Array.isArray(args.remainingHand)) {
-            if (isLocalPlayer) {
-                this.gamedatas.playerHand = args.remainingHand;
-            }
-            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        this.gamedatas.handCountsByPlayer = {
+            ...(this.gamedatas.handCountsByPlayer ?? {}),
+            [args.player_id]: args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
+        };
+        this.renderState(this.gamedatas);
+    }
+
+    async notif_privateHandUpdate(args) {
+        if (Array.isArray(args.playerHand)) {
+            this.gamedatas.playerHand = args.playerHand;
             this.gamedatas.handCountsByPlayer = {
                 ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: args.remainingHand.length,
+                [args.player_id]: args.playerHand.length,
             };
-            if (isLocalPlayer) {
-                this.clearSelection();
-            }
-            this.renderState(this.gamedatas);
         }
+
+        this.clearSelection();
+        this.renderState(this.gamedatas);
     }
 }

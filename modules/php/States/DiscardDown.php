@@ -46,8 +46,13 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'cardValue' => $cardValue,
-            'remainingHand' => $result['remainingHand'],
             'latestDiscardTomato' => $result['latestDiscardTomato'],
+            'handCount' => count($result['remainingHand']),
+        ]);
+        $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
+            'player_id' => $activePlayerId,
+            'mode' => 'discard',
+            'playerHand' => $result['remainingHand'],
         ]);
 
         return $this->game->shouldEnterDiscardDown($activePlayerId) ? DiscardDown::class : NextPlayer::class;

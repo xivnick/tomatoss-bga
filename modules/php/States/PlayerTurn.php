@@ -46,9 +46,15 @@ class PlayerTurn extends GameState
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'slot_no' => $slot + 1,
-            'collected' => $result['collected'],
             'refill' => $result['refill'],
             'tomatoDeckCount' => $result['tomatoDeckCount'],
+            'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
+        ]);
+        $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
+            'player_id' => $activePlayerId,
+            'mode' => 'collect',
+            'collected' => $result['collected'],
+            'playerHand' => $this->game->getHandForPlayer($activePlayerId),
         ]);
 
         return $this->game->shouldResolveBonus() ? ResolveBonus::class : PlayerTurn::class;
@@ -107,10 +113,19 @@ class PlayerTurn extends GameState
                 'revealed' => $result['revealed'],
                 'scoreGained' => $result['scoreGained'],
                 'newTarget' => $result['newTarget'],
-                'remainingHand' => $result['remainingHand'],
                 'publicDiscardCount' => $result['publicDiscardCount'],
+                'latestDiscardTomato' => $result['latestDiscardTomato'],
+                'targetDeckCount' => $result['targetDeckCount'],
+                'tomatoDeckCount' => $result['tomatoDeckCount'],
+                'capturedTargetsByPlayer' => $result['capturedTargetsByPlayer'],
+                'handCount' => count($result['remainingHand']),
             ]
         );
+        $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
+            'player_id' => $activePlayerId,
+            'mode' => 'toss',
+            'playerHand' => $result['remainingHand'],
+        ]);
 
         return $this->game->shouldResolveBonus() ? ResolveBonus::class : PlayerTurn::class;
     }

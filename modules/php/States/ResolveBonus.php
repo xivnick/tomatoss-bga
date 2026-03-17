@@ -34,9 +34,17 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'pattern' => $result['pattern'],
-            'bonusCard' => $result['bonusCard'],
             'basketFull' => $result['basketFull'],
+            'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
         ]);
+        if ($result['bonusCard'] !== null) {
+            $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
+                'player_id' => $activePlayerId,
+                'mode' => 'bonus',
+                'bonusCard' => $result['bonusCard'],
+                'playerHand' => $this->game->getHandForPlayer($activePlayerId),
+            ]);
+        }
 
         return $this->game->shouldEnterDiscardDown($activePlayerId) ? DiscardDown::class : NextPlayer::class;
     }
