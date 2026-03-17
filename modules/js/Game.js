@@ -402,13 +402,13 @@ export class Game {
 
             if (normal) {
                 normal.innerHTML = captured.normal.map((card, index) => `
-                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} right:${index * 32 * playerAreaScale}px; z-index:${captured.normal.length - index};"></div>
+                    <div class="captured-mission normal" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} right:${index * 96 * playerAreaScale}px; z-index:${captured.normal.length - index};"></div>
                 `).join('');
             }
 
             if (quick) {
                 quick.innerHTML = captured.quick.map((card, index) => `
-                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} left:${index * 32 * playerAreaScale}px; z-index:${captured.quick.length - index};"></div>
+                    <div class="captured-mission quick" style="${this.missionCardStyle(Number(card.targetId), playerAreaScale)} left:${index * 96 * playerAreaScale}px; z-index:${captured.quick.length - index};"></div>
                 `).join('');
             }
         });
