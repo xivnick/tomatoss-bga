@@ -26,16 +26,16 @@
     display: grid;
     gap: 12px;
     justify-self: center;
-    width: min(100%, 1180px);
+    width: min(100%, 860px);
 }
 
 .board-row {
     align-items: end;
     display: flex;
-    gap: 14px;
+    gap: 10px;
     justify-content: center;
     overflow-x: auto;
-    padding: 0 10px 6px;
+    padding: 0 6px 6px;
     width: 100%;
 }
 
@@ -80,10 +80,10 @@
     border: 2px solid rgba(176, 38, 31, 0.55);
     border-radius: 999px;
     cursor: pointer;
-    height: calc(112px * var(--board-scale));
+    height: calc(90px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%);
-    width: calc(112px * var(--board-scale));
+    width: calc(90px * var(--board-scale));
 }
 
 .board-token-slot:hover {
@@ -223,7 +223,7 @@
     border-radius: 18px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
     overflow-x: auto;
-    padding: 14px;
+    padding: 12px;
 }
 
 .hand-row {
@@ -284,16 +284,16 @@
 #player-zones {
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .tomatoss-player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
     flex: 0 0 auto;
-    height: 220px;
+    height: 176px;
     position: relative;
-    width: 220px;
+    width: 176px;
 }
 
 .tomatoss-player-hand-stack {
@@ -302,14 +302,14 @@
     gap: 4px;
     justify-items: center;
     position: absolute;
-    right: 18px;
-    top: 16px;
+    right: 12px;
+    top: 12px;
 }
 
 .basket-anchor {
     left: 50%;
     position: absolute;
-    top: 78%;
+    top: 79%;
     transform: translate(-50%, -50%);
 }
 
@@ -317,8 +317,8 @@
     background-image: url('img/basket_tokens.png');
     background-repeat: no-repeat;
     background-size: 200% 100%;
-    height: 46px;
-    width: 58px;
+    height: 36px;
+    width: 46px;
 }
 
 .basket-token.empty {
@@ -330,14 +330,14 @@
 }
 
 .captured-stack {
-    height: 220px;
+    height: 176px;
     position: relative;
-    width: 120px;
+    width: 92px;
 }
 
 .captured-mission {
     position: absolute;
-    top: 24px;
+    top: 22px;
 }
 
 .captured-mission.normal {
@@ -350,7 +350,7 @@
 
 @media (max-width: 900px) {
     #festival-stage {
-        width: min(100%, 760px);
+        width: min(100%, 640px);
     }
 
     #player-zones {
@@ -364,12 +364,12 @@
     }
 
     .captured-stack {
-        width: 72px;
+        width: 68px;
     }
 
     .tomatoss-player-board {
-        height: 168px;
-        width: 168px;
+        height: 144px;
+        width: 144px;
     }
 
     .basket-anchor {
