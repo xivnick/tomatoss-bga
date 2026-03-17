@@ -101,13 +101,24 @@ export class Game {
             <div id="tomatoss-layout">
                 <div id="tomatoss-state-note"></div>
                 <div id="festival-stage">
-                    <div id="mission-row" class="card-row board-row"></div>
-                    <div id="festival-board">
-                        <div id="festival-slot-layer"></div>
-                        <div id="festival-token-layer"></div>
+                    <div id="festival-canvas">
+                        <div id="mission-deck-slot" class="stage-slot"></div>
+                        <div id="mission-slot-0" class="stage-slot"></div>
+                        <div id="mission-slot-1" class="stage-slot"></div>
+                        <div id="mission-slot-2" class="stage-slot"></div>
+                        <div id="festival-board-wrap">
+                            <div id="festival-board">
+                                <div id="festival-slot-layer"></div>
+                                <div id="festival-token-layer"></div>
+                            </div>
+                        </div>
+                        <div id="discard-slot" class="stage-slot"></div>
+                        <div id="tomato-slot-0" class="stage-slot"></div>
+                        <div id="tomato-slot-1" class="stage-slot"></div>
+                        <div id="tomato-slot-2" class="stage-slot"></div>
+                        <div id="tomato-deck-slot" class="stage-slot"></div>
+                        <div id="deck-strip"></div>
                     </div>
-                    <div id="tomato-row" class="card-row board-row"></div>
-                    <div id="deck-strip"></div>
                 </div>
                 <div id="hand-area"></div>
                 <div id="player-zones"></div>
@@ -172,14 +183,14 @@ export class Game {
         return Math.min(1, board.clientWidth / 1138);
     }
 
-    getBoardWidth() {
-        const board = document.getElementById('festival-board');
-        return board?.clientWidth ?? 520;
+    getStageWidth() {
+        const stage = document.getElementById('festival-stage');
+        return stage?.clientWidth ?? 520;
     }
 
     getBoardCardScale(kind) {
-        const boardWidth = this.getBoardWidth();
-        const targetWidth = boardWidth / 5;
+        const stageWidth = this.getStageWidth();
+        const targetWidth = stageWidth * (kind === 'mission' ? 0.18 : 0.175);
         const sourceWidth = kind === 'mission' ? 315 : 310;
         return targetWidth / sourceWidth;
     }
@@ -255,35 +266,41 @@ export class Game {
 
     renderMissionRow() {
         const scale = this.getBoardCardScale('mission');
-        const row = document.getElementById('mission-row');
         const cards = this.gamedatas.boardTargets ?? [];
-        row.innerHTML = `
-            <div class="deck-slot">
+        document.getElementById('mission-deck-slot').innerHTML = `
+            <div class="deck-slot stage-deck">
                 <div class="card-back mission" style="${this.cardBackStyle('mission', scale)}"></div>
                 <div class="deck-count">${this.gamedatas.targetDeckCount ?? 0}</div>
             </div>
-            ${cards.map(card => `
-                <div class="board-card-slot target">
-                    ${card ? `<div class="board-mission-card" style="${this.missionCardStyle(Number(card.targetId), scale)}"></div>` : '<div class="board-card-empty"></div>'}
-                </div>
-            `).join('')}
         `;
+        cards.forEach((card, index) => {
+            const slot = document.getElementById(`mission-slot-${index}`);
+            if (!slot) {
+                return;
+            }
+            slot.innerHTML = card
+                ? `<div class="board-mission-card" style="${this.missionCardStyle(Number(card.targetId), scale)}"></div>`
+                : '<div class="board-card-empty"></div>';
+        });
     }
 
     renderTomatoRow() {
         const scale = this.getBoardCardScale('tomato');
-        const row = document.getElementById('tomato-row');
         const cards = this.gamedatas.boardTomatoes ?? [];
-        row.innerHTML = `
-            ${cards.map(card => `
-                <div class="board-card-slot tomato">
-                    ${card ? `<div class="board-tomato-card" style="${this.tomatoCardStyle(Number(card.value), scale)}"></div>` : '<div class="board-card-empty"></div>'}
-                </div>
-            `).join('')}
-            <div class="deck-slot tomato-deck-slot">
-                <div class="discard-preview">
-                    ${this.gamedatas.latestDiscardTomato ? `<div class="discard-card" style="${this.tomatoCardStyle(Number(this.gamedatas.latestDiscardTomato.value), scale * 0.92)}"></div>` : '<div class="board-card-empty small"></div>'}
-                </div>
+        cards.forEach((card, index) => {
+            const slot = document.getElementById(`tomato-slot-${index}`);
+            if (!slot) {
+                return;
+            }
+            slot.innerHTML = card
+                ? `<div class="board-tomato-card" style="${this.tomatoCardStyle(Number(card.value), scale)}"></div>`
+                : '<div class="board-card-empty"></div>';
+        });
+        document.getElementById('discard-slot').innerHTML = this.gamedatas.latestDiscardTomato
+            ? `<div class="discard-card" style="${this.tomatoCardStyle(Number(this.gamedatas.latestDiscardTomato.value), scale)}"></div>`
+            : '<div class="board-card-empty small"></div>';
+        document.getElementById('tomato-deck-slot').innerHTML = `
+            <div class="deck-slot stage-deck tomato-deck-slot">
                 <div class="card-back tomato" style="${this.cardBackStyle('tomato', scale)}"></div>
                 <div class="deck-count">${this.gamedatas.tomatoDeckCount ?? 0}</div>
             </div>

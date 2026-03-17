@@ -23,29 +23,86 @@
 
 #festival-stage {
     --board-scale: 1;
-    display: grid;
-    gap: 8px;
+    position: relative;
     justify-self: center;
     width: min(100%, 600px);
 }
 
-.board-row {
-    align-items: end;
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    overflow-x: auto;
-    padding: 0 2px 4px;
+#festival-canvas {
+    aspect-ratio: 1000 / 760;
+    position: relative;
     width: 100%;
 }
 
-.board-card-slot,
+#festival-board-wrap {
+    left: 12%;
+    position: absolute;
+    top: 34%;
+    width: 62%;
+}
+
+#mission-deck-slot {
+    left: 0%;
+    top: 0%;
+}
+
+#mission-slot-0 {
+    left: 19%;
+    top: 0%;
+}
+
+#mission-slot-1 {
+    left: 39%;
+    top: 0%;
+}
+
+#mission-slot-2 {
+    left: 59%;
+    top: 0%;
+}
+
+#discard-slot {
+    left: 81%;
+    top: 31%;
+}
+
+#tomato-slot-0 {
+    left: 0%;
+    top: 62%;
+}
+
+#tomato-slot-1 {
+    left: 19%;
+    top: 62%;
+}
+
+#tomato-slot-2 {
+    left: 39%;
+    top: 62%;
+}
+
+#tomato-deck-slot {
+    left: 59%;
+    top: 62%;
+}
+
+#deck-strip {
+    bottom: 0;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+}
+
+.stage-slot,
 .deck-slot {
     align-items: center;
     display: flex;
     justify-content: center;
-    min-width: calc(40px * var(--board-scale));
     position: relative;
+}
+
+.stage-slot {
+    position: absolute;
 }
 
 #festival-board {
@@ -109,24 +166,24 @@
     background: rgba(255, 255, 255, 0.55);
     border: 2px dashed rgba(155, 88, 57, 0.7);
     border-radius: 12px;
-    height: calc(96px * var(--board-scale));
-    width: calc(68px * var(--board-scale));
+    height: 84px;
+    width: 60px;
 }
 
 .board-card-empty.small {
-    height: calc(64px * var(--board-scale));
-    width: calc(46px * var(--board-scale));
+    height: 72px;
+    width: 51px;
 }
 
 .tomato-deck-slot {
     align-items: end;
     display: grid;
-    gap: calc(6px * var(--board-scale));
+    gap: 4px;
     justify-items: center;
 }
 
 .discard-preview {
-    min-height: calc(68px * var(--board-scale));
+    min-height: 68px;
 }
 
 .deck-count,
@@ -148,6 +205,7 @@
 #deck-strip {
     display: flex;
     justify-content: center;
+    width: max-content;
 }
 
 .turn-token-tray {
@@ -156,13 +214,13 @@
     border: 2px solid #d3a26a;
     border-radius: 14px;
     display: flex;
-    gap: 8px;
-    padding: 5px 8px;
+    gap: 6px;
+    padding: 4px 7px;
 }
 
 .turn-token-tray__label {
     color: #5a2a0d;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
 }
 
@@ -179,10 +237,10 @@
 }
 
 .placed-token {
-    height: calc(56px * var(--board-scale));
+    height: calc(46px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%) rotate(-8deg);
-    width: calc(56px * var(--board-scale));
+    width: calc(46px * var(--board-scale));
 }
 
 .placed-token.whole,
@@ -213,8 +271,8 @@
 }
 
 .tray-token {
-    height: calc(36px * var(--board-scale));
-    width: calc(36px * var(--board-scale));
+    height: calc(30px * var(--board-scale));
+    width: calc(30px * var(--board-scale));
 }
 
 #hand-area {
