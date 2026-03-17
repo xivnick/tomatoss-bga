@@ -219,6 +219,7 @@
     display: flex;
     justify-content: center;
     width: max-content;
+    z-index: 4;
 }
 
 .turn-token-tray {
@@ -228,6 +229,7 @@
     border-radius: 14px;
     display: flex;
     gap: 14px;
+    margin-top: 16px;
     padding: 10px 14px;
 }
 
@@ -284,6 +286,8 @@
 }
 
 .tray-token {
+    border: 2px solid rgba(110, 44, 20, 0.35);
+    border-radius: 999px;
     height: calc(58px * var(--board-scale));
     width: calc(58px * var(--board-scale));
 }

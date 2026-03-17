@@ -334,11 +334,12 @@ export class Game {
 
     renderDeckStrip() {
         const strip = document.getElementById('deck-strip');
+        const remaining = Number(this.gamedatas.placementsRemaining ?? 0);
         strip.innerHTML = `
             <div class="turn-token-tray">
                 <div class="turn-token-tray__label">Remaining tokens</div>
                 <div class="turn-token-tray__tokens">
-                    ${Array.from({ length: 3 }, (_, index) => `<div class="tray-token ${index < (this.gamedatas.placementsRemaining ?? 0) ? '' : 'is-spent'}"></div>`).join('')}
+                    ${Array.from({ length: remaining }, () => '<div class="tray-token"></div>').join('')}
                 </div>
             </div>
         `;
