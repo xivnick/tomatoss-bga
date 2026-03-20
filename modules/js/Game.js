@@ -100,9 +100,9 @@ export class Game {
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
             <div id="tomatoss-layout">
                 <div id="tomatoss-state-note"></div>
+                <div id="throw-log-panel"></div>
                 <div id="festival-stage">
                     <div id="festival-canvas">
-                        <div id="throw-log-panel"></div>
                         <div id="mission-deck-slot" class="stage-slot"></div>
                         <div id="mission-slot-0" class="stage-slot"></div>
                         <div id="mission-slot-1" class="stage-slot"></div>
@@ -364,7 +364,7 @@ export class Game {
             ? lastThrow.cards
             : (lastThrow.cardsJson ? JSON.parse(lastThrow.cardsJson) : []);
         const revealed = lastThrow.revealed?.value ?? lastThrow.revealedCard ?? null;
-        const targetId = lastThrow.targetId ?? ((this.gamedatas.boardTargets ?? [])[Math.max(0, Number(lastThrow.space) - 3)]?.targetId ?? null);
+        const targetId = lastThrow.targetId ?? null;
         const score = Number(lastThrow.scoreGained ?? lastThrow.score_gained ?? 0);
         const success = score > 0;
         const targetArt = targetId ? `<div class="throw-log__target" style="${this.missionCardStyle(Number(targetId), 0.16)}"></div>` : '<div class="board-card-empty small"></div>';
