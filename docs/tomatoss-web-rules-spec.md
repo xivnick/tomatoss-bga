@@ -27,15 +27,6 @@ Source of truth: `tomatoss-web/tomatoss/core/game.py`, `rules.py`, `types.py`.
 - Hand limit: `8`
 - Tokens per turn: `3`
 - Max turns: `300`
-- Submission caps by card value:
-  - `1 -> 3`
-  - `2 -> 3`
-  - `3 -> 5`
-  - `4 -> 4`
-  - `5 -> 3`
-  - `6 -> 3`
-  - `7 -> 3`
-
 ## Setup
 
 - Shuffle tomato deck.
@@ -81,7 +72,6 @@ Source of truth: `tomatoss-web/tomatoss/core/game.py`, `rules.py`, `types.py`.
   - not in discard phase
   - placements used `< 3`
   - chosen target slot is non-empty
-  - submitted cards respect submission caps
 - Normal toss:
   - submitted cards must already satisfy target check
 - Quick toss:
@@ -154,5 +144,4 @@ After the 3rd placement:
 - Quick toss legality is existential:
   - legal if any reveal `1..7` can work
 - Quick toss may submit zero cards.
-- Submission caps are part of legality, not only AI action generation.
 - Public discard is the reshuffle source for tomato deck.

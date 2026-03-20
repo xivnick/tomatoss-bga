@@ -111,8 +111,6 @@ Game state.
 - target slot must contain a target
 - placements remaining must be `> 0`
 - selected cards must all belong to acting player
-- selected cards must respect submission caps:
-  - `1:3 2:3 3:5 4:4 5:3 6:3 7:3`
 - normal toss:
   - target must match selected cards exactly
 - quick toss:
@@ -178,8 +176,7 @@ Captured target layout:
 
 High-priority parity with Python engine:
 
-1. submission caps enforced server-side
-2. private hand isolation
-3. quick toss legality with empty submission allowed
-4. turn-end bonus and discard flow matching Python engine
-5. end-of-game armed at final target exhaustion, resolved only after turn end
+1. private hand isolation
+2. quick toss legality with empty submission allowed
+3. turn-end bonus and discard flow matching Python engine
+4. end-of-game armed at final target exhaustion, resolved only after turn end

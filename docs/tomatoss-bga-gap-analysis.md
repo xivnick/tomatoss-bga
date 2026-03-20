@@ -24,8 +24,6 @@ Compared implementation:
 - Discard-down phase
 - Private hand updates separated from public notifications
 - Tie-break by remaining hand sum
-- Submission caps enforced server-side
-
 ## Partially Aligned
 
 - BGA client toss UX:
@@ -45,6 +43,5 @@ Compared implementation:
 - No automated parity test exists between Python engine and PHP engine.
   - best next step is to script scenario comparisons for:
     - quick toss with zero submitted cards
-    - submission cap violations
     - final target exhaustion
     - bonus pattern transitions

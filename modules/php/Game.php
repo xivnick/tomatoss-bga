@@ -27,16 +27,6 @@ class Game extends \Bga\GameFramework\Table
         7 => 4,
     ];
 
-    private const SUBMIT_CAPS = [
-        1 => 3,
-        2 => 3,
-        3 => 5,
-        4 => 4,
-        5 => 3,
-        6 => 3,
-        7 => 3,
-    ];
-
     private const TARGET_DEFS = [
         1 => ['desc' => '[card] = 3', 'base' => 2, 'toss' => 3],
         2 => ['desc' => '[card] = 3', 'base' => 2, 'toss' => 3],
@@ -243,7 +233,6 @@ class Game extends \Bga\GameFramework\Table
         $selectedCards = $this->loadPlayerHandCardsByIds($playerId, $cardIds);
         $values = array_map(static fn(array $card): int => (int) $card['value'], $selectedCards);
         $targetId = (int) $targetCard['targetId'];
-        $this->assertSubmissionCaps($values);
 
         if ($quickToss) {
             foreach (range(1, 7) as $nextCard) {
@@ -827,20 +816,6 @@ class Game extends \Bga\GameFramework\Table
             'id' => (int) $row['id'],
             'value' => (int) $row['value'],
         ], $rows);
-    }
-
-    private function assertSubmissionCaps(array $values): void
-    {
-        $counts = array_count_values(array_map('intval', $values));
-        foreach ($counts as $value => $count) {
-            $cap = self::SUBMIT_CAPS[(int) $value] ?? null;
-            if ($cap === null) {
-                throw new \Bga\GameFramework\UserException(clienttranslate('Invalid tomato card value'));
-            }
-            if ($count > $cap) {
-                throw new \Bga\GameFramework\UserException(clienttranslate('Too many copies of one tomato value were submitted'));
-            }
-        }
     }
 
     private function moveCardsToDiscard(array $cardIds): void
