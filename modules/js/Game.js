@@ -283,7 +283,7 @@ export class Game {
                 return;
             }
             slot.innerHTML = card
-                ? `<div class="board-mission-card" style="${this.missionCardStyle(Number(card.targetId), scale)}"></div>`
+                ? `<button class="stage-card-action" data-space="${index + 3}"><div class="board-mission-card" style="${this.missionCardStyle(Number(card.targetId), scale)}"></div></button>`
                 : '<div class="board-card-empty"></div>';
         });
     }
@@ -297,7 +297,7 @@ export class Game {
                 return;
             }
             slot.innerHTML = card
-                ? `<div class="board-tomato-card" style="${this.tomatoCardStyle(Number(card.value), scale)}"></div>`
+                ? `<button class="stage-card-action" data-space="${index}"><div class="board-tomato-card" style="${this.tomatoCardStyle(Number(card.value), scale)}"></div></button>`
                 : '<div class="board-card-empty"></div>';
         });
         document.getElementById('discard-slot').innerHTML = this.gamedatas.latestDiscardTomato
@@ -331,8 +331,21 @@ export class Game {
             const tokenType = kind === 'collect' ? 'whole' : 'splat';
             const stackIndex = slotCounts.get(slot.space) ?? 0;
             slotCounts.set(slot.space, stackIndex + 1);
+            const submittedCards = Array.isArray(action.cards)
+                ? action.cards
+                : (action.cardsJson ? JSON.parse(action.cardsJson) : []);
+            const revealed = action.revealed?.value ?? action.revealedCard ?? null;
+            const actionMeta = kind === 'collect'
+                ? ''
+                : `
+                    <div class="placed-token__meta">
+                        ${submittedCards.length > 0 ? submittedCards.join(',') : '0'}
+                        ${revealed ? ` + ${revealed}` : ''}
+                    </div>
+                `;
             return `
                 <div class="placed-token ${tokenType}" style="left:${slot.left}%; top:calc(${slot.top}% - ${stackIndex * 16}px);">
+                    ${actionMeta}
                 </div>
             `;
         }).join('');
@@ -421,6 +434,12 @@ export class Game {
         }
 
         document.querySelectorAll('.board-token-slot').forEach(button => {
+            const handler = () => this.handleBoardSlotClick(Number(button.dataset.space));
+            button.addEventListener('click', handler);
+            this.boundInteractions.push({ element: button, handler });
+        });
+
+        document.querySelectorAll('.stage-card-action').forEach(button => {
             const handler = () => this.handleBoardSlotClick(Number(button.dataset.space));
             button.addEventListener('click', handler);
             this.boundInteractions.push({ element: button, handler });
@@ -564,7 +583,7 @@ export class Game {
 
     appendTurnAction(space, actionKind) {
         const actions = [...(this.gamedatas.currentTurnActions ?? [])];
-        actions.push({ space, actionKind });
+        actions.push({ space, actionKind, cards: [], revealed: null });
         this.gamedatas.currentTurnActions = actions;
         this.gamedatas.placementsRemaining = Math.max(0, Number(this.gamedatas.placementsRemaining ?? 3) - 1);
     }
@@ -577,7 +596,15 @@ export class Game {
         const isCollect = Number(args.slot_no) <= 3 && Object.prototype.hasOwnProperty.call(args, 'refill');
         const actualSpace = isCollect ? Number(args.slot_no) - 1 : Number(args.slot_no) + 2;
         const actionKind = isCollect ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss');
-        this.appendTurnAction(actualSpace, actionKind);
+        const actions = [...(this.gamedatas.currentTurnActions ?? [])];
+        actions.push({
+            space: actualSpace,
+            actionKind,
+            cards: args.cards ?? [],
+            revealed: args.revealed ?? null,
+        });
+        this.gamedatas.currentTurnActions = actions;
+        this.gamedatas.placementsRemaining = Math.max(0, Number(this.gamedatas.placementsRemaining ?? 3) - 1);
 
         if (isCollect) {
             const slotIndex = Number(args.slot_no) - 1;

@@ -162,6 +162,13 @@
     flex: 0 0 auto;
 }
 
+.stage-card-action {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+}
+
 .board-card-empty {
     background: rgba(255, 255, 255, 0.55);
     border: 2px dashed rgba(155, 88, 57, 0.7);
@@ -256,6 +263,21 @@
     position: absolute;
     transform: translate(-50%, -50%) rotate(-8deg);
     width: calc(126px * var(--board-scale));
+}
+
+.placed-token__meta {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(110, 44, 20, 0.5);
+    border-radius: 999px;
+    bottom: calc(-20px * var(--board-scale));
+    color: #6e2c14;
+    font-size: calc(15px * var(--board-scale));
+    font-weight: 700;
+    left: 50%;
+    padding: 2px 8px;
+    position: absolute;
+    transform: translateX(-50%) rotate(8deg);
+    white-space: nowrap;
 }
 
 .placed-token.whole,
