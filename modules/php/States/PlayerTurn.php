@@ -110,6 +110,7 @@ class PlayerTurn extends GameState
                 'cards' => $cardValues,
                 'quickToss' => $quickToss,
                 'success' => $result['success'],
+                'targetId' => $result['targetId'],
                 'revealed' => $result['revealed'],
                 'scoreGained' => $result['scoreGained'],
                 'newTarget' => $result['newTarget'],

@@ -102,6 +102,7 @@ export class Game {
                 <div id="tomatoss-state-note"></div>
                 <div id="festival-stage">
                     <div id="festival-canvas">
+                        <div id="throw-log-panel"></div>
                         <div id="mission-deck-slot" class="stage-slot"></div>
                         <div id="mission-slot-0" class="stage-slot"></div>
                         <div id="mission-slot-1" class="stage-slot"></div>
@@ -264,6 +265,7 @@ export class Game {
         this.renderFestivalBoard();
         this.renderTomatoRow();
         this.renderDeckStrip();
+        this.renderThrowLog();
         this.renderHand();
         this.renderPlayerZones();
     }
@@ -331,24 +333,65 @@ export class Game {
             const tokenType = kind === 'collect' ? 'whole' : 'splat';
             const stackIndex = slotCounts.get(slot.space) ?? 0;
             slotCounts.set(slot.space, stackIndex + 1);
-            const submittedCards = Array.isArray(action.cards)
-                ? action.cards
-                : (action.cardsJson ? JSON.parse(action.cardsJson) : []);
-            const revealed = action.revealed?.value ?? action.revealedCard ?? null;
-            const actionMeta = kind === 'collect'
-                ? ''
-                : `
-                    <div class="placed-token__meta">
-                        ${submittedCards.length > 0 ? submittedCards.join(',') : '0'}
-                        ${revealed ? ` + ${revealed}` : ''}
-                    </div>
-                `;
             return `
                 <div class="placed-token ${tokenType}" style="left:${slot.left}%; top:calc(${slot.top}% - ${stackIndex * 16}px);">
-                    ${actionMeta}
                 </div>
             `;
         }).join('');
+    }
+
+    renderThrowLog() {
+        const panel = document.getElementById('throw-log-panel');
+        if (!panel) {
+            return;
+        }
+
+        const actions = [...(this.gamedatas.currentTurnActions ?? [])].reverse();
+        const lastThrow = actions.find(action => {
+            const kind = action.actionKind ?? action.action_kind;
+            return kind === 'normal_toss' || kind === 'quick_toss';
+        });
+
+        if (!lastThrow) {
+            panel.innerHTML = '';
+            panel.classList.add('is-empty');
+            return;
+        }
+
+        panel.classList.remove('is-empty');
+        const kind = lastThrow.actionKind ?? lastThrow.action_kind;
+        const submittedCards = Array.isArray(lastThrow.cards)
+            ? lastThrow.cards
+            : (lastThrow.cardsJson ? JSON.parse(lastThrow.cardsJson) : []);
+        const revealed = lastThrow.revealed?.value ?? lastThrow.revealedCard ?? null;
+        const targetId = lastThrow.targetId ?? ((this.gamedatas.boardTargets ?? [])[Math.max(0, Number(lastThrow.space) - 3)]?.targetId ?? null);
+        const score = Number(lastThrow.scoreGained ?? lastThrow.score_gained ?? 0);
+        const success = score > 0;
+        const targetArt = targetId ? `<div class="throw-log__target" style="${this.missionCardStyle(Number(targetId), 0.16)}"></div>` : '<div class="board-card-empty small"></div>';
+        const submitted = submittedCards.length > 0
+            ? submittedCards.map(value => `<div class="throw-log__tomato" style="${this.tomatoCardStyle(Number(value), 0.13)}"></div>`).join('')
+            : '<div class="throw-log__empty">0</div>';
+        const revealedMarkup = revealed
+            ? `<div class="throw-log__tomato reveal" style="${this.tomatoCardStyle(Number(revealed), 0.13)}"></div>`
+            : '<div class="throw-log__empty">-</div>';
+
+        panel.innerHTML = `
+            <div class="throw-log__label">Last throw</div>
+            <div class="throw-log__row">
+                ${targetArt}
+                <div class="throw-log__cards">
+                    <div class="throw-log__group">
+                        <span class="throw-log__group-label">${kind === 'quick_toss' ? 'Quick' : 'Normal'}</span>
+                        <div class="throw-log__fan">${submitted}</div>
+                    </div>
+                    <div class="throw-log__group">
+                        <span class="throw-log__group-label">Reveal</span>
+                        <div class="throw-log__fan">${revealedMarkup}</div>
+                    </div>
+                </div>
+                <div class="throw-log__result ${success ? 'is-success' : 'is-fail'}">${success ? `+${score}` : 'Fail'}</div>
+            </div>
+        `;
     }
 
     renderDeckStrip() {
@@ -602,6 +645,8 @@ export class Game {
             actionKind,
             cards: args.cards ?? [],
             revealed: args.revealed ?? null,
+            targetId: args.targetId ?? null,
+            scoreGained: args.scoreGained ?? 0,
         });
         this.gamedatas.currentTurnActions = actions;
         this.gamedatas.placementsRemaining = Math.max(0, Number(this.gamedatas.placementsRemaining ?? 3) - 1);
