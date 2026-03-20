@@ -270,6 +270,7 @@ class Game extends \Bga\GameFramework\Table
         string $actionKind,
         array $cards = [],
         bool $quickToss = false,
+        ?int $targetId = null,
         ?int $revealedCard = null,
         int $scoreGained = 0,
     ): void {
@@ -280,8 +281,9 @@ class Game extends \Bga\GameFramework\Table
 
         static::DbQuery(
             "INSERT INTO `turn_action` "
-            . "(`turn_no`, `player_id`, `action_index`, `space`, `action_kind`, `cards_json`, `quick_toss`, `revealed_card`, `score_gained`) VALUES "
+            . "(`turn_no`, `player_id`, `action_index`, `space`, `action_kind`, `cards_json`, `quick_toss`, `target_id`, `revealed_card`, `score_gained`) VALUES "
             . "($turnNo, $playerId, $actionIndex, $space, '$actionKindSql', '$cardsJson', " . ($quickToss ? 1 : 0) . ', '
+            . ($targetId === null ? 'NULL' : (string) $targetId) . ', '
             . ($revealedCard === null ? 'NULL' : (string) $revealedCard) . ", $scoreGained)"
         );
 
@@ -430,6 +432,7 @@ class Game extends \Bga\GameFramework\Table
             . '`action_kind` AS `actionKind`, '
             . '`cards_json` AS `cardsJson`, '
             . '`quick_toss` AS `quickToss`, '
+            . '`target_id` AS `targetId`, '
             . '`revealed_card` AS `revealedCard`, '
             . '`score_gained` AS `scoreGained` '
             . 'FROM `turn_action` '

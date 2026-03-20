@@ -77,6 +77,7 @@ class PlayerTurn extends GameState
             $actionKind,
             $cardValues,
             $quickToss,
+            $result['targetId'],
             $result['revealed']['value'] ?? null,
             $result['scoreGained']
         );

@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS `turn_action` (
   `action_kind` VARCHAR(16) NOT NULL,
   `cards_json` VARCHAR(64) NOT NULL DEFAULT '[]',
   `quick_toss` TINYINT(1) NOT NULL DEFAULT 0,
+  `target_id` TINYINT UNSIGNED DEFAULT NULL,
   `revealed_card` TINYINT UNSIGNED DEFAULT NULL,
   `score_gained` SMALLINT NOT NULL DEFAULT 0,
   PRIMARY KEY (`turn_action_id`),
