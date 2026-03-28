@@ -393,6 +393,7 @@ class PlayerTurn {
 
     onEnteringState(args, isCurrentPlayerActive) {
         this.game.currentUiMode = 'playerTurn';
+        this.game.isCurrentPlayerActive = isCurrentPlayerActive;
         this.game.renderState(args);
         this.game.bindPlayerTurnInteractions(isCurrentPlayerActive);
         this.game.setStateNote(isCurrentPlayerActive ? 'Select cards, then click a top throw slot or bottom collect slot.' : '');
@@ -400,6 +401,7 @@ class PlayerTurn {
 
     onLeavingState() {
         this.game.currentUiMode = null;
+        this.game.isCurrentPlayerActive = false;
         this.game.unbindInteractions();
         this.bga.statusBar.removeActionButtons();
     }
@@ -413,6 +415,7 @@ class ResolveBonus {
 
     onEnteringState(args) {
         this.game.currentUiMode = null;
+        this.game.isCurrentPlayerActive = false;
         this.game.renderState(args);
         this.game.setStateNote('Resolving bonus');
     }
@@ -426,6 +429,7 @@ class DiscardDown {
 
     onEnteringState(args, isCurrentPlayerActive) {
         this.game.currentUiMode = 'discard';
+        this.game.isCurrentPlayerActive = isCurrentPlayerActive;
         this.game.renderState(args);
         this.game.bindDiscardInteractions(isCurrentPlayerActive);
         this.game.setStateNote(isCurrentPlayerActive ? 'Discard a tomato card from your hand.' : '');
@@ -433,6 +437,7 @@ class DiscardDown {
 
     onLeavingState() {
         this.game.currentUiMode = null;
+        this.game.isCurrentPlayerActive = false;
         this.game.unbindInteractions();
         this.bga.statusBar.removeActionButtons();
     }
@@ -444,6 +449,7 @@ export class Game {
         this.boundInteractions = [];
         this.selectedCardIds = [];
         this.currentUiMode = null;
+        this.isCurrentPlayerActive = false;
 
         this.sprites = new SpriteStyles();
         this.stageView = new FestivalStageView(this, this.sprites);
@@ -644,14 +650,13 @@ export class Game {
     }
 
     refreshInteractions() {
-        const isCurrentPlayerActive = this.bga.isCurrentPlayerActive();
         if (this.currentUiMode === 'playerTurn') {
-            this.bindPlayerTurnInteractions(isCurrentPlayerActive);
+            this.bindPlayerTurnInteractions(this.isCurrentPlayerActive);
             return;
         }
 
         if (this.currentUiMode === 'discard') {
-            this.bindDiscardInteractions(isCurrentPlayerActive);
+            this.bindDiscardInteractions(this.isCurrentPlayerActive);
         }
     }
 
