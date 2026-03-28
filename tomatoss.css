@@ -297,7 +297,7 @@
 }
 
 .tomatoss-player-zone__bottom {
-    min-height: calc(470px * var(--player-zone-scale));
+    min-height: calc(250px * var(--player-zone-scale));
     position: relative;
 }
 
@@ -305,11 +305,11 @@
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
     bottom: 0;
-    height: calc(440px * var(--player-zone-scale));
+    height: calc(220px * var(--player-zone-scale));
     left: 50%;
     position: absolute;
     transform: translateX(-50%);
-    width: calc(440px * var(--player-zone-scale));
+    width: calc(220px * var(--player-zone-scale));
     z-index: 3;
 }
 
@@ -334,18 +334,18 @@
 .captured-band {
     bottom: 0;
     left: 50%;
-    min-height: calc(440px * var(--player-zone-scale));
+    min-height: calc(220px * var(--player-zone-scale));
     position: absolute;
     transform: translateX(-50%);
-    width: calc(680px * var(--player-zone-scale));
+    width: calc(360px * var(--player-zone-scale));
     z-index: 1;
 }
 
 .captured-stack {
     bottom: 0;
-    height: calc(440px * var(--player-zone-scale));
+    height: calc(220px * var(--player-zone-scale));
     position: absolute;
-    width: calc(315px * var(--player-zone-scale));
+    width: calc(157.5px * var(--player-zone-scale));
     z-index: 1;
 }
 

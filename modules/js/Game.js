@@ -39,31 +39,31 @@ class SpriteStyles {
     }
 
     getCardScale(kind) {
-        const width = this.getStageWidth() * (kind === 'mission' ? 0.175 : 0.17);
-        const sourceWidth = kind === 'mission' ? 315 : 310;
+        const width = this.getStageWidth() * (kind === 'mission' ? 0.165 : 0.16);
+        const sourceWidth = kind === 'mission' ? 157.5 : 155;
         return width / sourceWidth;
     }
 
     missionCardStyle(targetId, scale) {
-        const width = 315 * scale;
-        const height = 440 * scale;
+        const width = 157.5 * scale;
+        const height = 220 * scale;
         const col = (targetId - 1) % 6;
         const row = Math.floor((targetId - 1) / 6);
         return `
             width:${width}px;
             height:${height}px;
-            background-image:url('${g_gamethemeurl}img/mission_cards.png');
+            background-image:url('${g_gamethemeurl}img/mission_cards.jpg');
             background-repeat:no-repeat;
-            background-size:${1890 * scale}px ${2200 * scale}px;
+            background-size:${945 * scale}px ${1100 * scale}px;
             background-position:-${col * width}px -${row * height}px;
         `;
     }
 
     tomatoCardStyle(value, scale) {
         return `
-            width:${310 * scale}px;
-            height:${440 * scale}px;
-            background-image:url('${g_gamethemeurl}img/tomato_cards.png');
+            width:${155 * scale}px;
+            height:${220 * scale}px;
+            background-image:url('${g_gamethemeurl}img/tomato_cards.jpg');
             background-repeat:no-repeat;
             background-size:700% 100%;
             background-position:${((value - 1) / 6) * 100}% 0;
@@ -72,9 +72,9 @@ class SpriteStyles {
 
     cardBackStyle(kind, scale) {
         return `
-            width:${310 * scale}px;
-            height:${440 * scale}px;
-            background-image:url('${g_gamethemeurl}img/card_backs.png');
+            width:${155 * scale}px;
+            height:${220 * scale}px;
+            background-image:url('${g_gamethemeurl}img/card_backs.jpg');
             background-repeat:no-repeat;
             background-size:200% 100%;
             background-position:${kind === 'mission' ? 100 : 0}% 0;
@@ -323,7 +323,7 @@ class PlayerZonesView {
         const playerBoard = document.getElementById(`player-board-${playerId}`);
         const zone = document.getElementById(`player-zone-${playerId}`);
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
-        const scale = (playerBoard?.clientWidth ?? 176) / 440;
+        const scale = (playerBoard?.clientWidth ?? 176) / 220;
 
         zone?.style.setProperty('--player-zone-scale', String(scale));
 
