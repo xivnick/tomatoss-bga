@@ -755,8 +755,8 @@ export class Game {
 
     applyThrowAction(args) {
         const slotIndex = Number(args.slot_no) - 1;
-        this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
         if (args.newTarget !== undefined) {
+            this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
             this.gamedatas.boardTargets[slotIndex] = args.newTarget;
         }
         this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
@@ -789,10 +789,14 @@ export class Game {
         }
 
         this.applyThrowAction(args);
-        this.stageView.renderMissionRow();
         this.stageView.renderTomatoRow();
         this.throwLogView.render();
-        this.playerZonesView.renderPlayer(args.player_id);
+        if (args.newTarget !== undefined) {
+            this.stageView.renderMissionRow();
+            this.playerZonesView.renderPlayer(args.player_id);
+        } else {
+            this.playerZonesView.renderHandStack(args.player_id);
+        }
         this.refreshInteractions();
     }
 
