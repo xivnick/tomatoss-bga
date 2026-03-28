@@ -35,14 +35,13 @@ class SpriteStyles {
     }
 
     getStageWidth() {
-        const stage = document.getElementById('festival-stage');
-        return stage?.clientWidth ?? 520;
+        return document.getElementById('festival-stage')?.clientWidth ?? 560;
     }
 
-    getBoardCardScale(kind) {
-        const targetWidth = this.getStageWidth() * (kind === 'mission' ? 0.18 : 0.175);
+    getCardScale(kind) {
+        const width = this.getStageWidth() * (kind === 'mission' ? 0.175 : 0.17);
         const sourceWidth = kind === 'mission' ? 315 : 310;
-        return targetWidth / sourceWidth;
+        return width / sourceWidth;
     }
 
     missionCardStyle(targetId, scale) {
@@ -94,12 +93,12 @@ class FestivalStageView {
         this.renderMissionRow();
         this.renderTomatoRow();
         this.renderBoardTokens();
-        this.renderDeckStrip();
+        this.renderReserveTokens();
+        this.renderRecentThrow();
     }
 
     renderMissionRow() {
-        const scale = this.sprites.getBoardCardScale('mission');
-        const cards = this.game.gamedatas.boardTargets ?? [];
+        const scale = this.sprites.getCardScale('mission');
         const deck = document.getElementById('mission-deck-slot');
         if (deck) {
             deck.innerHTML = `
@@ -110,43 +109,44 @@ class FestivalStageView {
             `;
         }
 
-        cards.forEach((card, index) => {
+        (this.game.gamedatas.boardTargets ?? []).forEach((card, index) => {
             const slot = document.getElementById(`mission-slot-${index}`);
             if (!slot) {
                 return;
             }
 
+            const pendingClass = this.game.pendingSpace === index + 3 ? 'is-pending' : '';
             slot.innerHTML = card
-                ? `<button class="stage-card-action" data-space="${index + 3}"><div class="board-mission-card" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)}"></div></button>`
+                ? `<button class="stage-card-action mission-slot-button ${pendingClass}" data-space="${index + 3}"><div class="board-mission-card" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)}"></div></button>`
                 : '<div class="board-card-empty"></div>';
         });
     }
 
     renderTomatoRow() {
-        const scale = this.sprites.getBoardCardScale('tomato');
-        const cards = this.game.gamedatas.boardTomatoes ?? [];
+        const scale = this.sprites.getCardScale('tomato');
+        const discardSlot = document.getElementById('discard-slot');
+        const deckSlot = document.getElementById('tomato-deck-slot');
 
-        cards.forEach((card, index) => {
+        (this.game.gamedatas.boardTomatoes ?? []).forEach((card, index) => {
             const slot = document.getElementById(`tomato-slot-${index}`);
             if (!slot) {
                 return;
             }
 
+            const pendingClass = this.game.pendingSpace === index ? 'is-pending' : '';
             slot.innerHTML = card
-                ? `<button class="stage-card-action" data-space="${index}"><div class="board-tomato-card" style="${this.sprites.tomatoCardStyle(Number(card.value), scale)}"></div></button>`
+                ? `<button class="stage-card-action tomato-slot-button ${pendingClass}" data-space="${index}"><div class="board-tomato-card" style="${this.sprites.tomatoCardStyle(Number(card.value), scale)}"></div></button>`
                 : '<div class="board-card-empty"></div>';
         });
 
-        const discardSlot = document.getElementById('discard-slot');
         if (discardSlot) {
             discardSlot.innerHTML = this.game.gamedatas.latestDiscardTomato
                 ? `<div class="discard-card" style="${this.sprites.tomatoCardStyle(Number(this.game.gamedatas.latestDiscardTomato.value), scale)}"></div>`
                 : '<div class="board-card-empty small"></div>';
         }
 
-        const tomatoDeck = document.getElementById('tomato-deck-slot');
-        if (tomatoDeck) {
-            tomatoDeck.innerHTML = `
+        if (deckSlot) {
+            deckSlot.innerHTML = `
                 <div class="deck-slot stage-deck tomato-deck-slot">
                     <div class="card-back tomato" style="${this.sprites.cardBackStyle('tomato', scale)}"></div>
                     <div class="deck-count">${this.game.gamedatas.tomatoDeckCount ?? 0}</div>
@@ -163,7 +163,7 @@ class FestivalStageView {
         }
 
         slotLayer.innerHTML = TOKEN_SLOTS.map(slot => `
-            <button class="board-token-slot" data-space="${slot.space}" style="left:${slot.left}%; top:${slot.top}%"></button>
+            <button class="board-token-slot ${this.game.pendingSpace === slot.space ? 'is-pending' : ''}" data-space="${slot.space}" style="left:${slot.left}%; top:${slot.top}%"></button>
         `).join('');
 
         const slotCounts = new Map();
@@ -173,114 +173,58 @@ class FestivalStageView {
                 return '';
             }
 
-            const stackIndex = slotCounts.get(slot.space) ?? 0;
-            slotCounts.set(slot.space, stackIndex + 1);
+            const count = slotCounts.get(slot.space) ?? 0;
+            slotCounts.set(slot.space, count + 1);
             const kind = action.actionKind ?? action.action_kind;
             const tokenType = kind === 'collect' ? 'whole' : 'splat';
-            return `<div class="placed-token ${tokenType}" style="left:${slot.left}%; top:calc(${slot.top}% - ${stackIndex * 16}px);"></div>`;
+            return `<div class="placed-token ${tokenType}" style="left:${slot.left}%; top:calc(${slot.top}% - ${count * 18}px);"></div>`;
         }).join('');
     }
 
-    renderDeckStrip() {
-        const strip = document.getElementById('deck-strip');
-        if (!strip) {
+    renderReserveTokens() {
+        const reserve = document.getElementById('token-reserve');
+        if (!reserve) {
             return;
         }
 
         const remaining = Number(this.game.gamedatas.placementsRemaining ?? 0);
-        strip.innerHTML = `
-            <div class="turn-token-tray">
-                <div class="turn-token-tray__label">Remaining tokens</div>
-                <div class="turn-token-tray__tokens">
-                    ${Array.from({ length: remaining }, () => '<div class="tray-token"></div>').join('')}
-                </div>
-            </div>
-        `;
-    }
-}
-
-class ThrowLogView {
-    constructor(game, sprites) {
-        this.game = game;
-        this.sprites = sprites;
+        reserve.innerHTML = Array.from({ length: 3 }, (_, index) => {
+            if (index >= remaining) {
+                return '';
+            }
+            return `<div class="reserve-token"></div>`;
+        }).join('');
     }
 
-    render() {
-        const panel = document.getElementById('throw-log-panel');
-        if (!panel) {
+    renderRecentThrow() {
+        const area = document.getElementById('recent-throw-area');
+        const recent = this.game.recentThrow;
+        if (!area) {
             return;
         }
 
-        const actions = [...(this.game.gamedatas.currentTurnActions ?? [])].reverse();
-        const lastThrow = actions.find(action => {
-            const kind = action.actionKind ?? action.action_kind;
-            return kind === 'normal_toss' || kind === 'quick_toss';
-        });
-
-        if (!lastThrow) {
-            panel.innerHTML = '';
-            panel.classList.add('is-empty');
+        if (!recent) {
+            area.innerHTML = '';
+            area.dataset.visible = 'false';
             return;
         }
 
-        panel.classList.remove('is-empty');
-        const kind = lastThrow.actionKind ?? lastThrow.action_kind;
-        const submittedCards = Array.isArray(lastThrow.cards)
-            ? lastThrow.cards
-            : (lastThrow.cardsJson ? JSON.parse(lastThrow.cardsJson) : []);
-        const revealed = lastThrow.revealed?.value ?? lastThrow.revealedCard ?? null;
-        const targetId = lastThrow.targetId ?? null;
-        const score = Number(lastThrow.scoreGained ?? lastThrow.score_gained ?? 0);
-        const success = score > 0;
+        area.dataset.visible = 'true';
+        const missionScale = 0.18;
+        const tomatoScale = 0.12;
+        const cards = recent.cards ?? [];
+        const reveal = recent.revealed ?? null;
 
-        panel.innerHTML = `
-            <div class="throw-log__label">Last throw</div>
-            <div class="throw-log__row">
-                ${targetId ? `<div class="throw-log__target" style="${this.sprites.missionCardStyle(Number(targetId), 0.16)}"></div>` : '<div class="board-card-empty small"></div>'}
-                <div class="throw-log__cards">
-                    <div class="throw-log__group">
-                        <span class="throw-log__group-label">${kind === 'quick_toss' ? 'Quick' : 'Normal'}</span>
-                        <div class="throw-log__fan">
-                            ${submittedCards.length > 0
-                                ? submittedCards.map(value => `<div class="throw-log__tomato" style="${this.sprites.tomatoCardStyle(Number(value), 0.13)}"></div>`).join('')
-                                : '<div class="throw-log__empty">0</div>'}
-                        </div>
-                    </div>
-                    <div class="throw-log__group">
-                        <span class="throw-log__group-label">Reveal</span>
-                        <div class="throw-log__fan">
-                            ${revealed
-                                ? `<div class="throw-log__tomato reveal" style="${this.sprites.tomatoCardStyle(Number(revealed), 0.13)}"></div>`
-                                : '<div class="throw-log__empty">-</div>'}
-                        </div>
+        area.innerHTML = `
+            <div class="recent-throw ${recent.success ? 'is-success' : 'is-fail'}">
+                <div class="recent-throw__target" style="${this.sprites.missionCardStyle(Number(recent.targetId), missionScale)}">
+                    <div class="recent-throw__cards">
+                        ${cards.map((value, index) => `
+                            <div class="recent-throw__tomato" style="${this.sprites.tomatoCardStyle(Number(value), tomatoScale)} left:${index * 26}px;"></div>
+                        `).join('')}
+                        ${reveal ? `<div class="recent-throw__tomato reveal" style="${this.sprites.tomatoCardStyle(Number(reveal), tomatoScale)} left:${cards.length * 26}px;"></div>` : ''}
                     </div>
                 </div>
-                <div class="throw-log__result ${success ? 'is-success' : 'is-fail'}">${success ? `+${score}` : 'Fail'}</div>
-            </div>
-        `;
-    }
-}
-
-class HandView {
-    constructor(game, sprites) {
-        this.game = game;
-        this.sprites = sprites;
-    }
-
-    render() {
-        const handArea = document.getElementById('hand-area');
-        if (!handArea) {
-            return;
-        }
-
-        handArea.innerHTML = `
-            <h3>Your hand</h3>
-            <div class="hand-row">
-                ${(this.game.gamedatas.playerHand ?? []).map(card => `
-                    <button class="hand-card ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}" data-card-id="${card.id}" data-value="${card.value}">
-                        <div class="hand-card__art" style="${this.sprites.tomatoCardStyle(Number(card.value), 0.17)}"></div>
-                    </button>
-                `).join('')}
             </div>
         `;
     }
@@ -298,26 +242,20 @@ class PlayerZonesView {
             return;
         }
 
-        document.querySelectorAll('.player-board-summary').forEach(element => element.remove());
-        document.querySelectorAll('.tomatoss-player-zone').forEach(element => {
-            if (element.closest('#player-zones') === null) {
-                element.remove();
-            }
-        });
-
+        playerZones.innerHTML = '';
         Object.values(this.game.gamedatas.players ?? {}).forEach(player => {
             const isSelf = Number(player.id) === Number(globalThis.player_id ?? this.game.bga.player_id);
             playerZones.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
-                    <div class="tomatoss-player-zone__top" id="player-hand-stack-${player.id}"></div>
+                    <div class="tomatoss-player-zone__top" id="player-zone-top-${player.id}"></div>
                     <div class="tomatoss-player-zone__bottom">
-                        <div class="tomatoss-player-board" id="player-board-${player.id}">
-                            <div class="basket-anchor" id="basket-anchor-${player.id}"></div>
-                        </div>
                         <div class="captured-band" id="captured-band-${player.id}">
                             <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
                             <div class="captured-stack quick" id="captured-quick-${player.id}"></div>
+                        </div>
+                        <div class="tomatoss-player-board" id="player-board-${player.id}">
+                            <div class="basket-anchor" id="basket-anchor-${player.id}"></div>
                         </div>
                     </div>
                 </div>
@@ -326,7 +264,7 @@ class PlayerZonesView {
     }
 
     renderAll() {
-        Object.values(this.game.gamedatas.players ?? {}).forEach(player => this.renderPlayer(player.id));
+        Object.values(this.game.gamedatas.players ?? {}).forEach(player => this.renderPlayer(Number(player.id)));
     }
 
     renderPlayer(playerId) {
@@ -335,30 +273,48 @@ class PlayerZonesView {
             return;
         }
 
-        const basketAnchor = document.getElementById(`basket-anchor-${playerId}`);
-        if (basketAnchor) {
-            basketAnchor.innerHTML = `<div class="basket-token ${player.basketFull ? 'full' : 'empty'}"></div>`;
-        }
-
-        this.renderHandStack(playerId);
+        this.renderTop(playerId);
+        this.renderBoard(playerId);
         this.renderCapturedTargets(playerId);
     }
 
-    renderHandStack(playerId) {
-        const handStack = document.getElementById(`player-hand-stack-${playerId}`);
-        if (!handStack) {
+    renderTop(playerId) {
+        const top = document.getElementById(`player-zone-top-${playerId}`);
+        if (!top) {
+            return;
+        }
+
+        const isSelf = Number(playerId) === Number(this.game.bga.player_id);
+        if (isSelf) {
+            const scale = this.sprites.getCardScale('tomato');
+            top.innerHTML = `
+                <div class="self-hand-row">
+                    ${(this.game.gamedatas.playerHand ?? []).map(card => `
+                        <button class="hand-card ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}" data-card-id="${card.id}" data-value="${card.value}">
+                            <div class="hand-card__art" style="${this.sprites.tomatoCardStyle(Number(card.value), scale)}"></div>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
             return;
         }
 
         const count = this.game.gamedatas.handCountsByPlayer?.[playerId] ?? 0;
-        handStack.innerHTML = `
+        top.innerHTML = `
             <div class="player-hand-fan">
                 ${Array.from({ length: count }, (_, index) => `
-                    <div class="player-hand-back" style="${this.sprites.cardBackStyle('tomato', 0.12)} margin-left:${index === 0 ? 0 : -16}px;"></div>
+                    <div class="player-hand-back" style="${this.sprites.cardBackStyle('tomato', 0.16)} margin-left:${index === 0 ? 0 : -24}px;"></div>
                 `).join('')}
             </div>
-            <div class="player-hand-count">${count}</div>
         `;
+    }
+
+    renderBoard(playerId) {
+        const player = this.game.gamedatas.players?.[playerId];
+        const basketAnchor = document.getElementById(`basket-anchor-${playerId}`);
+        if (basketAnchor) {
+            basketAnchor.innerHTML = `<div class="basket-token ${player?.basketFull ? 'full' : 'empty'}"></div>`;
+        }
     }
 
     renderCapturedTargets(playerId) {
@@ -367,25 +323,25 @@ class PlayerZonesView {
         const playerBoard = document.getElementById(`player-board-${playerId}`);
         const zone = document.getElementById(`player-zone-${playerId}`);
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
-        const scale = (playerBoard?.clientWidth ?? 148) / 440;
+        const scale = (playerBoard?.clientWidth ?? 176) / 440;
 
         zone?.style.setProperty('--player-zone-scale', String(scale));
 
         if (normal) {
             normal.innerHTML = captured.normal.map((card, index) => `
-                <div class="captured-mission normal" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)} right:${index * 96 * scale}px; z-index:${captured.normal.length - index};"></div>
+                <div class="captured-mission normal" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)} right:${index * 76 * scale}px; z-index:${100 - index};"></div>
             `).join('');
         }
 
         if (quick) {
             quick.innerHTML = captured.quick.map((card, index) => `
-                <div class="captured-mission quick" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)} left:${index * 96 * scale}px; z-index:${captured.quick.length - index};"></div>
+                <div class="captured-mission quick" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)} left:${index * 76 * scale}px; z-index:${100 - index};"></div>
             `).join('');
         }
     }
 }
 
-class PlayerTurn {
+class PlayerTurnState {
     constructor(game, bga) {
         this.game = game;
         this.bga = bga;
@@ -394,9 +350,13 @@ class PlayerTurn {
     onEnteringState(args, isCurrentPlayerActive) {
         this.game.currentUiMode = 'playerTurn';
         this.game.isCurrentPlayerActive = isCurrentPlayerActive;
+        this.game.clearPendingAction();
         this.game.renderState(args);
-        this.game.bindPlayerTurnInteractions(isCurrentPlayerActive);
-        this.game.setStateNote(isCurrentPlayerActive ? 'Select cards, then click a top throw slot or bottom collect slot.' : '');
+        this.game.bindPlayerTurnInteractions();
+        this.game.setStatePrompt(isCurrentPlayerActive
+            ? _('Select a tomato card and a board slot, then confirm with the action buttons.')
+            : _('Waiting for the active player to choose an action.'));
+        this.game.updateActionButtons();
     }
 
     onLeavingState() {
@@ -407,21 +367,22 @@ class PlayerTurn {
     }
 }
 
-class ResolveBonus {
-    constructor(game, bga) {
+class ResolveBonusState {
+    constructor(game) {
         this.game = game;
-        this.bga = bga;
     }
 
     onEnteringState(args) {
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
+        this.game.clearPendingAction();
         this.game.renderState(args);
-        this.game.setStateNote('Resolving bonus');
+        this.game.setStatePrompt(_('Resolving bonus.'));
+        this.game.bga.statusBar.removeActionButtons();
     }
 }
 
-class DiscardDown {
+class DiscardDownState {
     constructor(game, bga) {
         this.game = game;
         this.bga = bga;
@@ -430,9 +391,13 @@ class DiscardDown {
     onEnteringState(args, isCurrentPlayerActive) {
         this.game.currentUiMode = 'discard';
         this.game.isCurrentPlayerActive = isCurrentPlayerActive;
+        this.game.clearPendingAction();
         this.game.renderState(args);
-        this.game.bindDiscardInteractions(isCurrentPlayerActive);
-        this.game.setStateNote(isCurrentPlayerActive ? 'Discard a tomato card from your hand.' : '');
+        this.game.bindDiscardInteractions();
+        this.game.setStatePrompt(isCurrentPlayerActive
+            ? _('Select a tomato card to discard, then confirm with the action buttons.')
+            : _('Waiting for the active player to discard down.'));
+        this.game.updateActionButtons();
     }
 
     onLeavingState() {
@@ -448,18 +413,19 @@ export class Game {
         this.bga = bga;
         this.boundInteractions = [];
         this.selectedCardIds = [];
+        this.pendingSpace = null;
         this.currentUiMode = null;
         this.isCurrentPlayerActive = false;
+        this.recentThrow = null;
+        this.recentThrowTimeout = null;
 
         this.sprites = new SpriteStyles();
         this.stageView = new FestivalStageView(this, this.sprites);
-        this.throwLogView = new ThrowLogView(this, this.sprites);
-        this.handView = new HandView(this, this.sprites);
         this.playerZonesView = new PlayerZonesView(this, this.sprites);
 
-        this.playerTurn = new PlayerTurn(this, bga);
-        this.resolveBonus = new ResolveBonus(this, bga);
-        this.discardDown = new DiscardDown(this, bga);
+        this.playerTurn = new PlayerTurnState(this, bga);
+        this.resolveBonus = new ResolveBonusState(this, bga);
+        this.discardDown = new DiscardDownState(this, bga);
 
         this.bga.states.register('PlayerTurn', this.playerTurn);
         this.bga.states.register('ResolveBonus', this.resolveBonus);
@@ -472,21 +438,13 @@ export class Game {
             this.bga.gameui.interface_min_width = 600;
         }
 
-        Object.values(this.gamedatas.players ?? {}).forEach(player => {
-            const panel = this.bga.playerPanels?.getElement?.(player.id);
-            if (!panel) {
-                return;
-            }
-
-            panel.querySelectorAll('.player-board-summary, .tomatoss-player-zone, [id^="player-zone-"], [id^="player-board-"], [id^="basket-anchor-"], [id^="captured-normal-"], [id^="captured-quick-"], [id^="player-hand-stack-"]').forEach(element => element.remove());
-        });
+        document.getElementById('tomatoss-layout')?.remove();
 
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
             <div id="tomatoss-layout">
-                <div id="tomatoss-state-note"></div>
-                <div id="throw-log-panel"></div>
                 <div id="festival-stage">
                     <div id="festival-canvas">
+                        <div id="recent-throw-area" data-visible="false"></div>
                         <div id="mission-deck-slot" class="stage-slot"></div>
                         <div id="mission-slot-0" class="stage-slot"></div>
                         <div id="mission-slot-1" class="stage-slot"></div>
@@ -498,14 +456,13 @@ export class Game {
                             </div>
                         </div>
                         <div id="discard-slot" class="stage-slot"></div>
+                        <div id="token-reserve" class="stage-slot"></div>
                         <div id="tomato-slot-0" class="stage-slot"></div>
                         <div id="tomato-slot-1" class="stage-slot"></div>
                         <div id="tomato-slot-2" class="stage-slot"></div>
                         <div id="tomato-deck-slot" class="stage-slot"></div>
-                        <div id="deck-strip"></div>
                     </div>
                 </div>
-                <div id="hand-area" class="whiteblock"></div>
                 <div id="player-zones"></div>
             </div>
         `);
@@ -534,16 +491,11 @@ export class Game {
     renderState(source) {
         this.gamedatas = { ...this.gamedatas, ...this.buildRenderData(source) };
         this.stageView.renderAll();
-        this.throwLogView.render();
-        this.handView.render();
         this.playerZonesView.renderAll();
     }
 
-    setStateNote(text) {
-        const note = document.getElementById('tomatoss-state-note');
-        if (note) {
-            note.textContent = text;
-        }
+    setStatePrompt(text) {
+        this.bga.statusBar.setTitle(text);
     }
 
     clearSelection() {
@@ -551,7 +503,52 @@ export class Game {
         document.querySelectorAll('.hand-card').forEach(card => card.classList.remove('is-selected'));
     }
 
-    getThrowOptions(targetId, cardIds) {
+    clearPendingAction() {
+        this.pendingSpace = null;
+    }
+
+    clearRecentThrow() {
+        if (this.recentThrowTimeout !== null) {
+            clearTimeout(this.recentThrowTimeout);
+            this.recentThrowTimeout = null;
+        }
+        this.recentThrow = null;
+        this.stageView.renderRecentThrow();
+    }
+
+    showRecentThrow(args) {
+        this.recentThrow = {
+            targetId: args.targetId,
+            cards: args.cards ?? [],
+            revealed: args.revealed?.value ?? null,
+            success: Boolean(args.success),
+        };
+        this.stageView.renderRecentThrow();
+        if (this.recentThrowTimeout !== null) {
+            clearTimeout(this.recentThrowTimeout);
+        }
+        this.recentThrowTimeout = setTimeout(() => this.clearRecentThrow(), 3200);
+    }
+
+    canInteract(action) {
+        if (!this.isCurrentPlayerActive) {
+            this.bga.dialogs.showMessage(_('This is not your turn'), 'error');
+            return false;
+        }
+
+        if (!this.bga.actions.checkAction(action, false)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    getSelectedValues(cardIds = this.selectedCardIds) {
+        const handMap = new Map((this.gamedatas.playerHand ?? []).map(card => [card.id, card.value]));
+        return cardIds.map(id => handMap.get(id)).filter(value => value !== undefined);
+    }
+
+    getThrowOptions(targetId, cardIds = this.selectedCardIds) {
         const values = this.getSelectedValues(cardIds);
         return {
             normal: this.targetMatches(targetId, [...values]),
@@ -559,16 +556,84 @@ export class Game {
         };
     }
 
-    getSelectedValues(cardIds) {
-        const handMap = new Map((this.gamedatas.playerHand ?? []).map(card => [card.id, card.value]));
-        return cardIds.map(id => handMap.get(id)).filter(value => value !== undefined);
-    }
-
-    bindPlayerTurnInteractions(isCurrentPlayerActive) {
-        this.unbindInteractions();
-        if (!isCurrentPlayerActive) {
+    updateActionButtons() {
+        this.bga.statusBar.removeActionButtons();
+        if (!this.isCurrentPlayerActive) {
             return;
         }
+
+        if (this.currentUiMode === 'playerTurn') {
+            this.renderPlayerTurnButtons();
+            return;
+        }
+
+        if (this.currentUiMode === 'discard') {
+            this.renderDiscardButtons();
+        }
+    }
+
+    renderPlayerTurnButtons() {
+        const pendingSpace = this.pendingSpace;
+        const hasSelection = this.selectedCardIds.length > 0;
+
+        if (pendingSpace !== null && pendingSpace < 3) {
+            this.bga.statusBar.addActionButton(_('Pick up'), () => this.confirmCollect(), {
+                id: 'pickup_button',
+            });
+        }
+
+        if (pendingSpace !== null && pendingSpace >= 3) {
+            const target = (this.gamedatas.boardTargets ?? [])[pendingSpace - 3];
+            const { normal, quick } = target ? this.getThrowOptions(Number(target.targetId)) : { normal: false, quick: false };
+
+            this.bga.statusBar.addActionButton(_('Toss'), () => this.confirmToss(false), {
+                id: 'toss_button',
+                disabled: !hasSelection || !normal,
+            });
+            this.bga.statusBar.addActionButton(_('Quick toss'), () => this.confirmToss(true), {
+                id: 'quick_toss_button',
+                color: 'secondary',
+                disabled: !hasSelection || !quick,
+            });
+        }
+
+        if (pendingSpace !== null || hasSelection) {
+            this.bga.statusBar.addActionButton(_('Clear selection'), () => {
+                this.clearPendingAction();
+                this.clearSelection();
+                this.renderState(this.gamedatas);
+                this.bindPlayerTurnInteractions();
+                this.updateActionButtons();
+            }, {
+                color: 'secondary',
+                id: 'clear_selection_button',
+            });
+        }
+    }
+
+    renderDiscardButtons() {
+        const selectedCard = (this.gamedatas.playerHand ?? []).find(card => this.selectedCardIds.includes(card.id));
+        this.bga.statusBar.addActionButton(_('Discard selected'), () => this.confirmDiscard(), {
+            id: 'discard_button',
+            color: 'alert',
+            disabled: !selectedCard,
+        });
+
+        if (selectedCard) {
+            this.bga.statusBar.addActionButton(_('Clear selection'), () => {
+                this.clearSelection();
+                this.playerZonesView.renderTop(this.bga.player_id);
+                this.bindDiscardInteractions();
+                this.updateActionButtons();
+            }, {
+                color: 'secondary',
+                id: 'clear_discard_selection_button',
+            });
+        }
+    }
+
+    bindPlayerTurnInteractions() {
+        this.unbindInteractions();
 
         document.querySelectorAll('.board-token-slot, .stage-card-action').forEach(button => {
             const handler = () => this.handleBoardSlotClick(Number(button.dataset.space));
@@ -577,35 +642,20 @@ export class Game {
         });
 
         document.querySelectorAll('.hand-card').forEach(button => {
-            const handler = () => this.toggleHandSelection(button);
+            const handler = () => this.handleHandCardClick(button);
             button.addEventListener('click', handler);
             this.boundInteractions.push({ element: button, handler });
         });
     }
 
-    bindDiscardInteractions(isCurrentPlayerActive) {
+    bindDiscardInteractions() {
         this.unbindInteractions();
-        if (!isCurrentPlayerActive) {
-            return;
-        }
 
         document.querySelectorAll('.hand-card').forEach(button => {
-            const handler = () => this.bga.actions.performAction('actDiscardCard', { cardValue: Number(button.dataset.value) });
+            const handler = () => this.handleDiscardCardClick(button);
             button.addEventListener('click', handler);
             this.boundInteractions.push({ element: button, handler });
         });
-    }
-
-    toggleHandSelection(button) {
-        const cardId = Number(button.dataset.cardId);
-        if (this.selectedCardIds.includes(cardId)) {
-            this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
-            button.classList.remove('is-selected');
-            return;
-        }
-
-        this.selectedCardIds = [...this.selectedCardIds, cardId];
-        button.classList.add('is-selected');
     }
 
     unbindInteractions() {
@@ -613,51 +663,92 @@ export class Game {
         this.boundInteractions = [];
     }
 
-    handleBoardSlotClick(space) {
-        if (space < 3) {
-            this.bga.actions.performAction('actCollectTomato', { slot: space });
+    handleHandCardClick(button) {
+        if (!this.canInteract('actTossToTarget')) {
             return;
         }
 
-        const target = (this.gamedatas.boardTargets ?? [])[space - 3];
+        this.toggleHandSelection(button);
+        this.playerZonesView.renderTop(this.bga.player_id);
+        this.bindPlayerTurnInteractions();
+        this.updateActionButtons();
+    }
+
+    handleDiscardCardClick(button) {
+        if (!this.canInteract('actDiscardCard')) {
+            return;
+        }
+
+        this.clearSelection();
+        this.selectedCardIds = [Number(button.dataset.cardId)];
+        this.playerZonesView.renderTop(this.bga.player_id);
+        this.bindDiscardInteractions();
+        this.updateActionButtons();
+    }
+
+    toggleHandSelection(button) {
+        const cardId = Number(button.dataset.cardId);
+        if (this.selectedCardIds.includes(cardId)) {
+            this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
+        } else {
+            this.selectedCardIds = [...this.selectedCardIds, cardId];
+        }
+    }
+
+    handleBoardSlotClick(space) {
+        const action = space < 3 ? 'actCollectTomato' : 'actTossToTarget';
+        if (!this.canInteract(action)) {
+            return;
+        }
+
+        this.pendingSpace = space;
+        this.bindPlayerTurnInteractions();
+        this.updateActionButtons();
+    }
+
+    confirmCollect() {
+        if (this.pendingSpace === null || this.pendingSpace >= 3) {
+            return;
+        }
+
+        this.bga.actions.performAction('actCollectTomato', { slot: this.pendingSpace });
+    }
+
+    confirmToss(quickToss) {
+        if (this.pendingSpace === null || this.pendingSpace < 3) {
+            return;
+        }
+
+        const target = (this.gamedatas.boardTargets ?? [])[this.pendingSpace - 3];
         if (!target) {
             this.bga.dialogs.showMessage(_('No mission card in that slot'), 'error');
             return;
         }
 
-        const cardIds = [...this.selectedCardIds];
-        const { normal, quick } = this.getThrowOptions(Number(target.targetId), cardIds);
-
-        if (normal) {
-            this.performToss(space, cardIds, false);
+        const { normal, quick } = this.getThrowOptions(Number(target.targetId));
+        if (!quickToss && !normal) {
+            this.bga.dialogs.showMessage(_('Selected cards cannot satisfy this target'), 'error');
+            return;
+        }
+        if (quickToss && !quick) {
+            this.bga.dialogs.showMessage(_('Selected cards cannot satisfy a quick toss for this target'), 'error');
             return;
         }
 
-        if (quick) {
-            this.performToss(space, cardIds, true);
-            return;
-        }
-
-        this.bga.dialogs.showMessage(_('Select a valid set of tomato cards for this throw slot'), 'error');
-    }
-
-    performToss(space, cardIds, quickToss) {
         this.bga.actions.performAction('actTossToTarget', {
-            slot: space,
-            cardsJson: JSON.stringify(cardIds),
+            slot: this.pendingSpace,
+            cardsJson: JSON.stringify(this.selectedCardIds),
             quickToss,
         });
     }
 
-    refreshInteractions() {
-        if (this.currentUiMode === 'playerTurn') {
-            this.bindPlayerTurnInteractions(this.isCurrentPlayerActive);
+    confirmDiscard() {
+        const selectedCard = (this.gamedatas.playerHand ?? []).find(card => this.selectedCardIds.includes(card.id));
+        if (!selectedCard) {
             return;
         }
 
-        if (this.currentUiMode === 'discard') {
-            this.bindDiscardInteractions(this.isCurrentPlayerActive);
-        }
+        this.bga.actions.performAction('actDiscardCard', { cardValue: Number(selectedCard.value) });
     }
 
     targetMatches(targetId, cards) {
@@ -747,10 +838,7 @@ export class Game {
         this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
         this.gamedatas.boardTomatoes[slotIndex] = args.refill;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-        this.updateHandCount(
-            args.player_id,
-            args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1),
-        );
+        this.updateHandCount(args.player_id, args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1));
     }
 
     applyThrowAction(args) {
@@ -766,6 +854,17 @@ export class Game {
         this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
     }
 
+    refreshCurrentUi() {
+        if (this.currentUiMode === 'playerTurn') {
+            this.playerZonesView.renderTop(this.bga.player_id);
+            this.bindPlayerTurnInteractions();
+        } else if (this.currentUiMode === 'discard') {
+            this.playerZonesView.renderTop(this.bga.player_id);
+            this.bindDiscardInteractions();
+        }
+        this.updateActionButtons();
+    }
+
     async notif_turnAction(args) {
         const isCollect = Number(args.slot_no) <= 3 && Object.prototype.hasOwnProperty.call(args, 'refill');
         this.pushTurnAction({
@@ -777,27 +876,29 @@ export class Game {
             scoreGained: args.scoreGained ?? 0,
         });
 
-        this.stageView.renderBoardTokens();
-        this.stageView.renderDeckStrip();
-
         if (isCollect) {
             this.applyCollectAction(args);
+            this.clearPendingAction();
             this.stageView.renderTomatoRow();
-            this.playerZonesView.renderHandStack(args.player_id);
-            this.refreshInteractions();
+            this.stageView.renderBoardTokens();
+            this.stageView.renderReserveTokens();
+            this.playerZonesView.renderPlayer(args.player_id);
+            this.refreshCurrentUi();
             return;
         }
 
         this.applyThrowAction(args);
+        this.showRecentThrow(args);
+        this.clearPendingAction();
+        this.clearSelection();
         this.stageView.renderTomatoRow();
-        this.throwLogView.render();
+        this.stageView.renderBoardTokens();
+        this.stageView.renderReserveTokens();
         if (args.newTarget !== undefined) {
             this.stageView.renderMissionRow();
-            this.playerZonesView.renderPlayer(args.player_id);
-        } else {
-            this.playerZonesView.renderHandStack(args.player_id);
         }
-        this.refreshInteractions();
+        this.playerZonesView.renderPlayer(args.player_id);
+        this.refreshCurrentUi();
     }
 
     async notif_resolveBonus(args) {
@@ -805,17 +906,18 @@ export class Game {
         if (player) {
             player.basketFull = args.basketFull;
         }
-
         this.updateHandCount(args.player_id, args.handCount);
         this.playerZonesView.renderPlayer(args.player_id);
+        this.refreshCurrentUi();
     }
 
     async notif_discardCard(args) {
         this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
         this.updateHandCount(args.player_id, args.handCount);
+        this.clearSelection();
         this.stageView.renderTomatoRow();
-        this.playerZonesView.renderHandStack(args.player_id);
-        this.refreshInteractions();
+        this.playerZonesView.renderPlayer(args.player_id);
+        this.refreshCurrentUi();
     }
 
     async notif_privateHandUpdate(args) {
@@ -823,10 +925,7 @@ export class Game {
             this.gamedatas.playerHand = args.playerHand;
             this.updateHandCount(args.player_id, args.playerHand.length);
         }
-
-        this.clearSelection();
-        this.handView.render();
-        this.playerZonesView.renderHandStack(args.player_id);
-        this.refreshInteractions();
+        this.playerZonesView.renderTop(this.bga.player_id);
+        this.refreshCurrentUi();
     }
 }
