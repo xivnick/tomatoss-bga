@@ -244,7 +244,22 @@ export class Game {
     }
 
     renderState(source) {
-        const data = {
+        const data = this.buildRenderData(source);
+
+        this.gamedatas = { ...this.gamedatas, ...data };
+        this.updateBoardScale();
+
+        this.renderMissionRow();
+        this.renderFestivalBoard();
+        this.renderTomatoRow();
+        this.renderDeckStrip();
+        this.renderThrowLog();
+        this.renderHand();
+        this.renderPlayerZones();
+    }
+
+    buildRenderData(source) {
+        return {
             players: source.players ?? this.gamedatas.players ?? {},
             boardTomatoes: source.boardTomatoes ?? this.gamedatas.boardTomatoes ?? [null, null, null],
             boardTargets: source.boardTargets ?? this.gamedatas.boardTargets ?? [null, null, null],
@@ -257,17 +272,6 @@ export class Game {
             placementsRemaining: source.placementsRemaining ?? this.gamedatas.placementsRemaining ?? 3,
             capturedTargetsByPlayer: source.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer ?? {},
         };
-
-        this.gamedatas = { ...this.gamedatas, ...data };
-        this.updateBoardScale();
-
-        this.renderMissionRow();
-        this.renderFestivalBoard();
-        this.renderTomatoRow();
-        this.renderDeckStrip();
-        this.renderThrowLog();
-        this.renderHand();
-        this.renderPlayerZones();
     }
 
     renderMissionRow() {
@@ -535,11 +539,7 @@ export class Game {
             return;
         }
 
-        const handMap = new Map((this.gamedatas.playerHand ?? []).map(card => [card.id, card.value]));
-        const values = cardIds.map(id => handMap.get(id)).filter(value => value !== undefined);
-
-        const normal = this.targetMatches(Number(target.targetId), [...values]);
-        const quick = [1, 2, 3, 4, 5, 6, 7].some(next => this.targetMatches(Number(target.targetId), [...values, next]));
+        const { normal, quick } = this.getThrowOptions(Number(target.targetId), cardIds);
 
         if (normal) {
             this.bga.actions.performAction('actTossToTarget', {
@@ -560,6 +560,21 @@ export class Game {
         }
 
         this.bga.dialogs.showMessage(_('Select a valid set of tomato cards for this throw slot'), 'error');
+    }
+
+    getThrowOptions(targetId, cardIds) {
+        const values = this.getSelectedValues(cardIds);
+        return {
+            normal: this.targetMatches(targetId, [...values]),
+            quick: [1, 2, 3, 4, 5, 6, 7].some(next => this.targetMatches(targetId, [...values, next])),
+        };
+    }
+
+    getSelectedValues(cardIds) {
+        const handMap = new Map((this.gamedatas.playerHand ?? []).map(card => [card.id, card.value]));
+        return cardIds
+            .map(id => handMap.get(id))
+            .filter(value => value !== undefined);
     }
 
     targetMatches(targetId, cards) {
@@ -639,8 +654,7 @@ export class Game {
         const isCollect = Number(args.slot_no) <= 3 && Object.prototype.hasOwnProperty.call(args, 'refill');
         const actualSpace = isCollect ? Number(args.slot_no) - 1 : Number(args.slot_no) + 2;
         const actionKind = isCollect ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss');
-        const actions = [...(this.gamedatas.currentTurnActions ?? [])];
-        actions.push({
+        this.pushTurnAction({
             space: actualSpace,
             actionKind,
             cards: args.cards ?? [],
@@ -648,38 +662,15 @@ export class Game {
             targetId: args.targetId ?? null,
             scoreGained: args.scoreGained ?? 0,
         });
-        this.gamedatas.currentTurnActions = actions;
-        this.gamedatas.placementsRemaining = Math.max(0, Number(this.gamedatas.placementsRemaining ?? 3) - 1);
 
         if (isCollect) {
-            const slotIndex = Number(args.slot_no) - 1;
-            this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
-            this.gamedatas.boardTomatoes[slotIndex] = args.refill;
-            this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-            this.gamedatas.handCountsByPlayer = {
-                ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1),
-            };
+            this.applyCollectAction(args);
             this.renderState(this.gamedatas);
             return;
         }
 
-        {
-            const slotIndex = Number(args.slot_no) - 1;
-            this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
-            if (args.newTarget !== undefined) {
-                this.gamedatas.boardTargets[slotIndex] = args.newTarget;
-            }
-            this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
-            this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-            this.gamedatas.targetDeckCount = args.targetDeckCount ?? this.gamedatas.targetDeckCount;
-            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
-            this.gamedatas.handCountsByPlayer = {
-                ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
-            };
-            this.renderState(this.gamedatas);
-        }
+        this.applyThrowAction(args);
+        this.renderState(this.gamedatas);
     }
 
     async notif_resolveBonus(args) {
@@ -688,33 +679,69 @@ export class Game {
             player.basketFull = args.basketFull;
         }
 
-        this.gamedatas.handCountsByPlayer = {
-            ...(this.gamedatas.handCountsByPlayer ?? {}),
-            [args.player_id]: args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
-        };
+        this.updateHandCount(args.player_id, args.handCount);
 
         this.renderState(this.gamedatas);
     }
 
     async notif_discardCard(args) {
         this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
-        this.gamedatas.handCountsByPlayer = {
-            ...(this.gamedatas.handCountsByPlayer ?? {}),
-            [args.player_id]: args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
-        };
+        this.updateHandCount(args.player_id, args.handCount);
         this.renderState(this.gamedatas);
     }
 
     async notif_privateHandUpdate(args) {
         if (Array.isArray(args.playerHand)) {
             this.gamedatas.playerHand = args.playerHand;
-            this.gamedatas.handCountsByPlayer = {
-                ...(this.gamedatas.handCountsByPlayer ?? {}),
-                [args.player_id]: args.playerHand.length,
-            };
+            this.updateHandCount(args.player_id, args.playerHand.length);
         }
 
         this.clearSelection();
         this.renderState(this.gamedatas);
+    }
+
+    pushTurnAction(action) {
+        const actions = [...(this.gamedatas.currentTurnActions ?? [])];
+        actions.push(action);
+        this.gamedatas.currentTurnActions = actions;
+        this.gamedatas.placementsRemaining = Math.max(0, Number(this.gamedatas.placementsRemaining ?? 3) - 1);
+    }
+
+    updateHandCount(playerId, handCount) {
+        if (playerId === undefined || handCount === undefined) {
+            return;
+        }
+
+        this.gamedatas.handCountsByPlayer = {
+            ...(this.gamedatas.handCountsByPlayer ?? {}),
+            [playerId]: handCount,
+        };
+    }
+
+    applyCollectAction(args) {
+        const slotIndex = Number(args.slot_no) - 1;
+        this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
+        this.gamedatas.boardTomatoes[slotIndex] = args.refill;
+        this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
+        this.updateHandCount(
+            args.player_id,
+            args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1),
+        );
+    }
+
+    applyThrowAction(args) {
+        const slotIndex = Number(args.slot_no) - 1;
+        this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
+        if (args.newTarget !== undefined) {
+            this.gamedatas.boardTargets[slotIndex] = args.newTarget;
+        }
+        this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
+        this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
+        this.gamedatas.targetDeckCount = args.targetDeckCount ?? this.gamedatas.targetDeckCount;
+        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        this.updateHandCount(
+            args.player_id,
+            args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0),
+        );
     }
 }

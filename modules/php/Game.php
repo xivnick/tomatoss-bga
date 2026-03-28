@@ -354,15 +354,7 @@ class Game extends \Bga\GameFramework\Table
 
         $slots = [null, null, null];
         foreach ($rows as $row) {
-            $targetId = (int) $row['targetId'];
-            $meta = self::TARGET_DEFS[$targetId];
-            $slots[(int) $row['slot']] = [
-                'id' => (int) $row['id'],
-                'targetId' => $targetId,
-                'desc' => $meta['desc'],
-                'base' => $meta['base'],
-                'toss' => $meta['toss'],
-            ];
+            $slots[(int) $row['slot']] = $this->buildTargetData((int) $row['id'], (int) $row['targetId']);
         }
 
         return $slots;
@@ -370,9 +362,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function getPublicDiscardCount(): int
     {
-        return (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_discard'"
-        );
+        return $this->getCardCount('tomato', 'tomato_discard');
     }
 
     public function getLatestDiscardTomato(): ?array
@@ -395,16 +385,12 @@ class Game extends \Bga\GameFramework\Table
 
     public function getTargetDeckCount(): int
     {
-        return (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'target_deck'"
-        );
+        return $this->getCardCount('target', 'target_deck');
     }
 
     public function getTomatoDeckCount(): int
     {
-        return (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_deck'"
-        );
+        return $this->getCardCount('tomato', 'tomato_deck');
     }
 
     public function getHandForPlayer(int $playerId): array
@@ -610,14 +596,7 @@ class Game extends \Bga\GameFramework\Table
 
             $replacement = $this->drawCard('target', 'target_deck', 'board_target', $targetSlot);
             if ($replacement !== null) {
-                $replacementTargetId = (int) $replacement['typeArg'];
-                $newTarget = [
-                    'id' => (int) $replacement['id'],
-                    'targetId' => $replacementTargetId,
-                    'desc' => self::TARGET_DEFS[$replacementTargetId]['desc'],
-                    'base' => self::TARGET_DEFS[$replacementTargetId]['base'],
-                    'toss' => self::TARGET_DEFS[$replacementTargetId]['toss'],
-                ];
+                $newTarget = $this->buildTargetData((int) $replacement['id'], (int) $replacement['typeArg']);
             }
         }
 
@@ -652,9 +631,7 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $cardId = (int) $card['id'];
-        static::DbQuery(
-            "UPDATE `card` SET `card_location` = 'hand', `card_location_arg` = $playerId WHERE `card_id` = $cardId"
-        );
+        $this->moveCardToLocation($cardId, 'hand', $playerId);
 
         $refill = $this->drawCard('tomato', 'tomato_deck', 'board_tomato', $slot);
 
@@ -761,10 +738,7 @@ class Game extends \Bga\GameFramework\Table
             $toArg = $this->getNextDiscardIndex();
         }
 
-        static::DbQuery(
-            "UPDATE `card` SET `card_location` = '" . addslashes($toLocation) . "', `card_location_arg` = $toArg "
-            . 'WHERE `card_id` = ' . (int) $card['id']
-        );
+        $this->moveCardToLocation((int) $card['id'], $toLocation, $toArg);
 
         return [
             'id' => (int) $card['id'],
@@ -774,9 +748,7 @@ class Game extends \Bga\GameFramework\Table
 
     private function recycleTomatoDiscardIntoDeckIfNeeded(): void
     {
-        $deckCount = (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_deck'"
-        );
+        $deckCount = $this->getCardCount('tomato', 'tomato_deck');
         if ($deckCount > 0) {
             return;
         }
@@ -824,9 +796,7 @@ class Game extends \Bga\GameFramework\Table
     private function moveCardsToDiscard(array $cardIds): void
     {
         foreach (array_values(array_map('intval', $cardIds)) as $cardId) {
-            static::DbQuery(
-                "UPDATE `card` SET `card_location` = 'tomato_discard', `card_location_arg` = " . $this->getNextDiscardIndex() . " WHERE `card_id` = $cardId"
-            );
+            $this->moveCardToLocation($cardId, 'tomato_discard', $this->getNextDiscardIndex());
         }
     }
 
@@ -835,6 +805,34 @@ class Game extends \Bga\GameFramework\Table
         return (int) $this->getUniqueValueFromDb(
             "SELECT COALESCE(MAX(`card_location_arg`), -1) + 1 FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_discard'"
         );
+    }
+
+    private function getCardCount(string $cardType, string $location): int
+    {
+        return (int) $this->getUniqueValueFromDb(
+            "SELECT COUNT(*) FROM `card` WHERE `card_type` = '" . addslashes($cardType) . "' AND `card_location` = '" . addslashes($location) . "'"
+        );
+    }
+
+    private function moveCardToLocation(int $cardId, string $location, int $locationArg): void
+    {
+        static::DbQuery(
+            "UPDATE `card` SET `card_location` = '" . addslashes($location) . "', `card_location_arg` = $locationArg "
+            . "WHERE `card_id` = $cardId"
+        );
+    }
+
+    private function buildTargetData(int $cardId, int $targetId): array
+    {
+        $meta = self::TARGET_DEFS[$targetId];
+
+        return [
+            'id' => $cardId,
+            'targetId' => $targetId,
+            'desc' => $meta['desc'],
+            'base' => $meta['base'],
+            'toss' => $meta['toss'],
+        ];
     }
 
     private function targetMatches(int $targetId, array $cards): bool
