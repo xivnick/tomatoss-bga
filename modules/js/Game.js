@@ -15,27 +15,20 @@ const TOKEN_SLOTS = [
 ];
 
 class SpriteStyles {
-    getScale() {
-        const board = document.getElementById('festival-board');
-        if (!board) {
-            return 1;
-        }
+    getStageWidth() {
+        return document.getElementById('festival-stage')?.clientWidth ?? 560;
+    }
 
-        return Math.min(1, board.clientWidth / 1138);
+    getBoardScale() {
+        const board = document.getElementById('festival-board');
+        return board ? Math.min(1, board.clientWidth / 569) : 1;
     }
 
     updateBoardScale() {
-        const board = document.getElementById('festival-board');
         const stage = document.getElementById('festival-stage');
-        if (!board || !stage) {
-            return;
+        if (stage) {
+            stage.style.setProperty('--board-scale', String(this.getBoardScale()));
         }
-
-        stage.style.setProperty('--board-scale', String(this.getScale()));
-    }
-
-    getStageWidth() {
-        return document.getElementById('festival-stage')?.clientWidth ?? 560;
     }
 
     getCardScale(kind) {
@@ -82,83 +75,189 @@ class SpriteStyles {
     }
 }
 
-class FestivalStageView {
+class CardRegistry {
     constructor(game, sprites) {
         this.game = game;
         this.sprites = sprites;
+        this.nodes = new Map();
+    }
+
+    getMissionNode(card, scale, classes = []) {
+        return this.getNode(`mission-${card.id}`, {
+            style: this.sprites.missionCardStyle(Number(card.targetId), scale),
+            classes: ['card-node', 'board-mission-card', ...classes],
+        });
+    }
+
+    getTomatoNode(card, scale, classes = []) {
+        return this.getNode(`tomato-${card.id}`, {
+            style: this.sprites.tomatoCardStyle(Number(card.value), scale),
+            classes: ['card-node', 'board-tomato-card', ...classes],
+        });
+    }
+
+    getBackNode(key, kind, scale, classes = []) {
+        return this.getNode(key, {
+            style: this.sprites.cardBackStyle(kind, scale),
+            classes: ['card-node', 'card-back', ...classes],
+        });
+    }
+
+    getTemporaryTomatoNode(key, value, scale, classes = []) {
+        return this.getNode(key, {
+            style: this.sprites.tomatoCardStyle(Number(value), scale),
+            classes: ['card-node', 'recent-throw__tomato', ...classes],
+        });
+    }
+
+    mount(parent, node, { empty = false } = {}) {
+        if (!parent) {
+            return;
+        }
+
+        parent.dataset.empty = empty ? 'true' : 'false';
+        if (empty) {
+            parent.replaceChildren();
+            return;
+        }
+
+        if (node.parentElement !== parent || parent.firstElementChild !== node || parent.childElementCount !== 1) {
+            parent.replaceChildren(node);
+        }
+    }
+
+    removeMissing(prefixes, keepKeys) {
+        const keep = new Set(keepKeys);
+        [...this.nodes.keys()].forEach(key => {
+            if (!prefixes.some(prefix => key.startsWith(prefix))) {
+                return;
+            }
+            if (keep.has(key)) {
+                return;
+            }
+            this.nodes.get(key)?.remove();
+            this.nodes.delete(key);
+        });
+    }
+
+    clearTemporary(prefix) {
+        [...this.nodes.keys()].forEach(key => {
+            if (!key.startsWith(prefix)) {
+                return;
+            }
+            this.nodes.get(key)?.remove();
+            this.nodes.delete(key);
+        });
+    }
+
+    getNode(key, { style, classes }) {
+        let node = this.nodes.get(key);
+        if (!node) {
+            node = document.createElement('div');
+            this.nodes.set(key, node);
+        }
+
+        node.className = classes.join(' ');
+        node.style.cssText = style;
+        node.dataset.registryKey = key;
+        return node;
+    }
+}
+
+class FestivalStageView {
+    constructor(game, sprites, registry) {
+        this.game = game;
+        this.sprites = sprites;
+        this.registry = registry;
     }
 
     renderAll() {
         this.sprites.updateBoardScale();
         this.renderMissionRow();
         this.renderTomatoRow();
-        this.renderBoardTokens();
+        this.renderActionSlots();
+        this.renderPlacedTokens();
         this.renderReserveTokens();
         this.renderRecentThrow();
     }
 
     renderMissionRow() {
         const scale = this.sprites.getCardScale('mission');
+        const keepKeys = [];
+
         const deck = document.getElementById('mission-deck-slot');
         if (deck) {
-            deck.innerHTML = `
-                <div class="deck-slot stage-deck mission-deck-slot">
-                    <div class="card-back mission" style="${this.sprites.cardBackStyle('mission', scale)}"></div>
-                    <div class="deck-count">${this.game.gamedatas.targetDeckCount ?? 0}</div>
-                </div>
-            `;
+            const back = this.registry.getBackNode('back-mission-deck', 'mission', scale, ['mission']);
+            deck.replaceChildren(back);
+            deck.insertAdjacentHTML('beforeend', `<div class="deck-count">${this.game.gamedatas.targetDeckCount ?? 0}</div>`);
         }
 
         (this.game.gamedatas.boardTargets ?? []).forEach((card, index) => {
-            const slot = document.getElementById(`mission-slot-${index}`);
-            if (!slot) {
+            const host = document.querySelector(`#mission-slot-${index} .slot-card-host`);
+            if (!host) {
                 return;
             }
 
-            const pendingClass = this.game.pendingSpace === index + 3 ? 'is-pending' : '';
-            slot.innerHTML = card
-                ? `<button class="stage-card-action mission-slot-button ${pendingClass}" data-space="${index + 3}"><div class="board-mission-card" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)}"></div></button>`
-                : '<div class="board-card-empty"></div>';
+            if (!card) {
+                this.registry.mount(host, null, { empty: true });
+                return;
+            }
+
+            const key = `mission-${card.id}`;
+            keepKeys.push(key);
+            const node = this.registry.getMissionNode(card, scale);
+            this.registry.mount(host, node);
         });
+
+        this.registry.removeMissing(['mission-'], keepKeys);
     }
 
     renderTomatoRow() {
         const scale = this.sprites.getCardScale('tomato');
-        const discardSlot = document.getElementById('discard-slot');
-        const deckSlot = document.getElementById('tomato-deck-slot');
+        const keepKeys = [];
 
         (this.game.gamedatas.boardTomatoes ?? []).forEach((card, index) => {
-            const slot = document.getElementById(`tomato-slot-${index}`);
-            if (!slot) {
+            const host = document.querySelector(`#tomato-slot-${index} .slot-card-host`);
+            if (!host) {
                 return;
             }
 
-            const pendingClass = this.game.pendingSpace === index ? 'is-pending' : '';
-            slot.innerHTML = card
-                ? `<button class="stage-card-action tomato-slot-button ${pendingClass}" data-space="${index}"><div class="board-tomato-card" style="${this.sprites.tomatoCardStyle(Number(card.value), scale)}"></div></button>`
-                : '<div class="board-card-empty"></div>';
+            if (!card) {
+                this.registry.mount(host, null, { empty: true });
+                return;
+            }
+
+            const key = `tomato-${card.id}`;
+            keepKeys.push(key);
+            const node = this.registry.getTomatoNode(card, scale);
+            this.registry.mount(host, node);
         });
 
-        if (discardSlot) {
-            discardSlot.innerHTML = this.game.gamedatas.latestDiscardTomato
-                ? `<div class="discard-card" style="${this.sprites.tomatoCardStyle(Number(this.game.gamedatas.latestDiscardTomato.value), scale)}"></div>`
-                : '<div class="board-card-empty small"></div>';
+        const discardHost = document.querySelector('#discard-slot .slot-card-host');
+        if (discardHost) {
+            const discardCard = this.game.gamedatas.latestDiscardTomato;
+            if (discardCard) {
+                const node = this.registry.getTomatoNode(discardCard, scale, ['discard-card']);
+                keepKeys.push(`tomato-${discardCard.id}`);
+                this.registry.mount(discardHost, node);
+            } else {
+                this.registry.mount(discardHost, null, { empty: true });
+            }
         }
 
-        if (deckSlot) {
-            deckSlot.innerHTML = `
-                <div class="deck-slot stage-deck tomato-deck-slot">
-                    <div class="card-back tomato" style="${this.sprites.cardBackStyle('tomato', scale)}"></div>
-                    <div class="deck-count">${this.game.gamedatas.tomatoDeckCount ?? 0}</div>
-                </div>
-            `;
+        const deck = document.getElementById('tomato-deck-slot');
+        if (deck) {
+            const back = this.registry.getBackNode('back-tomato-deck', 'tomato', scale, ['tomato']);
+            deck.replaceChildren(back);
+            deck.insertAdjacentHTML('beforeend', `<div class="deck-count">${this.game.gamedatas.tomatoDeckCount ?? 0}</div>`);
         }
+
+        this.registry.removeMissing(['tomato-'], keepKeys);
     }
 
-    renderBoardTokens() {
+    renderActionSlots() {
         const slotLayer = document.getElementById('festival-slot-layer');
-        const tokenLayer = document.getElementById('festival-token-layer');
-        if (!slotLayer || !tokenLayer) {
+        if (!slotLayer) {
             return;
         }
 
@@ -166,18 +265,28 @@ class FestivalStageView {
             <button class="board-token-slot ${this.game.pendingSpace === slot.space ? 'is-pending' : ''}" data-space="${slot.space}" style="left:${slot.left}%; top:${slot.top}%"></button>
         `).join('');
 
-        const slotCounts = new Map();
+        document.querySelectorAll('.stage-slot-button').forEach(button => {
+            button.classList.toggle('is-pending', Number(button.dataset.space) === this.game.pendingSpace);
+        });
+    }
+
+    renderPlacedTokens() {
+        const tokenLayer = document.getElementById('festival-token-layer');
+        if (!tokenLayer) {
+            return;
+        }
+
+        const counts = new Map();
         tokenLayer.innerHTML = (this.game.gamedatas.currentTurnActions ?? []).map(action => {
             const slot = TOKEN_SLOTS.find(item => item.space === Number(action.space));
             if (!slot) {
                 return '';
             }
 
-            const count = slotCounts.get(slot.space) ?? 0;
-            slotCounts.set(slot.space, count + 1);
-            const kind = action.actionKind ?? action.action_kind;
-            const tokenType = kind === 'collect' ? 'whole' : 'splat';
-            return `<div class="placed-token ${tokenType}" style="left:${slot.left}%; top:calc(${slot.top}% - ${count * 18}px);"></div>`;
+            const stackIndex = counts.get(slot.space) ?? 0;
+            counts.set(slot.space, stackIndex + 1);
+            const kind = (action.actionKind ?? action.action_kind) === 'collect' ? 'whole' : 'splat';
+            return `<div class="placed-token ${kind}" style="left:${slot.left}%; top:calc(${slot.top}% - ${stackIndex * 18}px);"></div>`;
         }).join('');
     }
 
@@ -188,64 +297,71 @@ class FestivalStageView {
         }
 
         const remaining = Number(this.game.gamedatas.placementsRemaining ?? 0);
-        reserve.innerHTML = Array.from({ length: 3 }, (_, index) => {
-            if (index >= remaining) {
-                return '';
-            }
-            return `<div class="reserve-token"></div>`;
-        }).join('');
+        reserve.innerHTML = Array.from({ length: remaining }, () => '<div class="reserve-token"></div>').join('');
     }
 
     renderRecentThrow() {
         const area = document.getElementById('recent-throw-area');
-        const recent = this.game.recentThrow;
         if (!area) {
             return;
         }
 
+        const recent = this.game.recentThrow;
         if (!recent) {
-            area.innerHTML = '';
             area.dataset.visible = 'false';
+            area.replaceChildren();
+            this.registry.clearTemporary('recent-');
             return;
         }
 
         area.dataset.visible = 'true';
-        const missionScale = 0.18;
-        const tomatoScale = 0.12;
-        const cards = recent.cards ?? [];
-        const reveal = recent.revealed ?? null;
+        this.registry.clearTemporary('recent-');
 
-        area.innerHTML = `
-            <div class="recent-throw ${recent.success ? 'is-success' : 'is-fail'}">
-                <div class="recent-throw__target" style="${this.sprites.missionCardStyle(Number(recent.targetId), missionScale)}">
-                    <div class="recent-throw__cards">
-                        ${cards.map((value, index) => `
-                            <div class="recent-throw__tomato" style="${this.sprites.tomatoCardStyle(Number(value), tomatoScale)} left:${index * 26}px;"></div>
-                        `).join('')}
-                        ${reveal ? `<div class="recent-throw__tomato reveal" style="${this.sprites.tomatoCardStyle(Number(reveal), tomatoScale)} left:${cards.length * 26}px;"></div>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
+        const wrap = document.createElement('div');
+        wrap.className = `recent-throw ${recent.success ? 'is-success' : 'is-fail'}`;
+
+        const target = document.createElement('div');
+        target.className = 'recent-throw__target';
+        target.style.cssText = this.sprites.missionCardStyle(Number(recent.targetId), 0.18);
+        wrap.appendChild(target);
+
+        const cards = document.createElement('div');
+        cards.className = 'recent-throw__cards';
+        target.appendChild(cards);
+
+        (recent.cards ?? []).forEach((value, index) => {
+            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, 0.12);
+            node.style.left = `${index * 26}px`;
+            cards.appendChild(node);
+        });
+
+        if (recent.revealed) {
+            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, 0.12, ['reveal']);
+            node.style.left = `${(recent.cards?.length ?? 0) * 26}px`;
+            cards.appendChild(node);
+        }
+
+        area.replaceChildren(wrap);
     }
 }
 
 class PlayerZonesView {
-    constructor(game, sprites) {
+    constructor(game, sprites, registry) {
         this.game = game;
         this.sprites = sprites;
+        this.registry = registry;
     }
 
     setup() {
-        const playerZones = document.getElementById('player-zones');
-        if (!playerZones) {
+        const root = document.getElementById('player-zones');
+        if (!root) {
             return;
         }
 
-        playerZones.innerHTML = '';
+        root.innerHTML = '';
         Object.values(this.game.gamedatas.players ?? {}).forEach(player => {
-            const isSelf = Number(player.id) === Number(globalThis.player_id ?? this.game.bga.player_id);
-            playerZones.insertAdjacentHTML('beforeend', `
+            const isSelf = Number(player.id) === Number(this.game.bga.player_id);
+            root.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
                     <div class="tomatoss-player-zone__top" id="player-zone-top-${player.id}"></div>
@@ -268,83 +384,127 @@ class PlayerZonesView {
     }
 
     renderPlayer(playerId) {
-        const player = this.game.gamedatas.players?.[playerId];
-        if (!player) {
-            return;
-        }
-
-        this.renderTop(playerId);
+        this.renderHandArea(playerId);
         this.renderBoard(playerId);
-        this.renderCapturedTargets(playerId);
+        this.renderCaptured(playerId);
     }
 
-    renderTop(playerId) {
+    renderHandArea(playerId) {
         const top = document.getElementById(`player-zone-top-${playerId}`);
         if (!top) {
             return;
         }
 
         const isSelf = Number(playerId) === Number(this.game.bga.player_id);
+        const scale = this.sprites.getCardScale('tomato');
+
         if (isSelf) {
-            const scale = this.sprites.getCardScale('tomato');
-            top.innerHTML = `
-                <div class="self-hand-row">
-                    ${(this.game.gamedatas.playerHand ?? []).map(card => `
-                        <button class="hand-card ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}" data-card-id="${card.id}" data-value="${card.value}">
-                            <div class="hand-card__art" style="${this.sprites.tomatoCardStyle(Number(card.value), scale)}"></div>
-                        </button>
-                    `).join('')}
-                </div>
-            `;
+            top.innerHTML = `<div class="self-hand-row"></div>`;
+            const row = top.firstElementChild;
+            const keepKeys = [];
+
+            (this.game.gamedatas.playerHand ?? []).forEach(card => {
+                const key = `tomato-${card.id}`;
+                keepKeys.push(key);
+                const button = document.createElement('button');
+                button.className = `hand-card-button ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}`;
+                button.dataset.cardId = String(card.id);
+                button.dataset.value = String(card.value);
+                const host = document.createElement('div');
+                host.className = 'hand-card-host';
+                button.appendChild(host);
+                row.appendChild(button);
+                this.registry.mount(host, this.registry.getTomatoNode(card, scale));
+            });
+
+            this.registry.removeMissing(['tomato-'], [
+                ...keepKeys,
+                ...this.getBoardTomatoKeys(),
+                ...this.getDiscardTomatoKeys(),
+            ]);
             return;
         }
 
         const count = this.game.gamedatas.handCountsByPlayer?.[playerId] ?? 0;
-        top.innerHTML = `
-            <div class="player-hand-fan">
-                ${Array.from({ length: count }, (_, index) => `
-                    <div class="player-hand-back" style="${this.sprites.cardBackStyle('tomato', 0.16)} margin-left:${index === 0 ? 0 : -24}px;"></div>
-                `).join('')}
-            </div>
-        `;
+        top.innerHTML = `<div class="player-hand-fan"></div>`;
+        const fan = top.firstElementChild;
+        for (let index = 0; index < count; index += 1) {
+            const host = document.createElement('div');
+            host.className = 'player-hand-back-host';
+            host.style.marginLeft = index === 0 ? '0' : '-24px';
+            fan.appendChild(host);
+            this.registry.mount(host, this.registry.getBackNode(`back-opponent-${playerId}-${index}`, 'tomato', 0.16));
+        }
     }
 
     renderBoard(playerId) {
-        const player = this.game.gamedatas.players?.[playerId];
         const basketAnchor = document.getElementById(`basket-anchor-${playerId}`);
-        if (basketAnchor) {
-            basketAnchor.innerHTML = `<div class="basket-token ${player?.basketFull ? 'full' : 'empty'}"></div>`;
+        const player = this.game.gamedatas.players?.[playerId];
+        if (basketAnchor && player) {
+            basketAnchor.innerHTML = `<div class="basket-token ${player.basketFull ? 'full' : 'empty'}"></div>`;
         }
     }
 
-    renderCapturedTargets(playerId) {
-        const normal = document.getElementById(`captured-normal-${playerId}`);
-        const quick = document.getElementById(`captured-quick-${playerId}`);
-        const playerBoard = document.getElementById(`player-board-${playerId}`);
+    renderCaptured(playerId) {
+        const normalHost = document.getElementById(`captured-normal-${playerId}`);
+        const quickHost = document.getElementById(`captured-quick-${playerId}`);
+        const board = document.getElementById(`player-board-${playerId}`);
         const zone = document.getElementById(`player-zone-${playerId}`);
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
-        const scale = (playerBoard?.clientWidth ?? 176) / 220;
+        const scale = (board?.clientWidth ?? 176) / 220;
+        const keepKeys = [];
 
         zone?.style.setProperty('--player-zone-scale', String(scale));
-
-        if (normal) {
-            normal.innerHTML = captured.normal.map((card, index) => `
-                <div class="captured-mission normal" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)} right:${index * 76 * scale}px; z-index:${100 - index};"></div>
-            `).join('');
+        if (normalHost) {
+            normalHost.replaceChildren();
+            captured.normal.forEach((card, index) => {
+                const key = `mission-${card.id}`;
+                keepKeys.push(key);
+                const wrapper = document.createElement('div');
+                wrapper.className = 'captured-card-host';
+                wrapper.style.right = `${index * 76 * scale}px`;
+                wrapper.style.zIndex = String(100 - index);
+                normalHost.appendChild(wrapper);
+                this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
+            });
         }
 
-        if (quick) {
-            quick.innerHTML = captured.quick.map((card, index) => `
-                <div class="captured-mission quick" style="${this.sprites.missionCardStyle(Number(card.targetId), scale)} left:${index * 76 * scale}px; z-index:${100 - index};"></div>
-            `).join('');
+        if (quickHost) {
+            quickHost.replaceChildren();
+            captured.quick.forEach((card, index) => {
+                const key = `mission-${card.id}`;
+                keepKeys.push(key);
+                const wrapper = document.createElement('div');
+                wrapper.className = 'captured-card-host';
+                wrapper.style.left = `${index * 76 * scale}px`;
+                wrapper.style.zIndex = String(100 - index);
+                quickHost.appendChild(wrapper);
+                this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));
+            });
         }
+
+        this.registry.removeMissing(['mission-'], [
+            ...keepKeys,
+            ...this.getBoardMissionKeys(),
+        ]);
+    }
+
+    getBoardTomatoKeys() {
+        return (this.game.gamedatas.boardTomatoes ?? []).filter(Boolean).map(card => `tomato-${card.id}`);
+    }
+
+    getDiscardTomatoKeys() {
+        return this.game.gamedatas.latestDiscardTomato ? [`tomato-${this.game.gamedatas.latestDiscardTomato.id}`] : [];
+    }
+
+    getBoardMissionKeys() {
+        return (this.game.gamedatas.boardTargets ?? []).filter(Boolean).map(card => `mission-${card.id}`);
     }
 }
 
 class PlayerTurnState {
-    constructor(game, bga) {
+    constructor(game) {
         this.game = game;
-        this.bga = bga;
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
@@ -352,7 +512,6 @@ class PlayerTurnState {
         this.game.isCurrentPlayerActive = isCurrentPlayerActive;
         this.game.clearPendingAction();
         this.game.renderState(args);
-        this.game.bindPlayerTurnInteractions();
         this.game.setStatePrompt(isCurrentPlayerActive
             ? _('Select a tomato card and a board slot, then confirm with the action buttons.')
             : _('Waiting for the active player to choose an action.'));
@@ -362,8 +521,7 @@ class PlayerTurnState {
     onLeavingState() {
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
-        this.game.unbindInteractions();
-        this.bga.statusBar.removeActionButtons();
+        this.game.bga.statusBar.removeActionButtons();
     }
 }
 
@@ -383,17 +541,16 @@ class ResolveBonusState {
 }
 
 class DiscardDownState {
-    constructor(game, bga) {
+    constructor(game) {
         this.game = game;
-        this.bga = bga;
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
         this.game.currentUiMode = 'discard';
         this.game.isCurrentPlayerActive = isCurrentPlayerActive;
         this.game.clearPendingAction();
+        this.game.clearSelection();
         this.game.renderState(args);
-        this.game.bindDiscardInteractions();
         this.game.setStatePrompt(isCurrentPlayerActive
             ? _('Select a tomato card to discard, then confirm with the action buttons.')
             : _('Waiting for the active player to discard down.'));
@@ -403,15 +560,13 @@ class DiscardDownState {
     onLeavingState() {
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
-        this.game.unbindInteractions();
-        this.bga.statusBar.removeActionButtons();
+        this.game.bga.statusBar.removeActionButtons();
     }
 }
 
 export class Game {
     constructor(bga) {
         this.bga = bga;
-        this.boundInteractions = [];
         this.selectedCardIds = [];
         this.pendingSpace = null;
         this.currentUiMode = null;
@@ -420,12 +575,13 @@ export class Game {
         this.recentThrowTimeout = null;
 
         this.sprites = new SpriteStyles();
-        this.stageView = new FestivalStageView(this, this.sprites);
-        this.playerZonesView = new PlayerZonesView(this, this.sprites);
+        this.registry = new CardRegistry(this, this.sprites);
+        this.stageView = new FestivalStageView(this, this.sprites, this.registry);
+        this.playerZonesView = new PlayerZonesView(this, this.sprites, this.registry);
 
-        this.playerTurn = new PlayerTurnState(this, bga);
-        this.resolveBonus = new ResolveBonusState(this, bga);
-        this.discardDown = new DiscardDownState(this, bga);
+        this.playerTurn = new PlayerTurnState(this);
+        this.resolveBonus = new ResolveBonusState(this);
+        this.discardDown = new DiscardDownState(this);
 
         this.bga.states.register('PlayerTurn', this.playerTurn);
         this.bga.states.register('ResolveBonus', this.resolveBonus);
@@ -439,28 +595,37 @@ export class Game {
         }
 
         document.getElementById('tomatoss-layout')?.remove();
-
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
             <div id="tomatoss-layout">
                 <div id="festival-stage">
                     <div id="festival-canvas">
                         <div id="recent-throw-area" data-visible="false"></div>
-                        <div id="mission-deck-slot" class="stage-slot"></div>
-                        <div id="mission-slot-0" class="stage-slot"></div>
-                        <div id="mission-slot-1" class="stage-slot"></div>
-                        <div id="mission-slot-2" class="stage-slot"></div>
+                        <div id="mission-deck-slot" class="stage-slot stage-deck-slot"></div>
+                        ${[0, 1, 2].map(index => `
+                            <div id="mission-slot-${index}" class="stage-slot">
+                                <button class="stage-slot-button mission-slot-button" data-space="${index + 3}">
+                                    <div class="slot-card-host" data-empty="true"></div>
+                                </button>
+                            </div>
+                        `).join('')}
                         <div id="festival-board-wrap">
                             <div id="festival-board">
                                 <div id="festival-slot-layer"></div>
                                 <div id="festival-token-layer"></div>
                             </div>
                         </div>
-                        <div id="discard-slot" class="stage-slot"></div>
+                        <div id="discard-slot" class="stage-slot">
+                            <div class="slot-card-host" data-empty="true"></div>
+                        </div>
                         <div id="token-reserve" class="stage-slot"></div>
-                        <div id="tomato-slot-0" class="stage-slot"></div>
-                        <div id="tomato-slot-1" class="stage-slot"></div>
-                        <div id="tomato-slot-2" class="stage-slot"></div>
-                        <div id="tomato-deck-slot" class="stage-slot"></div>
+                        ${[0, 1, 2].map(index => `
+                            <div id="tomato-slot-${index}" class="stage-slot">
+                                <button class="stage-slot-button tomato-slot-button" data-space="${index}">
+                                    <div class="slot-card-host" data-empty="true"></div>
+                                </button>
+                            </div>
+                        `).join('')}
+                        <div id="tomato-deck-slot" class="stage-slot stage-deck-slot"></div>
                     </div>
                 </div>
                 <div id="player-zones"></div>
@@ -468,8 +633,38 @@ export class Game {
         `);
 
         this.playerZonesView.setup();
+        this.bindRootEvents();
         this.renderState(gamedatas);
         this.setupNotifications();
+    }
+
+    bindRootEvents() {
+        const root = document.getElementById('tomatoss-layout');
+        if (!root || root.dataset.bound === 'true') {
+            return;
+        }
+
+        root.addEventListener('click', event => {
+            const target = event.target;
+            const handButton = target.closest('.hand-card-button');
+            if (handButton) {
+                this.onHandCardClick(handButton);
+                return;
+            }
+
+            const stageSlotButton = target.closest('.stage-slot-button');
+            if (stageSlotButton) {
+                this.onBoardSpaceClick(Number(stageSlotButton.dataset.space));
+                return;
+            }
+
+            const boardTokenSlot = target.closest('.board-token-slot');
+            if (boardTokenSlot) {
+                this.onBoardSpaceClick(Number(boardTokenSlot.dataset.space));
+            }
+        });
+
+        root.dataset.bound = 'true';
     }
 
     buildRenderData(source) {
@@ -492,42 +687,11 @@ export class Game {
         this.gamedatas = { ...this.gamedatas, ...this.buildRenderData(source) };
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
+        this.updateActionButtons();
     }
 
     setStatePrompt(text) {
         this.bga.statusBar.setTitle(text);
-    }
-
-    clearSelection() {
-        this.selectedCardIds = [];
-        document.querySelectorAll('.hand-card').forEach(card => card.classList.remove('is-selected'));
-    }
-
-    clearPendingAction() {
-        this.pendingSpace = null;
-    }
-
-    clearRecentThrow() {
-        if (this.recentThrowTimeout !== null) {
-            clearTimeout(this.recentThrowTimeout);
-            this.recentThrowTimeout = null;
-        }
-        this.recentThrow = null;
-        this.stageView.renderRecentThrow();
-    }
-
-    showRecentThrow(args) {
-        this.recentThrow = {
-            targetId: args.targetId,
-            cards: args.cards ?? [],
-            revealed: args.revealed?.value ?? null,
-            success: Boolean(args.success),
-        };
-        this.stageView.renderRecentThrow();
-        if (this.recentThrowTimeout !== null) {
-            clearTimeout(this.recentThrowTimeout);
-        }
-        this.recentThrowTimeout = setTimeout(() => this.clearRecentThrow(), 3200);
     }
 
     canInteract(action) {
@@ -535,12 +699,49 @@ export class Game {
             this.bga.dialogs.showMessage(_('This is not your turn'), 'error');
             return false;
         }
+        return this.bga.actions.checkAction(action, false);
+    }
 
-        if (!this.bga.actions.checkAction(action, false)) {
-            return false;
+    clearSelection() {
+        this.selectedCardIds = [];
+    }
+
+    clearPendingAction() {
+        this.pendingSpace = null;
+    }
+
+    onHandCardClick(button) {
+        if (this.currentUiMode !== 'playerTurn' && this.currentUiMode !== 'discard') {
+            return;
         }
 
-        return true;
+        const action = this.currentUiMode === 'discard' ? 'actDiscardCard' : 'actTossToTarget';
+        if (!this.canInteract(action)) {
+            return;
+        }
+
+        const cardId = Number(button.dataset.cardId);
+        if (this.currentUiMode === 'discard') {
+            this.selectedCardIds = [cardId];
+        } else if (this.selectedCardIds.includes(cardId)) {
+            this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
+        } else {
+            this.selectedCardIds = [...this.selectedCardIds, cardId];
+        }
+
+        this.playerZonesView.renderHandArea(this.bga.player_id);
+        this.updateActionButtons();
+    }
+
+    onBoardSpaceClick(space) {
+        const action = space < 3 ? 'actCollectTomato' : 'actTossToTarget';
+        if (!this.canInteract(action)) {
+            return;
+        }
+
+        this.pendingSpace = space;
+        this.stageView.renderActionSlots();
+        this.updateActionButtons();
     }
 
     getSelectedValues(cardIds = this.selectedCardIds) {
@@ -573,40 +774,36 @@ export class Game {
     }
 
     renderPlayerTurnButtons() {
-        const pendingSpace = this.pendingSpace;
-        const hasSelection = this.selectedCardIds.length > 0;
-
-        if (pendingSpace !== null && pendingSpace < 3) {
+        if (this.pendingSpace !== null && this.pendingSpace < 3) {
             this.bga.statusBar.addActionButton(_('Pick up'), () => this.confirmCollect(), {
                 id: 'pickup_button',
             });
         }
 
-        if (pendingSpace !== null && pendingSpace >= 3) {
-            const target = (this.gamedatas.boardTargets ?? [])[pendingSpace - 3];
+        if (this.pendingSpace !== null && this.pendingSpace >= 3) {
+            const target = (this.gamedatas.boardTargets ?? [])[this.pendingSpace - 3];
             const { normal, quick } = target ? this.getThrowOptions(Number(target.targetId)) : { normal: false, quick: false };
 
             this.bga.statusBar.addActionButton(_('Toss'), () => this.confirmToss(false), {
                 id: 'toss_button',
-                disabled: !hasSelection || !normal,
+                disabled: !normal,
             });
             this.bga.statusBar.addActionButton(_('Quick toss'), () => this.confirmToss(true), {
                 id: 'quick_toss_button',
                 color: 'secondary',
-                disabled: !hasSelection || !quick,
+                disabled: !quick,
             });
         }
 
-        if (pendingSpace !== null || hasSelection) {
+        if (this.pendingSpace !== null || this.selectedCardIds.length > 0) {
             this.bga.statusBar.addActionButton(_('Clear selection'), () => {
                 this.clearPendingAction();
                 this.clearSelection();
-                this.renderState(this.gamedatas);
-                this.bindPlayerTurnInteractions();
+                this.playerZonesView.renderHandArea(this.bga.player_id);
+                this.stageView.renderActionSlots();
                 this.updateActionButtons();
             }, {
                 color: 'secondary',
-                id: 'clear_selection_button',
             });
         }
     }
@@ -614,96 +811,16 @@ export class Game {
     renderDiscardButtons() {
         const selectedCard = (this.gamedatas.playerHand ?? []).find(card => this.selectedCardIds.includes(card.id));
         this.bga.statusBar.addActionButton(_('Discard selected'), () => this.confirmDiscard(), {
-            id: 'discard_button',
             color: 'alert',
             disabled: !selectedCard,
         });
-
         if (selectedCard) {
             this.bga.statusBar.addActionButton(_('Clear selection'), () => {
                 this.clearSelection();
-                this.playerZonesView.renderTop(this.bga.player_id);
-                this.bindDiscardInteractions();
+                this.playerZonesView.renderHandArea(this.bga.player_id);
                 this.updateActionButtons();
-            }, {
-                color: 'secondary',
-                id: 'clear_discard_selection_button',
-            });
+            }, { color: 'secondary' });
         }
-    }
-
-    bindPlayerTurnInteractions() {
-        this.unbindInteractions();
-
-        document.querySelectorAll('.board-token-slot, .stage-card-action').forEach(button => {
-            const handler = () => this.handleBoardSlotClick(Number(button.dataset.space));
-            button.addEventListener('click', handler);
-            this.boundInteractions.push({ element: button, handler });
-        });
-
-        document.querySelectorAll('.hand-card').forEach(button => {
-            const handler = () => this.handleHandCardClick(button);
-            button.addEventListener('click', handler);
-            this.boundInteractions.push({ element: button, handler });
-        });
-    }
-
-    bindDiscardInteractions() {
-        this.unbindInteractions();
-
-        document.querySelectorAll('.hand-card').forEach(button => {
-            const handler = () => this.handleDiscardCardClick(button);
-            button.addEventListener('click', handler);
-            this.boundInteractions.push({ element: button, handler });
-        });
-    }
-
-    unbindInteractions() {
-        this.boundInteractions.forEach(({ element, handler }) => element.removeEventListener('click', handler));
-        this.boundInteractions = [];
-    }
-
-    handleHandCardClick(button) {
-        if (!this.canInteract('actTossToTarget')) {
-            return;
-        }
-
-        this.toggleHandSelection(button);
-        this.playerZonesView.renderTop(this.bga.player_id);
-        this.bindPlayerTurnInteractions();
-        this.updateActionButtons();
-    }
-
-    handleDiscardCardClick(button) {
-        if (!this.canInteract('actDiscardCard')) {
-            return;
-        }
-
-        this.clearSelection();
-        this.selectedCardIds = [Number(button.dataset.cardId)];
-        this.playerZonesView.renderTop(this.bga.player_id);
-        this.bindDiscardInteractions();
-        this.updateActionButtons();
-    }
-
-    toggleHandSelection(button) {
-        const cardId = Number(button.dataset.cardId);
-        if (this.selectedCardIds.includes(cardId)) {
-            this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
-        } else {
-            this.selectedCardIds = [...this.selectedCardIds, cardId];
-        }
-    }
-
-    handleBoardSlotClick(space) {
-        const action = space < 3 ? 'actCollectTomato' : 'actTossToTarget';
-        if (!this.canInteract(action)) {
-            return;
-        }
-
-        this.pendingSpace = space;
-        this.bindPlayerTurnInteractions();
-        this.updateActionButtons();
     }
 
     confirmCollect() {
@@ -721,7 +838,6 @@ export class Game {
 
         const target = (this.gamedatas.boardTargets ?? [])[this.pendingSpace - 3];
         if (!target) {
-            this.bga.dialogs.showMessage(_('No mission card in that slot'), 'error');
             return;
         }
 
@@ -826,7 +942,6 @@ export class Game {
         if (playerId === undefined || handCount === undefined) {
             return;
         }
-
         this.gamedatas.handCountsByPlayer = {
             ...(this.gamedatas.handCountsByPlayer ?? {}),
             [playerId]: handCount,
@@ -854,14 +969,26 @@ export class Game {
         this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
     }
 
-    refreshCurrentUi() {
-        if (this.currentUiMode === 'playerTurn') {
-            this.playerZonesView.renderTop(this.bga.player_id);
-            this.bindPlayerTurnInteractions();
-        } else if (this.currentUiMode === 'discard') {
-            this.playerZonesView.renderTop(this.bga.player_id);
-            this.bindDiscardInteractions();
+    showRecentThrow(args) {
+        if (this.recentThrowTimeout) {
+            clearTimeout(this.recentThrowTimeout);
         }
+        this.recentThrow = {
+            targetId: args.targetId,
+            cards: args.cards ?? [],
+            revealed: args.revealed?.value ?? null,
+            success: Boolean(args.success),
+        };
+        this.stageView.renderRecentThrow();
+        this.recentThrowTimeout = setTimeout(() => {
+            this.recentThrow = null;
+            this.stageView.renderRecentThrow();
+        }, 3200);
+    }
+
+    afterPublicChange() {
+        this.stageView.renderAll();
+        this.playerZonesView.renderAll();
         this.updateActionButtons();
     }
 
@@ -878,46 +1005,30 @@ export class Game {
 
         if (isCollect) {
             this.applyCollectAction(args);
-            this.clearPendingAction();
-            this.stageView.renderTomatoRow();
-            this.stageView.renderBoardTokens();
-            this.stageView.renderReserveTokens();
-            this.playerZonesView.renderPlayer(args.player_id);
-            this.refreshCurrentUi();
-            return;
+        } else {
+            this.applyThrowAction(args);
+            this.showRecentThrow(args);
+            this.clearSelection();
         }
 
-        this.applyThrowAction(args);
-        this.showRecentThrow(args);
         this.clearPendingAction();
-        this.clearSelection();
-        this.stageView.renderTomatoRow();
-        this.stageView.renderBoardTokens();
-        this.stageView.renderReserveTokens();
-        if (args.newTarget !== undefined) {
-            this.stageView.renderMissionRow();
-        }
-        this.playerZonesView.renderPlayer(args.player_id);
-        this.refreshCurrentUi();
+        this.afterPublicChange();
     }
 
     async notif_resolveBonus(args) {
-        const player = this.gamedatas.players?.[args.player_id];
-        if (player) {
-            player.basketFull = args.basketFull;
+        if (this.gamedatas.players?.[args.player_id]) {
+            this.gamedatas.players[args.player_id].basketFull = args.basketFull;
         }
         this.updateHandCount(args.player_id, args.handCount);
         this.playerZonesView.renderPlayer(args.player_id);
-        this.refreshCurrentUi();
+        this.updateActionButtons();
     }
 
     async notif_discardCard(args) {
         this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
         this.updateHandCount(args.player_id, args.handCount);
         this.clearSelection();
-        this.stageView.renderTomatoRow();
-        this.playerZonesView.renderPlayer(args.player_id);
-        this.refreshCurrentUi();
+        this.afterPublicChange();
     }
 
     async notif_privateHandUpdate(args) {
@@ -925,7 +1036,7 @@ export class Game {
             this.gamedatas.playerHand = args.playerHand;
             this.updateHandCount(args.player_id, args.playerHand.length);
         }
-        this.playerZonesView.renderTop(this.bga.player_id);
-        this.refreshCurrentUi();
+        this.playerZonesView.renderHandArea(this.bga.player_id);
+        this.updateActionButtons();
     }
 }
