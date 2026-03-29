@@ -436,13 +436,13 @@
 }
 
 .captured-stack.normal {
-    left: 0;
+    right: 100%;
     flex-direction: row-reverse;
     justify-content: flex-start;
 }
 
 .captured-stack.quick {
-    right: 0;
+    left: 100%;
     flex-direction: row;
     justify-content: flex-start;
 }
