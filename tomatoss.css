@@ -38,7 +38,9 @@
     display: grid;
     gap: 18px;
     justify-items: center;
-    width: min(100%, calc(var(--stage-width) + 32px));
+    margin-inline: auto;
+    max-width: 700px;
+    width: min(100%, 700px);
 }
 
 #table-center {
@@ -47,6 +49,7 @@
     border-radius: 18px;
     padding: 18px;
     box-sizing: border-box;
+    margin-inline: auto;
     width: 100%;
 }
 
@@ -313,6 +316,8 @@
     gap: 14px;
     grid-template-columns: 1fr;
     justify-content: stretch;
+    margin-inline: auto;
+    max-width: 700px;
     width: 100%;
 }
 
