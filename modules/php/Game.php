@@ -16,6 +16,7 @@ class Game extends \Bga\GameFramework\Table
     private const G_TURN_NO = 'turnNo';
     private const G_ACTION_INDEX = 'actionIndex';
     private const G_START_PLAYER_ID = 'startPlayerId';
+    private const G_END_AFTER_TURN = 'endAfterTurn';
 
     private const TOMATO_CARD_COUNTS = [
         1 => 3,
@@ -68,6 +69,7 @@ class Game extends \Bga\GameFramework\Table
             self::G_TURN_NO => 10,
             self::G_ACTION_INDEX => 11,
             self::G_START_PLAYER_ID => 12,
+            self::G_END_AFTER_TURN => 13,
         ]);
     }
 
@@ -150,6 +152,7 @@ class Game extends \Bga\GameFramework\Table
         $firstPlayerId = (int) $this->activeNextPlayer();
         $this->setGameStateInitialValue(self::G_TURN_NO, 1);
         $this->setGameStateInitialValue(self::G_ACTION_INDEX, 0);
+        $this->setGameStateInitialValue(self::G_END_AFTER_TURN, 0);
         $this->setGameStateInitialValue(self::G_START_PLAYER_ID, $firstPlayerId);
 
         $this->bga->playerStats->init([
@@ -319,13 +322,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function isGameEndPending(): bool
     {
-        $deckCount = (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'target_deck'"
-        );
-        $boardCount = (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'board_target'"
-        );
-        return $deckCount === 0 && $boardCount === 0;
+        return (int) $this->getGameStateValue(self::G_END_AFTER_TURN) === 1;
     }
 
     public function getBoardTomatoSlots(): array
@@ -598,6 +595,8 @@ class Game extends \Bga\GameFramework\Table
             $replacement = $this->drawCard('target', 'target_deck', 'board_target', $targetSlot);
             if ($replacement !== null) {
                 $replacementTarget = $this->buildTargetData((int) $replacement['id'], (int) $replacement['typeArg']);
+            } else {
+                $this->setGameStateValue(self::G_END_AFTER_TURN, 1);
             }
         }
 
