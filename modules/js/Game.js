@@ -34,20 +34,10 @@ class SpriteStyles {
         return document.getElementById('tomatoss-layout');
     }
 
-    getStageElement() {
-        return document.getElementById('festival-stage');
-    }
-
     getStageWidth() {
-        const leftSide = document.getElementById('left-side');
-        const gameAreaWrap = document.getElementById('game_play_area_wrap');
-        const tableCenter = document.getElementById('table-center');
         const layoutParent = this.getLayoutElement()?.parentElement;
-        const available = leftSide?.clientWidth
-            ?? gameAreaWrap?.clientWidth
-            ?? tableCenter?.clientWidth
-            ?? layoutParent?.clientWidth
-            ?? STAGE_DESIGN_WIDTH;
+        const leftSide = document.getElementById('left-side');
+        const available = layoutParent?.clientWidth ?? leftSide?.clientWidth ?? STAGE_DESIGN_WIDTH;
         const usable = Math.max(320, Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME);
         return Math.min(STAGE_DESIGN_WIDTH, usable);
     }
@@ -63,11 +53,8 @@ class SpriteStyles {
 
     updateBoardScale() {
         const layout = this.getLayoutElement();
-        const stage = this.getStageElement();
         const stageScale = this.getStageScale();
         const boardScale = this.getBoardScale();
-        const tomatoCardScale = (CARD_DESIGN_WIDTH / 155) * stageScale;
-        const missionCardScale = (CARD_DESIGN_WIDTH / 157.5) * stageScale;
         const sharedCardWidth = CARD_DESIGN_WIDTH * stageScale;
         const sharedCardHeight = CARD_DESIGN_HEIGHT * stageScale;
 
@@ -75,18 +62,12 @@ class SpriteStyles {
             layout.style.setProperty('--layout-width', `${this.getStageWidth() + LAYOUT_HORIZONTAL_CHROME}px`);
             layout.style.setProperty('--stage-width', `${this.getStageWidth()}px`);
             layout.style.setProperty('--stage-height', `${STAGE_DESIGN_HEIGHT * stageScale}px`);
-            layout.style.setProperty('--card-scale', String(stageScale));
             layout.style.setProperty('--tomato-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--mission-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--card-h', `${sharedCardHeight}px`);
             layout.style.setProperty('--player-board-size', `${PLAYER_BOARD_DESIGN_SIZE * stageScale}px`);
-            layout.style.setProperty('--tomato-card-scale', String(tomatoCardScale));
-            layout.style.setProperty('--mission-card-scale', String(missionCardScale));
-        }
-
-        if (stage) {
-            stage.style.setProperty('--board-scale', String(boardScale));
-            stage.style.setProperty('--stage-scale', String(stageScale));
+            layout.style.setProperty('--board-scale', String(boardScale));
+            layout.style.setProperty('--stage-scale', String(stageScale));
         }
     }
 
@@ -532,12 +513,10 @@ class PlayerZonesView {
     renderCaptured(playerId) {
         const normalHost = document.getElementById(`captured-normal-${playerId}`);
         const quickHost = document.getElementById(`captured-quick-${playerId}`);
-        const zone = document.getElementById(`player-zone-${playerId}`);
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
         const scale = this.sprites.getCardScale('mission');
         const overlapOffset = CARD_DESIGN_WIDTH * this.sprites.getStageScale() * 0.3;
 
-        zone?.style.setProperty('--player-zone-scale', String(this.sprites.getStageScale()));
         if (normalHost) {
             normalHost.replaceChildren();
             captured.normal.forEach((card, index) => {
@@ -570,10 +549,6 @@ class PlayerZonesView {
 
     getDiscardTomatoKeys() {
         return this.game.gamedatas.latestDiscardTomato ? [`tomato-${this.game.gamedatas.latestDiscardTomato.id}`] : [];
-    }
-
-    getBoardMissionKeys() {
-        return (this.game.gamedatas.boardTargets ?? []).filter(Boolean).map(card => `mission-${card.id}`);
     }
 }
 

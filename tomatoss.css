@@ -9,7 +9,6 @@
     --ink: #5a2a0d;
     --board-scale: 1;
     --stage-scale: 1;
-    --card-scale: 0.72;
     --tomato-card-w: 118px;
     --mission-card-w: 120px;
     --card-h: 168px;
@@ -320,7 +319,6 @@
 }
 
 .tomatoss-player-zone {
-    --player-zone-scale: 0.8;
     background: rgba(255, 255, 255, 0.4);
     border: 2px solid white;
     border-radius: 15px;
