@@ -377,7 +377,7 @@ class FestivalStageView {
         wrap.style.position = 'absolute';
         wrap.style.height = `${CARD_DESIGN_HEIGHT * this.sprites.getStageScale()}px`;
 
-        const scale = Math.max(0.42, this.sprites.getCardScale('mission') * 0.9);
+        const tomatoScale = this.sprites.getCardScale('tomato');
         const targetIndex = Math.max(0, Number(recent.slotIndex ?? 0));
         const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
         wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
@@ -388,7 +388,7 @@ class FestivalStageView {
         wrap.appendChild(cards);
 
         (recent.cards ?? []).forEach((value, index) => {
-            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, scale * 0.68);
+            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, tomatoScale);
             node.style.position = 'relative';
             node.style.left = '0';
             cards.appendChild(node);
@@ -398,7 +398,7 @@ class FestivalStageView {
         });
 
         if (recent.revealed) {
-            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, scale * 0.68, ['reveal']);
+            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, tomatoScale, ['reveal']);
             node.style.position = 'relative';
             node.style.left = '0';
             node.style.marginLeft = `${-360 * this.sprites.getStageScale()}px`;
