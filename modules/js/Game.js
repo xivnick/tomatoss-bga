@@ -379,7 +379,7 @@ class FestivalStageView {
         wrap.style.height = `${CARD_DESIGN_HEIGHT * this.sprites.getStageScale()}px`;
 
         const tomatoScale = this.sprites.getCardScale('tomato');
-        const targetIndex = Math.max(0, Number(recent.slotIndex ?? 0));
+        const targetIndex = Math.max(0, Number(recent.targetIndex ?? 0));
         const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
         wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
         wrap.style.top = `${100 * this.sprites.getStageScale()}px`;
@@ -1066,7 +1066,7 @@ export class Game {
     }
 
     applyCollectAction(args) {
-        const slotIndex = Number(args.slot_no) - 1;
+        const slotIndex = Number(args.space);
         this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
         this.gamedatas.boardTomatoes[slotIndex] = args.refill;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
@@ -1074,7 +1074,7 @@ export class Game {
     }
 
     applyThrowAction(args) {
-        const slotIndex = Number(args.slot_no) - 1;
+        const slotIndex = Number(args.targetIndex);
         if (args.newTarget !== undefined) {
             this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
             this.gamedatas.boardTargets[slotIndex] = args.newTarget;
@@ -1108,7 +1108,7 @@ export class Game {
         }
         this.recentThrow = {
             targetId: args.targetId,
-            slotIndex: Math.max(0, Number(args.slot_no) - 1),
+            targetIndex: Number(args.targetIndex),
             cards: args.cards ?? [],
             revealed: args.revealed?.value ?? null,
             success: Boolean(args.success),
@@ -1135,9 +1135,9 @@ export class Game {
     }
 
     async notif_turnAction(args) {
-        const isCollect = Number(args.slot_no) <= 3 && Object.prototype.hasOwnProperty.call(args, 'refill');
+        const isCollect = Object.prototype.hasOwnProperty.call(args, 'refill');
         this.pushTurnAction({
-            space: isCollect ? Number(args.slot_no) - 1 : Number(args.slot_no) + 2,
+            space: Number(args.space),
             actionKind: isCollect ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss'),
             cards: args.cards ?? [],
             revealed: args.revealed ?? null,
