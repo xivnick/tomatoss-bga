@@ -18,6 +18,7 @@ const STAGE_DESIGN_WIDTH = 3754;
 const STAGE_DESIGN_HEIGHT = 2976;
 const CARD_DESIGN_WIDTH = 620;
 const CARD_DESIGN_HEIGHT = 880;
+const PLAYER_BOARD_DESIGN_SIZE = 440;
 const MAX_LAYOUT_WIDTH = 700;
 const LAYOUT_HORIZONTAL_CHROME = 32 + 36 + 4;
 const TARGET_CARD_POSITIONS = [
@@ -77,7 +78,7 @@ class SpriteStyles {
             layout.style.setProperty('--tomato-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--mission-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--card-h', `${sharedCardHeight}px`);
-            layout.style.setProperty('--player-board-size', `${250 * stageScale}px`);
+            layout.style.setProperty('--player-board-size', `${PLAYER_BOARD_DESIGN_SIZE * stageScale}px`);
             layout.style.setProperty('--tomato-card-scale', String(tomatoCardScale));
             layout.style.setProperty('--mission-card-scale', String(missionCardScale));
         }
@@ -530,13 +531,13 @@ class PlayerZonesView {
     renderCaptured(playerId) {
         const normalHost = document.getElementById(`captured-normal-${playerId}`);
         const quickHost = document.getElementById(`captured-quick-${playerId}`);
-        const board = document.getElementById(`player-board-${playerId}`);
         const zone = document.getElementById(`player-zone-${playerId}`);
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
-        const scale = (board?.clientWidth ?? 176) / 220;
+        const scale = this.sprites.getCardScale('mission');
+        const overlapOffset = CARD_DESIGN_WIDTH * this.sprites.getStageScale() * 0.3;
         const keepKeys = [];
 
-        zone?.style.setProperty('--player-zone-scale', String(scale));
+        zone?.style.setProperty('--player-zone-scale', String(this.sprites.getStageScale()));
         if (normalHost) {
             normalHost.replaceChildren();
             captured.normal.forEach((card, index) => {
@@ -544,7 +545,7 @@ class PlayerZonesView {
                 keepKeys.push(key);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
-                wrapper.style.right = `${index * 52 * scale}px`;
+                wrapper.style.right = `${index * overlapOffset}px`;
                 wrapper.style.zIndex = String(100 - index);
                 normalHost.appendChild(wrapper);
                 this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
@@ -558,7 +559,7 @@ class PlayerZonesView {
                 keepKeys.push(key);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
-                wrapper.style.left = `${index * 52 * scale}px`;
+                wrapper.style.left = `${index * overlapOffset}px`;
                 wrapper.style.zIndex = String(100 - index);
                 quickHost.appendChild(wrapper);
                 this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));
