@@ -172,7 +172,7 @@
     background: none;
     border: 0;
     cursor: pointer;
-    display: block;
+    display: inline-flex;
     padding: 0;
 }
 
@@ -355,12 +355,13 @@
 }
 
 .self-hand-row {
+    align-content: flex-start;
     align-items: flex-end;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;
-    min-width: 100%;
+    min-width: 0;
     padding-bottom: 8px;
     width: 100%;
 }
@@ -371,6 +372,7 @@
 
 .hand-card-button {
     flex: 0 0 auto;
+    width: var(--tomato-card-w);
 }
 
 .player-hand-fan {
