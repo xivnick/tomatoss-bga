@@ -15,7 +15,7 @@
     --card-h: 168px;
     --player-board-size: 168px;
     --stage-width: 760px;
-    --stage-height: 540px;
+    --stage-height: 603px;
     display: grid;
     gap: 18px;
     margin: 12px 0 20px;
@@ -73,50 +73,44 @@
 }
 
 #recent-throw-area {
-    align-items: flex-start;
-    display: flex;
-    justify-content: center;
-    left: calc(255px * var(--stage-scale));
-    min-height: calc(110px * var(--stage-scale));
-    top: 0;
-    width: calc(350px * var(--stage-scale));
+    inset: 0;
     z-index: 5;
 }
 
 #mission-deck-slot {
-    left: calc(70px * var(--stage-scale));
-    top: calc(38px * var(--stage-scale));
+    left: calc(100px * var(--stage-scale));
+    top: calc(370px * var(--stage-scale));
 }
 
-#mission-slot-0 { left: calc(228px * var(--stage-scale)); top: calc(38px * var(--stage-scale)); }
-#mission-slot-1 { left: calc(365px * var(--stage-scale)); top: calc(38px * var(--stage-scale)); }
-#mission-slot-2 { left: calc(502px * var(--stage-scale)); top: calc(38px * var(--stage-scale)); }
+#mission-slot-0 { left: calc(841px * var(--stage-scale)); top: calc(370px * var(--stage-scale)); }
+#mission-slot-1 { left: calc(1592px * var(--stage-scale)); top: calc(370px * var(--stage-scale)); }
+#mission-slot-2 { left: calc(2343px * var(--stage-scale)); top: calc(370px * var(--stage-scale)); }
 
 #festival-board-wrap {
-    left: calc(147px * var(--stage-scale));
-    top: calc(214px * var(--stage-scale));
-    width: calc(569px * var(--stage-scale));
+    left: calc(584px * var(--stage-scale));
+    top: calc(1300px * var(--stage-scale));
+    width: calc(2275px * var(--stage-scale));
 }
 
 #discard-slot {
-    left: calc(724px * var(--stage-scale));
-    top: calc(190px * var(--stage-scale));
+    left: calc(3034px * var(--stage-scale));
+    top: calc(1066px * var(--stage-scale));
 }
 
 #token-reserve {
-    bottom: calc(103px * var(--stage-scale));
     display: flex;
     gap: calc(12px * var(--stage-scale));
-    left: calc(732px * var(--stage-scale));
+    left: calc(3060px * var(--stage-scale));
+    top: calc(2140px * var(--stage-scale));
 }
 
-#tomato-slot-0 { left: calc(210px * var(--stage-scale)); top: calc(401px * var(--stage-scale)); }
-#tomato-slot-1 { left: calc(347px * var(--stage-scale)); top: calc(401px * var(--stage-scale)); }
-#tomato-slot-2 { left: calc(484px * var(--stage-scale)); top: calc(401px * var(--stage-scale)); }
+#tomato-slot-0 { left: calc(485px * var(--stage-scale)); top: calc(1996px * var(--stage-scale)); }
+#tomato-slot-1 { left: calc(1226px * var(--stage-scale)); top: calc(1996px * var(--stage-scale)); }
+#tomato-slot-2 { left: calc(1967px * var(--stage-scale)); top: calc(1996px * var(--stage-scale)); }
 
 #tomato-deck-slot {
-    left: calc(636px * var(--stage-scale));
-    top: calc(401px * var(--stage-scale));
+    left: calc(2708px * var(--stage-scale));
+    top: calc(1996px * var(--stage-scale));
 }
 
 #recent-throw-area {
@@ -129,7 +123,7 @@
 
 .recent-throw {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(calc(-12px * var(--stage-scale)));
     transition: opacity 180ms ease, transform 180ms ease;
 }
 
@@ -145,9 +139,9 @@
 
 .recent-throw__cards {
     display: flex;
-    left: 16%;
+    left: calc(-150px * var(--stage-scale));
     position: absolute;
-    top: 12%;
+    top: calc(100px * var(--stage-scale));
 }
 
 .recent-throw__tomato {

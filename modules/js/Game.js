@@ -14,8 +14,13 @@ const TOKEN_SLOTS = [
     { space: 2, left: 74.51, top: 65.79 },
 ];
 
-const STAGE_DESIGN_WIDTH = 900;
-const STAGE_DESIGN_HEIGHT = 640;
+const STAGE_DESIGN_WIDTH = 3754;
+const STAGE_DESIGN_HEIGHT = 2976;
+const TARGET_CARD_POSITIONS = [
+    { x: 841, y: 370 },
+    { x: 1592, y: 370 },
+    { x: 2343, y: 370 },
+];
 
 class SpriteStyles {
     getLayoutElement() {
@@ -358,10 +363,15 @@ class FestivalStageView {
 
         const wrap = document.createElement('div');
         wrap.className = `recent-throw ${recent.success ? 'is-success' : 'is-fail'}`;
+        wrap.style.position = 'absolute';
 
         const target = document.createElement('div');
         target.className = 'recent-throw__target';
         const scale = Math.max(0.42, this.sprites.getCardScale('mission') * 0.9);
+        const targetIndex = Math.max(0, Number(recent.slotIndex ?? 0));
+        const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
+        wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
+        wrap.style.top = `${100 * this.sprites.getStageScale()}px`;
         target.style.cssText = this.sprites.missionCardStyle(Number(recent.targetId), scale);
         wrap.appendChild(target);
 
@@ -371,13 +381,13 @@ class FestivalStageView {
 
         (recent.cards ?? []).forEach((value, index) => {
             const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, scale * 0.68);
-            node.style.left = `${index * (34 * scale)}px`;
+            node.style.left = `${index * (-360 * this.sprites.getStageScale())}px`;
             cards.appendChild(node);
         });
 
         if (recent.revealed) {
             const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, scale * 0.68, ['reveal']);
-            node.style.left = `${(recent.cards?.length ?? 0) * (34 * scale)}px`;
+            node.style.left = `${(recent.cards?.length ?? 0) * (-360 * this.sprites.getStageScale())}px`;
             cards.appendChild(node);
         }
 
@@ -1054,6 +1064,7 @@ export class Game {
         }
         this.recentThrow = {
             targetId: args.targetId,
+            slotIndex: Math.max(0, Number(args.slot_no) - 4),
             cards: args.cards ?? [],
             revealed: args.revealed?.value ?? null,
             success: Boolean(args.success),
