@@ -16,6 +16,8 @@ const TOKEN_SLOTS = [
 
 const STAGE_DESIGN_WIDTH = 3754;
 const STAGE_DESIGN_HEIGHT = 2976;
+const CARD_DESIGN_WIDTH = 620;
+const CARD_DESIGN_HEIGHT = 880;
 const TARGET_CARD_POSITIONS = [
     { x: 841, y: 370 },
     { x: 1592, y: 370 },
@@ -58,16 +60,21 @@ class SpriteStyles {
         const stage = this.getStageElement();
         const stageScale = this.getStageScale();
         const boardScale = this.getBoardScale();
-        const cardScale = stageScale;
+        const tomatoCardScale = (CARD_DESIGN_WIDTH / 155) * stageScale;
+        const missionCardScale = (CARD_DESIGN_WIDTH / 157.5) * stageScale;
+        const sharedCardWidth = CARD_DESIGN_WIDTH * stageScale;
+        const sharedCardHeight = CARD_DESIGN_HEIGHT * stageScale;
 
         if (layout) {
             layout.style.setProperty('--stage-width', `${this.getStageWidth()}px`);
             layout.style.setProperty('--stage-height', `${STAGE_DESIGN_HEIGHT * stageScale}px`);
-            layout.style.setProperty('--card-scale', String(cardScale));
-            layout.style.setProperty('--tomato-card-w', `${155 * cardScale}px`);
-            layout.style.setProperty('--mission-card-w', `${157.5 * cardScale}px`);
-            layout.style.setProperty('--card-h', `${220 * cardScale}px`);
-            layout.style.setProperty('--player-board-size', `${220 * cardScale}px`);
+            layout.style.setProperty('--card-scale', String(stageScale));
+            layout.style.setProperty('--tomato-card-w', `${sharedCardWidth}px`);
+            layout.style.setProperty('--mission-card-w', `${sharedCardWidth}px`);
+            layout.style.setProperty('--card-h', `${sharedCardHeight}px`);
+            layout.style.setProperty('--player-board-size', `${220 * stageScale}px`);
+            layout.style.setProperty('--tomato-card-scale', String(tomatoCardScale));
+            layout.style.setProperty('--mission-card-scale', String(missionCardScale));
         }
 
         if (stage) {
@@ -77,8 +84,11 @@ class SpriteStyles {
     }
 
     getCardScale(kind) {
-        void kind;
-        return this.getStageScale();
+        const stageScale = this.getStageScale();
+        if (kind === 'mission') {
+            return (CARD_DESIGN_WIDTH / 157.5) * stageScale;
+        }
+        return (CARD_DESIGN_WIDTH / 155) * stageScale;
     }
 
     missionCardStyle(targetId, scale) {
