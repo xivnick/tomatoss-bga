@@ -516,14 +516,12 @@ class PlayerZonesView {
         const quickHost = document.getElementById(`captured-quick-${playerId}`);
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
         const scale = this.sprites.getCardScale('mission');
-        const overlapOffset = CARD_DESIGN_WIDTH * this.sprites.getStageScale() * 0.3;
 
         if (normalHost) {
             normalHost.replaceChildren();
             captured.normal.forEach((card, index) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
-                wrapper.style.right = `${index * overlapOffset}px`;
                 wrapper.style.zIndex = String(100 - index);
                 normalHost.appendChild(wrapper);
                 this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
@@ -535,7 +533,6 @@ class PlayerZonesView {
             captured.quick.forEach((card, index) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
-                wrapper.style.left = `${index * overlapOffset}px`;
                 wrapper.style.zIndex = String(100 - index);
                 quickHost.appendChild(wrapper);
                 this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));

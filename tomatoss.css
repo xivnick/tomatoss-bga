@@ -425,27 +425,38 @@
 }
 
 .captured-stack {
+    align-items: flex-end;
     bottom: 0;
+    display: flex;
     height: var(--card-h);
     overflow: visible;
     position: absolute;
-    width: calc(var(--mission-card-w) * 2.3);
+    width: auto;
     z-index: 1;
 }
 
 .captured-stack.normal {
     left: 0;
-    transform: translateX(calc(var(--mission-card-w) * -0.75));
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    transform: translateX(calc(var(--mission-card-w) * -0.72));
 }
 
 .captured-stack.quick {
     right: 0;
-    transform: translateX(calc(var(--mission-card-w) * 0.75));
+    flex-direction: row;
+    justify-content: flex-start;
+    transform: translateX(calc(var(--mission-card-w) * 0.72));
 }
 
 .captured-card-host {
-    bottom: 0;
-    position: absolute;
+    flex: 0 0 auto;
+    margin-right: calc(var(--mission-card-w) * -0.7);
+    position: relative;
+}
+
+.captured-stack > .captured-card-host:last-child {
+    margin-right: 0;
 }
 
 .captured-mission {
