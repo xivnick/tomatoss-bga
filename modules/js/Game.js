@@ -24,6 +24,7 @@ const TARGET_CARD_POSITIONS = [
     { x: 2343, y: 370 },
 ];
 const THROW_CUTSCENE_MS = 3200;
+const THROW_RESOLVE_DELAY_MS = 180;
 
 class SpriteStyles {
     getLayoutElement() {
@@ -1107,7 +1108,7 @@ export class Game {
         }
         this.recentThrow = {
             targetId: args.targetId,
-            slotIndex: Math.max(0, Number(args.slot_no) - 4),
+            slotIndex: Math.max(0, Number(args.slot_no) - 1),
             cards: args.cards ?? [],
             revealed: args.revealed?.value ?? null,
             success: Boolean(args.success),
@@ -1119,8 +1120,10 @@ export class Game {
             const pending = this.pendingThrowResolution;
             this.pendingThrowResolution = null;
             if (pending) {
-                this.applyThrowAction(pending);
-                this.afterPublicChange();
+                setTimeout(() => {
+                    this.applyThrowAction(pending);
+                    this.afterPublicChange();
+                }, THROW_RESOLVE_DELAY_MS);
             }
         }, THROW_CUTSCENE_MS);
     }
