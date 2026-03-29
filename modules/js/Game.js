@@ -23,6 +23,7 @@ const TARGET_CARD_POSITIONS = [
     { x: 1592, y: 370 },
     { x: 2343, y: 370 },
 ];
+const THROW_CUTSCENE_MS = 3200;
 
 class SpriteStyles {
     getLayoutElement() {
@@ -376,18 +377,11 @@ class FestivalStageView {
         wrap.style.position = 'absolute';
         wrap.style.height = `${CARD_DESIGN_HEIGHT * this.sprites.getStageScale()}px`;
 
-        const target = document.createElement('div');
-        target.className = 'recent-throw__target';
         const scale = Math.max(0.42, this.sprites.getCardScale('mission') * 0.9);
         const targetIndex = Math.max(0, Number(recent.slotIndex ?? 0));
         const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
         wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
         wrap.style.top = `${100 * this.sprites.getStageScale()}px`;
-        target.style.cssText = this.sprites.missionCardStyle(Number(recent.targetId), scale);
-        target.style.position = 'absolute';
-        target.style.left = `${150 * this.sprites.getStageScale()}px`;
-        target.style.top = `${(targetPos.y - 100) * this.sprites.getStageScale()}px`;
-        wrap.appendChild(target);
 
         const cards = document.createElement('div');
         cards.className = 'recent-throw__cards';
@@ -657,6 +651,7 @@ export class Game {
         this.isCurrentPlayerActive = false;
         this.recentThrow = null;
         this.recentThrowTimeout = null;
+        this.pendingThrowResolution = null;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1090,6 +1085,22 @@ export class Game {
         this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
     }
 
+    applyImmediateThrowHandChange(args) {
+        if (Number(args.player_id) !== this.getLocalPlayerId()) {
+            this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
+            return;
+        }
+
+        const playedIds = new Set((args.cards ?? []).map(card => Number(card.id)));
+        if (playedIds.size === 0) {
+            return;
+        }
+
+        this.gamedatas.playerHand = (this.gamedatas.playerHand ?? []).filter(card => !playedIds.has(Number(card.id)));
+        this.updateHandCount(args.player_id, this.gamedatas.playerHand.length);
+        this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+    }
+
     showRecentThrow(args) {
         if (this.recentThrowTimeout) {
             clearTimeout(this.recentThrowTimeout);
@@ -1105,7 +1116,13 @@ export class Game {
         this.recentThrowTimeout = setTimeout(() => {
             this.recentThrow = null;
             this.stageView.renderRecentThrow();
-        }, 3200);
+            const pending = this.pendingThrowResolution;
+            this.pendingThrowResolution = null;
+            if (pending) {
+                this.applyThrowAction(pending);
+                this.afterPublicChange();
+            }
+        }, THROW_CUTSCENE_MS);
     }
 
     afterPublicChange() {
@@ -1127,14 +1144,18 @@ export class Game {
 
         if (isCollect) {
             this.applyCollectAction(args);
+            this.clearPendingAction();
+            this.afterPublicChange();
         } else {
-            this.applyThrowAction(args);
+            this.applyImmediateThrowHandChange(args);
+            this.pendingThrowResolution = args;
             this.showRecentThrow(args);
             this.clearSelection();
+            this.clearPendingAction();
+            this.stageView.renderAll();
+            this.playerZonesView.renderAll();
+            this.updateActionButtons();
         }
-
-        this.clearPendingAction();
-        this.afterPublicChange();
     }
 
     async notif_resolveBonus(args) {
