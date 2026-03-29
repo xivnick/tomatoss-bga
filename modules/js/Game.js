@@ -386,7 +386,7 @@ class PlayerZonesView {
 
         root.innerHTML = '';
         Object.values(this.game.gamedatas.players ?? {}).forEach(player => {
-            const isSelf = Number(player.id) === Number(this.game.bga.player_id);
+            const isSelf = Number(player.id) === this.game.getLocalPlayerId();
             root.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__top" id="player-zone-top-${player.id}"></div>
@@ -423,7 +423,7 @@ class PlayerZonesView {
             return;
         }
 
-        const isSelf = Number(playerId) === Number(this.game.bga.player_id);
+        const isSelf = Number(playerId) === this.game.getLocalPlayerId();
         const scale = this.sprites.getCardScale('tomato');
 
         if (isSelf) {
@@ -741,6 +741,17 @@ export class Game {
         this.bga.statusBar.setTitle(text);
     }
 
+    getLocalPlayerId() {
+        const candidates = [this.bga.player_id, this.bga.current_player_id];
+        for (const candidate of candidates) {
+            const parsed = Number(candidate);
+            if (!Number.isNaN(parsed) && parsed > 0) {
+                return parsed;
+            }
+        }
+        return NaN;
+    }
+
     canInteract(action) {
         if (!this.isCurrentPlayerActive) {
             this.bga.dialogs.showMessage(_('This is not your turn'), 'error');
@@ -776,7 +787,7 @@ export class Game {
             this.selectedCardIds = [...this.selectedCardIds, cardId];
         }
 
-        this.playerZonesView.renderHandArea(this.bga.player_id);
+        this.playerZonesView.renderHandArea(this.getLocalPlayerId());
         this.updateActionButtons();
     }
 
@@ -846,7 +857,7 @@ export class Game {
             this.bga.statusBar.addActionButton(_('Clear selection'), () => {
                 this.clearPendingAction();
                 this.clearSelection();
-                this.playerZonesView.renderHandArea(this.bga.player_id);
+                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
                 this.stageView.renderActionSlots();
                 this.updateActionButtons();
             }, {
@@ -864,7 +875,7 @@ export class Game {
         if (selectedCard) {
             this.bga.statusBar.addActionButton(_('Clear selection'), () => {
                 this.clearSelection();
-                this.playerZonesView.renderHandArea(this.bga.player_id);
+                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
                 this.updateActionButtons();
             }, { color: 'secondary' });
         }
@@ -1083,7 +1094,7 @@ export class Game {
             this.gamedatas.playerHand = args.playerHand;
             this.updateHandCount(args.player_id, args.playerHand.length);
         }
-        this.playerZonesView.renderHandArea(this.bga.player_id);
+        this.playerZonesView.renderHandArea(this.getLocalPlayerId());
         this.updateActionButtons();
     }
 }
