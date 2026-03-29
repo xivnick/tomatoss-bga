@@ -373,6 +373,7 @@
     align-items: center;
     display: flex;
     justify-content: flex-start;
+    min-height: var(--card-h);
     padding: 0;
 }
 
