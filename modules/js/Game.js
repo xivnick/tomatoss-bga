@@ -19,6 +19,7 @@ const STAGE_DESIGN_HEIGHT = 2976;
 const CARD_DESIGN_WIDTH = 620;
 const CARD_DESIGN_HEIGHT = 880;
 const MAX_LAYOUT_WIDTH = 700;
+const LAYOUT_HORIZONTAL_CHROME = 32 + 36 + 4;
 const TARGET_CARD_POSITIONS = [
     { x: 841, y: 370 },
     { x: 1592, y: 370 },
@@ -46,7 +47,8 @@ class SpriteStyles {
             ?? tableCenter?.clientWidth
             ?? layoutParent?.clientWidth
             ?? STAGE_DESIGN_WIDTH;
-        return Math.min(STAGE_DESIGN_WIDTH, MAX_LAYOUT_WIDTH, Math.max(360, available - 40));
+        const usable = Math.max(320, Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME);
+        return Math.min(STAGE_DESIGN_WIDTH, usable);
     }
 
     getStageScale() {
