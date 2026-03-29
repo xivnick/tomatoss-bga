@@ -402,7 +402,7 @@ class FestivalStageView {
             node.style.position = 'static';
             node.style.left = '';
             node.style.top = '';
-            node.style.marginLeft = `${-360 * this.sprites.getStageScale()}px`;
+            node.style.marginLeft = (recent.cards?.length ?? 0) > 0 ? `${-360 * this.sprites.getStageScale()}px` : '0';
             cards.appendChild(node);
         }
 
