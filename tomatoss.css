@@ -431,14 +431,14 @@
     height: var(--card-h);
     overflow: visible;
     position: absolute;
-    width: auto;
+    width: max-content;
     z-index: 1;
 }
 
 .captured-stack.normal {
     left: 0;
     flex-direction: row-reverse;
-    justify-content: flex-end;
+    justify-content: flex-start;
 }
 
 .captured-stack.quick {
@@ -449,8 +449,15 @@
 
 .captured-card-host {
     flex: 0 0 auto;
-    margin-right: calc(var(--mission-card-w) * -0.7);
     position: relative;
+}
+
+.captured-stack.normal .captured-card-host {
+    margin-right: calc(var(--mission-card-w) * -0.7);
+}
+
+.captured-stack.quick .captured-card-host {
+    margin-left: calc(var(--mission-card-w) * -0.7);
 }
 
 .captured-mission {
