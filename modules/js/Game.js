@@ -270,7 +270,6 @@ class FestivalStageView {
             this.registry.mount(host, node);
         });
 
-        this.registry.removeMissing(['mission-'], keepKeys);
     }
 
     renderTomatoRow() {
@@ -567,10 +566,6 @@ class PlayerZonesView {
             });
         }
 
-        this.registry.removeMissing(['mission-'], [
-            ...keepKeys,
-            ...this.getBoardMissionKeys(),
-        ]);
     }
 
     getBoardTomatoKeys() {
@@ -805,7 +800,17 @@ export class Game {
         this.gamedatas = { ...this.gamedatas, ...this.buildRenderData(source) };
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
+        this.cleanupMissionNodes();
         this.updateActionButtons();
+    }
+
+    cleanupMissionNodes() {
+        const boardKeys = (this.gamedatas.boardTargets ?? []).filter(Boolean).map(card => `mission-${card.id}`);
+        const capturedKeys = Object.values(this.gamedatas.capturedTargetsByPlayer ?? {}).flatMap(captured => [
+            ...((captured?.normal ?? []).map(card => `mission-${card.id}`)),
+            ...((captured?.quick ?? []).map(card => `mission-${card.id}`)),
+        ]);
+        this.registry.removeMissing(['mission-'], [...boardKeys, ...capturedKeys]);
     }
 
     setStatePrompt(text) {
