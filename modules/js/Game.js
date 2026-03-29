@@ -854,7 +854,9 @@ export class Game {
         const wasSelected = this.selectedCardIds.includes(cardId);
         if (this.currentUiMode === 'discard') {
             if (wasSelected) {
-                this.confirmDiscard();
+                this.clearSelection();
+                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+                this.updateActionButtons();
                 return;
             }
             this.selectedCardIds = [cardId];
