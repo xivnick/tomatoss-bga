@@ -140,11 +140,6 @@
     transform: translateY(0);
 }
 
-.recent-throw__target {
-    border-radius: var(--card-radius);
-    position: relative;
-}
-
 .recent-throw__cards {
     align-items: flex-start;
     display: flex;
@@ -157,6 +152,10 @@
     border-radius: var(--card-radius);
     flex: 0 0 auto;
     position: static;
+}
+
+.recent-throw__tomato.is-overlap {
+    margin-left: calc(-360px * var(--stage-scale));
 }
 
 .recent-throw__tomato.reveal {

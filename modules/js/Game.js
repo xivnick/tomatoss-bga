@@ -244,7 +244,6 @@ class FestivalStageView {
 
     renderMissionRow() {
         const scale = this.sprites.getCardScale('mission');
-        const keepKeys = [];
 
         const deck = document.getElementById('mission-deck-slot');
         if (deck) {
@@ -264,8 +263,6 @@ class FestivalStageView {
                 return;
             }
 
-            const key = `mission-${card.id}`;
-            keepKeys.push(key);
             const node = this.registry.getMissionNode(card, scale);
             this.registry.mount(host, node);
         });
@@ -393,20 +390,17 @@ class FestivalStageView {
         wrap.appendChild(cards);
 
         (recent.cards ?? []).forEach((value, index) => {
-            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, tomatoScale);
-            node.style.position = 'static';
-            node.style.left = '';
-            node.style.top = '';
-            node.style.marginLeft = index > 0 ? `${-360 * this.sprites.getStageScale()}px` : '0';
+            const classes = index > 0 ? ['is-overlap'] : [];
+            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, tomatoScale, classes);
             cards.appendChild(node);
         });
 
         if (recent.revealed) {
-            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, tomatoScale, ['reveal']);
-            node.style.position = 'static';
-            node.style.left = '';
-            node.style.top = '';
-            node.style.marginLeft = (recent.cards?.length ?? 0) > 0 ? `${-360 * this.sprites.getStageScale()}px` : '0';
+            const classes = ['reveal'];
+            if ((recent.cards?.length ?? 0) > 0) {
+                classes.push('is-overlap');
+            }
+            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, tomatoScale, classes);
             cards.appendChild(node);
         }
 
@@ -478,36 +472,43 @@ class PlayerZonesView {
             return;
         }
 
-        const isSelf = Number(playerId) === this.game.getLocalPlayerId();
-        const scale = this.sprites.getCardScale('tomato');
-
-        if (isSelf) {
-            top.innerHTML = `<div class="self-hand-row"></div>`;
-            const row = top.firstElementChild;
-            const keepKeys = [];
-
-            (this.game.gamedatas.playerHand ?? []).forEach(card => {
-                const key = `tomato-${card.id}`;
-                keepKeys.push(key);
-                const button = document.createElement('button');
-                button.className = `hand-card-button ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}`;
-                button.dataset.cardId = String(card.id);
-                button.dataset.value = String(card.value);
-                const host = document.createElement('div');
-                host.className = 'hand-card-host';
-                button.appendChild(host);
-                row.appendChild(button);
-                this.registry.mount(host, this.registry.getTomatoNode(card, scale));
-            });
-
-            this.registry.removeMissing(['tomato-'], [
-                ...keepKeys,
-                ...this.getBoardTomatoKeys(),
-                ...this.getDiscardTomatoKeys(),
-            ]);
+        if (Number(playerId) === this.game.getLocalPlayerId()) {
+            this.renderSelfHand(top);
             return;
         }
 
+        this.renderOpponentHand(top, playerId);
+    }
+
+    renderSelfHand(top) {
+        const scale = this.sprites.getCardScale('tomato');
+        const keepKeys = [];
+        top.innerHTML = `<div class="self-hand-row"></div>`;
+        const row = top.firstElementChild;
+
+        (this.game.gamedatas.playerHand ?? []).forEach(card => {
+            const key = `tomato-${card.id}`;
+            keepKeys.push(key);
+            const button = document.createElement('button');
+            button.className = `hand-card-button ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}`;
+            button.dataset.cardId = String(card.id);
+            button.dataset.value = String(card.value);
+            const host = document.createElement('div');
+            host.className = 'hand-card-host';
+            button.appendChild(host);
+            row.appendChild(button);
+            this.registry.mount(host, this.registry.getTomatoNode(card, scale));
+        });
+
+        this.registry.removeMissing(['tomato-'], [
+            ...keepKeys,
+            ...this.getBoardTomatoKeys(),
+            ...this.getDiscardTomatoKeys(),
+        ]);
+    }
+
+    renderOpponentHand(top, playerId) {
+        const scale = this.sprites.getCardScale('tomato');
         const count = this.game.gamedatas.handCountsByPlayer?.[playerId] ?? 0;
         top.innerHTML = `<div class="player-hand-fan"></div>`;
         const fan = top.firstElementChild;
@@ -535,14 +536,11 @@ class PlayerZonesView {
         const captured = this.game.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
         const scale = this.sprites.getCardScale('mission');
         const overlapOffset = CARD_DESIGN_WIDTH * this.sprites.getStageScale() * 0.3;
-        const keepKeys = [];
 
         zone?.style.setProperty('--player-zone-scale', String(this.sprites.getStageScale()));
         if (normalHost) {
             normalHost.replaceChildren();
             captured.normal.forEach((card, index) => {
-                const key = `mission-${card.id}`;
-                keepKeys.push(key);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
                 wrapper.style.right = `${index * overlapOffset}px`;
@@ -555,8 +553,6 @@ class PlayerZonesView {
         if (quickHost) {
             quickHost.replaceChildren();
             captured.quick.forEach((card, index) => {
-                const key = `mission-${card.id}`;
-                keepKeys.push(key);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
                 wrapper.style.left = `${index * overlapOffset}px`;
@@ -783,17 +779,21 @@ export class Game {
         };
 
         if (this.pendingThrowResolution) {
-            return {
-                ...base,
-                boardTargets: this.gamedatas.boardTargets ?? [null, null, null],
-                tomatoDeckCount: this.gamedatas.tomatoDeckCount ?? 0,
-                targetDeckCount: this.gamedatas.targetDeckCount ?? 0,
-                latestDiscardTomato: this.gamedatas.latestDiscardTomato ?? null,
-                capturedTargetsByPlayer: this.gamedatas.capturedTargetsByPlayer ?? {},
-            };
+            return this.buildFrozenThrowRenderData(base);
         }
 
         return base;
+    }
+
+    buildFrozenThrowRenderData(base) {
+        return {
+            ...base,
+            boardTargets: this.gamedatas.boardTargets ?? [null, null, null],
+            tomatoDeckCount: this.gamedatas.tomatoDeckCount ?? 0,
+            targetDeckCount: this.gamedatas.targetDeckCount ?? 0,
+            latestDiscardTomato: this.gamedatas.latestDiscardTomato ?? null,
+            capturedTargetsByPlayer: this.gamedatas.capturedTargetsByPlayer ?? {},
+        };
     }
 
     renderState(source) {
