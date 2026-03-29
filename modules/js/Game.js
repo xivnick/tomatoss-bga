@@ -459,9 +459,9 @@ class PlayerZonesView {
         for (let index = 0; index < count; index += 1) {
             const host = document.createElement('div');
             host.className = 'player-hand-back-host';
-            host.style.marginLeft = index === 0 ? '0' : '-24px';
+            host.style.marginLeft = index === 0 ? '0' : `${-Math.round(0.68 * 155 * scale)}px`;
             fan.appendChild(host);
-            this.registry.mount(host, this.registry.getBackNode(`back-opponent-${playerId}-${index}`, 'tomato', 0.16));
+            this.registry.mount(host, this.registry.getBackNode(`back-opponent-${playerId}-${index}`, 'tomato', scale));
         }
     }
 
