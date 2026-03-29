@@ -390,18 +390,18 @@ class FestivalStageView {
 
         (recent.cards ?? []).forEach((value, index) => {
             const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, tomatoScale);
-            node.style.position = 'relative';
-            node.style.left = '0';
+            node.style.position = 'static';
+            node.style.left = '';
+            node.style.top = '';
+            node.style.marginLeft = index > 0 ? `${-360 * this.sprites.getStageScale()}px` : '0';
             cards.appendChild(node);
-            if (index > 0) {
-                node.style.marginLeft = `${-360 * this.sprites.getStageScale()}px`;
-            }
         });
 
         if (recent.revealed) {
             const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, tomatoScale, ['reveal']);
-            node.style.position = 'relative';
-            node.style.left = '0';
+            node.style.position = 'static';
+            node.style.left = '';
+            node.style.top = '';
             node.style.marginLeft = `${-360 * this.sprites.getStageScale()}px`;
             cards.appendChild(node);
         }

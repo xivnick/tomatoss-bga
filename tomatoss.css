@@ -152,12 +152,12 @@
 
 .recent-throw__tomato {
     border-radius: var(--card-radius);
-    position: absolute;
-    top: 0;
+    flex: 0 0 auto;
+    position: static;
 }
 
 .recent-throw__tomato.reveal {
-    top: -8px;
+    margin-top: calc(-8px * var(--stage-scale));
 }
 
 .stage-slot {
