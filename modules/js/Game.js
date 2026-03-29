@@ -41,7 +41,7 @@ class SpriteStyles {
         const stage = this.getStageElement();
         const stageScale = this.getStageScale();
         const boardScale = this.getBoardScale();
-        const cardScale = Math.min(1, stageScale * 0.76);
+        const cardScale = stageScale;
 
         if (layout) {
             layout.style.setProperty('--card-scale', String(cardScale));
@@ -59,7 +59,7 @@ class SpriteStyles {
 
     getCardScale(kind) {
         void kind;
-        return Math.min(1, this.getStageScale() * 0.76);
+        return this.getStageScale();
     }
 
     missionCardStyle(targetId, scale) {

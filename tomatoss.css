@@ -33,24 +33,25 @@
     display: grid;
     gap: 18px;
     justify-items: center;
-    width: min(100%, 1040px);
+    width: min(100%, 820px);
 }
 
 #table-center {
     background: rgba(255, 255, 255, 0.36);
     border: 2px solid white;
     border-radius: 18px;
+    overflow: hidden;
     padding: 18px;
-    width: fit-content;
+    width: min(100%, 100%);
 }
 
 #festival-stage {
     position: relative;
-    width: min(100vw - 84px, 860px);
+    width: min(100%, 760px);
 }
 
 #festival-stage-canvas {
-    height: calc(540px * var(--stage-scale));
+    height: calc(510px * var(--stage-scale));
     position: relative;
     width: 100%;
 }
@@ -78,6 +79,7 @@
     min-height: calc(110px * var(--stage-scale));
     top: 0;
     width: calc(350px * var(--stage-scale));
+    z-index: 5;
 }
 
 #mission-deck-slot {
@@ -171,6 +173,10 @@
     cursor: pointer;
     display: block;
     padding: 0;
+}
+
+.stage-slot-button {
+    overflow: visible;
 }
 
 .stage-slot-button.is-pending .slot-card-host > .card-node,
@@ -304,7 +310,7 @@
 #player-zones {
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    grid-template-columns: 1fr;
     justify-content: stretch;
     width: 100%;
 }
@@ -350,9 +356,10 @@
 
 .self-hand-row {
     align-items: flex-end;
-    display: inline-flex;
+    display: flex;
     gap: 8px;
-    min-width: 100%;
+    justify-content: flex-start;
+    min-width: 0;
     padding-bottom: 8px;
     width: max-content;
 }
@@ -364,6 +371,7 @@
 .player-hand-fan {
     align-items: center;
     display: flex;
+    justify-content: flex-start;
     min-height: var(--card-h);
     padding-left: 20px;
 }
@@ -441,7 +449,7 @@
 
 @media (max-width: 900px) {
     #festival-stage {
-        width: min(100vw - 42px, 740px);
+        width: min(100%, 720px);
     }
 
     #player-zones {
