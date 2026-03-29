@@ -374,6 +374,7 @@ class FestivalStageView {
         const wrap = document.createElement('div');
         wrap.className = `recent-throw ${recent.success ? 'is-success' : 'is-fail'}`;
         wrap.style.position = 'absolute';
+        wrap.style.height = `${CARD_DESIGN_HEIGHT * this.sprites.getStageScale()}px`;
 
         const target = document.createElement('div');
         target.className = 'recent-throw__target';
@@ -383,21 +384,30 @@ class FestivalStageView {
         wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
         wrap.style.top = `${100 * this.sprites.getStageScale()}px`;
         target.style.cssText = this.sprites.missionCardStyle(Number(recent.targetId), scale);
+        target.style.position = 'absolute';
+        target.style.left = `${150 * this.sprites.getStageScale()}px`;
+        target.style.top = `${(targetPos.y - 100) * this.sprites.getStageScale()}px`;
         wrap.appendChild(target);
 
         const cards = document.createElement('div');
         cards.className = 'recent-throw__cards';
-        target.appendChild(cards);
+        wrap.appendChild(cards);
 
         (recent.cards ?? []).forEach((value, index) => {
             const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, scale * 0.68);
-            node.style.left = `${index * (-360 * this.sprites.getStageScale())}px`;
+            node.style.position = 'relative';
+            node.style.left = '0';
             cards.appendChild(node);
+            if (index > 0) {
+                node.style.marginLeft = `${-360 * this.sprites.getStageScale()}px`;
+            }
         });
 
         if (recent.revealed) {
             const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, scale * 0.68, ['reveal']);
-            node.style.left = `${(recent.cards?.length ?? 0) * (-360 * this.sprites.getStageScale())}px`;
+            node.style.position = 'relative';
+            node.style.left = '0';
+            node.style.marginLeft = `${-360 * this.sprites.getStageScale()}px`;
             cards.appendChild(node);
         }
 

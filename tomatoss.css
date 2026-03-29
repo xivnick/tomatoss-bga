@@ -127,6 +127,7 @@
 
 .recent-throw {
     opacity: 0;
+    pointer-events: none;
     transform: translateY(calc(-12px * var(--stage-scale)));
     transition: opacity 180ms ease, transform 180ms ease;
 }
@@ -142,10 +143,11 @@
 }
 
 .recent-throw__cards {
+    align-items: flex-start;
     display: flex;
-    left: calc(-150px * var(--stage-scale));
+    left: 0;
     position: absolute;
-    top: calc(100px * var(--stage-scale));
+    top: 0;
 }
 
 .recent-throw__tomato {
