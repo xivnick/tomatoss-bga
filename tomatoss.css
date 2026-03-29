@@ -439,24 +439,18 @@
     left: 0;
     flex-direction: row-reverse;
     justify-content: flex-end;
-    transform: translateX(calc(var(--mission-card-w) * -0.72));
 }
 
 .captured-stack.quick {
     right: 0;
     flex-direction: row;
     justify-content: flex-start;
-    transform: translateX(calc(var(--mission-card-w) * 0.72));
 }
 
 .captured-card-host {
     flex: 0 0 auto;
     margin-right: calc(var(--mission-card-w) * -0.7);
     position: relative;
-}
-
-.captured-stack > .captured-card-host:last-child {
-    margin-right: 0;
 }
 
 .captured-mission {
