@@ -360,15 +360,12 @@
 .self-hand-row {
     align-content: flex-start;
     align-items: flex-end;
-    background: rgba(255, 255, 255, 0.46);
-    border: 1px solid rgba(255, 255, 255, 0.58);
-    border-radius: 14px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;
     min-width: 0;
-    padding: 10px 12px;
+    padding: 0;
     width: 100%;
 }
 
@@ -383,12 +380,9 @@
 
 .player-hand-fan {
     align-items: center;
-    background: rgba(255, 255, 255, 0.46);
-    border: 1px solid rgba(255, 255, 255, 0.58);
-    border-radius: 14px;
     display: flex;
     justify-content: flex-start;
-    padding: 10px 12px;
+    padding: 0;
 }
 
 .tomatoss-player-zone__bottom {

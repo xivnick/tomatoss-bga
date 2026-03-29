@@ -20,6 +20,7 @@ const CARD_DESIGN_WIDTH = 620;
 const CARD_DESIGN_HEIGHT = 880;
 const PLAYER_BOARD_DESIGN_SIZE = 880;
 const MAX_LAYOUT_WIDTH = 700;
+const LAYOUT_HORIZONTAL_CHROME = 40;
 const TARGET_CARD_POSITIONS = [
     { x: 841, y: 370 },
     { x: 1592, y: 370 },
@@ -37,22 +38,6 @@ class SpriteStyles {
         return document.getElementById('festival-stage');
     }
 
-    getHorizontalChromeWidth() {
-        const layout = this.getLayoutElement();
-        const tableCenter = document.getElementById('table-center');
-        const sumHorizontalInsets = element => {
-            if (!element) {
-                return 0;
-            }
-            const style = window.getComputedStyle(element);
-            return ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth']
-                .map(property => parseFloat(style[property]) || 0)
-                .reduce((total, value) => total + value, 0);
-        };
-
-        return sumHorizontalInsets(layout) + sumHorizontalInsets(tableCenter);
-    }
-
     getStageWidth() {
         const leftSide = document.getElementById('left-side');
         const gameAreaWrap = document.getElementById('game_play_area_wrap');
@@ -63,8 +48,7 @@ class SpriteStyles {
             ?? tableCenter?.clientWidth
             ?? layoutParent?.clientWidth
             ?? STAGE_DESIGN_WIDTH;
-        const chromeWidth = this.getHorizontalChromeWidth();
-        const usable = Math.max(320, Math.min(available, MAX_LAYOUT_WIDTH) - chromeWidth);
+        const usable = Math.max(320, Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME);
         return Math.min(STAGE_DESIGN_WIDTH, usable);
     }
 
@@ -86,10 +70,9 @@ class SpriteStyles {
         const missionCardScale = (CARD_DESIGN_WIDTH / 157.5) * stageScale;
         const sharedCardWidth = CARD_DESIGN_WIDTH * stageScale;
         const sharedCardHeight = CARD_DESIGN_HEIGHT * stageScale;
-        const chromeWidth = this.getHorizontalChromeWidth();
 
         if (layout) {
-            layout.style.setProperty('--layout-width', `${this.getStageWidth() + chromeWidth}px`);
+            layout.style.setProperty('--layout-width', `${this.getStageWidth() + LAYOUT_HORIZONTAL_CHROME}px`);
             layout.style.setProperty('--stage-width', `${this.getStageWidth()}px`);
             layout.style.setProperty('--stage-height', `${STAGE_DESIGN_HEIGHT * stageScale}px`);
             layout.style.setProperty('--card-scale', String(stageScale));
