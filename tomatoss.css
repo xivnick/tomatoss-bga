@@ -80,6 +80,7 @@
 
 #recent-throw-area {
     inset: 0;
+    pointer-events: none;
     z-index: 5;
 }
 
@@ -117,14 +118,6 @@
 #tomato-deck-slot {
     left: calc(2708px * var(--stage-scale));
     top: calc(1996px * var(--stage-scale));
-}
-
-#recent-throw-area {
-    pointer-events: none;
-}
-
-#recent-throw-area[data-visible="false"] {
-    pointer-events: none;
 }
 
 .recent-throw {

@@ -53,14 +53,15 @@ class SpriteStyles {
 
     updateBoardScale() {
         const layout = this.getLayoutElement();
+        const stageWidth = this.getStageWidth();
         const stageScale = this.getStageScale();
         const boardScale = this.getBoardScale();
         const sharedCardWidth = CARD_DESIGN_WIDTH * stageScale;
         const sharedCardHeight = CARD_DESIGN_HEIGHT * stageScale;
 
         if (layout) {
-            layout.style.setProperty('--layout-width', `${this.getStageWidth() + LAYOUT_HORIZONTAL_CHROME}px`);
-            layout.style.setProperty('--stage-width', `${this.getStageWidth()}px`);
+            layout.style.setProperty('--layout-width', `${stageWidth + LAYOUT_HORIZONTAL_CHROME}px`);
+            layout.style.setProperty('--stage-width', `${stageWidth}px`);
             layout.style.setProperty('--stage-height', `${STAGE_DESIGN_HEIGHT * stageScale}px`);
             layout.style.setProperty('--tomato-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--mission-card-w', `${sharedCardWidth}px`);
