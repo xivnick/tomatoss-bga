@@ -15,6 +15,10 @@ const TOKEN_SLOTS = [
 ];
 
 class SpriteStyles {
+    getLayoutElement() {
+        return document.getElementById('tomatoss-layout');
+    }
+
     getStageElement() {
         return document.getElementById('festival-stage');
     }
@@ -33,18 +37,23 @@ class SpriteStyles {
     }
 
     updateBoardScale() {
+        const layout = this.getLayoutElement();
         const stage = this.getStageElement();
+        const stageScale = this.getStageScale();
+        const boardScale = this.getBoardScale();
+        const cardScale = Math.min(1, stageScale * 0.76);
+
+        if (layout) {
+            layout.style.setProperty('--card-scale', String(cardScale));
+            layout.style.setProperty('--tomato-card-w', `${155 * cardScale}px`);
+            layout.style.setProperty('--mission-card-w', `${157.5 * cardScale}px`);
+            layout.style.setProperty('--card-h', `${220 * cardScale}px`);
+            layout.style.setProperty('--player-board-size', `${220 * cardScale}px`);
+        }
+
         if (stage) {
-            const stageScale = this.getStageScale();
-            const boardScale = this.getBoardScale();
-            const cardScale = Math.min(1, stageScale * 0.76);
             stage.style.setProperty('--board-scale', String(boardScale));
             stage.style.setProperty('--stage-scale', String(stageScale));
-            stage.style.setProperty('--card-scale', String(cardScale));
-            stage.style.setProperty('--tomato-card-w', `${155 * cardScale}px`);
-            stage.style.setProperty('--mission-card-w', `${157.5 * cardScale}px`);
-            stage.style.setProperty('--card-h', `${220 * cardScale}px`);
-            stage.style.setProperty('--player-board-size', `${220 * cardScale}px`);
         }
     }
 
