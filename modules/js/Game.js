@@ -716,6 +716,7 @@ export class Game {
 
     buildRenderData(source) {
         return {
+            viewerPlayerId: source.viewerPlayerId ?? this.gamedatas.viewerPlayerId ?? null,
             players: source.players ?? this.gamedatas.players ?? {},
             boardTomatoes: source.boardTomatoes ?? this.gamedatas.boardTomatoes ?? [null, null, null],
             boardTargets: source.boardTargets ?? this.gamedatas.boardTargets ?? [null, null, null],
@@ -742,7 +743,13 @@ export class Game {
     }
 
     getLocalPlayerId() {
-        const candidates = [this.bga.player_id, this.bga.current_player_id];
+        const candidates = [
+            this.gamedatas?.viewerPlayerId,
+            this.bga.player_id,
+            this.bga.current_player_id,
+            this.bga.gameui?.player_id,
+            this.bga.gameui?.current_player_id,
+        ];
         for (const candidate of candidates) {
             const parsed = Number(candidate);
             if (!Number.isNaN(parsed) && parsed > 0) {
