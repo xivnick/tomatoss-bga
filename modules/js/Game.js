@@ -767,7 +767,7 @@ export class Game {
     }
 
     buildRenderData(source) {
-        return {
+        const base = {
             viewerPlayerId: source.viewerPlayerId ?? this.gamedatas.viewerPlayerId ?? null,
             players: source.players ?? this.gamedatas.players ?? {},
             boardTomatoes: source.boardTomatoes ?? this.gamedatas.boardTomatoes ?? [null, null, null],
@@ -781,6 +781,19 @@ export class Game {
             placementsRemaining: source.placementsRemaining ?? this.gamedatas.placementsRemaining ?? 3,
             capturedTargetsByPlayer: source.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer ?? {},
         };
+
+        if (this.pendingThrowResolution) {
+            return {
+                ...base,
+                boardTargets: this.gamedatas.boardTargets ?? [null, null, null],
+                tomatoDeckCount: this.gamedatas.tomatoDeckCount ?? 0,
+                targetDeckCount: this.gamedatas.targetDeckCount ?? 0,
+                latestDiscardTomato: this.gamedatas.latestDiscardTomato ?? null,
+                capturedTargetsByPlayer: this.gamedatas.capturedTargetsByPlayer ?? {},
+            };
+        }
+
+        return base;
     }
 
     renderState(source) {
