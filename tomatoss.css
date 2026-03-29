@@ -16,6 +16,7 @@
     --player-board-size: 168px;
     --stage-width: 760px;
     --stage-height: 603px;
+    --card-radius: calc(var(--tomato-card-w) * 0.0483871);
     display: grid;
     gap: 18px;
     margin: 12px 0 20px;
@@ -133,7 +134,7 @@
 }
 
 .recent-throw__target {
-    border-radius: 8px;
+    border-radius: var(--card-radius);
     position: relative;
 }
 
@@ -145,7 +146,7 @@
 }
 
 .recent-throw__tomato {
-    border-radius: 6px;
+    border-radius: var(--card-radius);
     position: absolute;
     top: 0;
 }
@@ -203,7 +204,7 @@
 .slot-card-host[data-empty="true"]::before {
     background: rgba(255, 255, 255, 0.55);
     border: 2px dashed rgba(155, 88, 57, 0.7);
-    border-radius: 8px;
+    border-radius: var(--card-radius);
     content: '';
     display: block;
     height: 100%;
@@ -247,7 +248,7 @@
 
 .card-node {
     background-repeat: no-repeat;
-    border-radius: 4px;
+    border-radius: var(--card-radius);
     display: block;
     transition: transform 160ms ease, box-shadow 160ms ease;
 }
