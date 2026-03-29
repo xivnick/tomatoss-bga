@@ -8,6 +8,7 @@
 #tomatoss-layout {
     --ink: #5a2a0d;
     --board-scale: 1;
+    --stage-scale: 0.6;
     display: grid;
     gap: 18px;
     margin: 12px 0 20px;
@@ -53,8 +54,7 @@
 }
 
 .recent-throw__target {
-    border-radius: 14px;
-    box-shadow: 0 8px 18px rgba(53, 31, 20, 0.22);
+    border-radius: 8px;
     position: relative;
 }
 
@@ -66,8 +66,7 @@
 }
 
 .recent-throw__tomato {
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(53, 31, 20, 0.2);
+    border-radius: 6px;
     position: absolute;
     top: 0;
 }
@@ -76,17 +75,17 @@
     top: -8px;
 }
 
-#mission-deck-slot { left: 0%; top: 14%; }
-#mission-slot-0 { left: 19%; top: 14%; }
-#mission-slot-1 { left: 39%; top: 14%; }
-#mission-slot-2 { left: 59%; top: 14%; }
-#festival-board-wrap { left: 12%; position: absolute; top: 42%; width: 62%; }
-#discard-slot { left: 81%; top: 36%; }
-#token-reserve { left: 79%; top: 64%; }
-#tomato-slot-0 { left: 8%; top: 72%; }
-#tomato-slot-1 { left: 27%; top: 72%; }
-#tomato-slot-2 { left: 46%; top: 72%; }
-#tomato-deck-slot { left: 65%; top: 72%; }
+#mission-deck-slot { left: calc(18px * var(--stage-scale)); top: calc(116px * var(--stage-scale)); }
+#mission-slot-0 { left: calc(188px * var(--stage-scale)); top: calc(116px * var(--stage-scale)); }
+#mission-slot-1 { left: calc(358px * var(--stage-scale)); top: calc(116px * var(--stage-scale)); }
+#mission-slot-2 { left: calc(528px * var(--stage-scale)); top: calc(116px * var(--stage-scale)); }
+#festival-board-wrap { left: calc(120px * var(--stage-scale)); position: absolute; top: calc(382px * var(--stage-scale)); width: calc(620px * var(--stage-scale)); }
+#discard-slot { left: calc(816px * var(--stage-scale)); top: calc(312px * var(--stage-scale)); }
+#token-reserve { left: calc(790px * var(--stage-scale)); top: calc(524px * var(--stage-scale)); }
+#tomato-slot-0 { left: calc(78px * var(--stage-scale)); top: calc(610px * var(--stage-scale)); }
+#tomato-slot-1 { left: calc(248px * var(--stage-scale)); top: calc(610px * var(--stage-scale)); }
+#tomato-slot-2 { left: calc(418px * var(--stage-scale)); top: calc(610px * var(--stage-scale)); }
+#tomato-deck-slot { left: calc(588px * var(--stage-scale)); top: calc(610px * var(--stage-scale)); }
 
 .stage-slot {
     align-items: center;
@@ -100,25 +99,26 @@
     background: none;
     border: 0;
     cursor: pointer;
+    display: block;
     padding: 0;
 }
 
 .stage-slot-button.is-pending .slot-card-host > .card-node,
 .hand-card-button.is-selected .hand-card-host > .card-node,
 .board-token-slot.is-pending {
-    box-shadow: 0 0 0 3px rgba(217, 72, 59, 0.45), 0 6px 18px rgba(53, 31, 20, 0.24);
+    box-shadow: 0 0 0 3px rgba(217, 72, 59, 0.45);
 }
 
 .slot-card-host,
 .hand-card-host {
-    min-height: 72px;
-    min-width: 54px;
+    min-height: 132px;
+    min-width: 94px;
 }
 
 .slot-card-host[data-empty="true"]::before {
     background: rgba(255, 255, 255, 0.55);
     border: 2px dashed rgba(155, 88, 57, 0.7);
-    border-radius: 12px;
+    border-radius: 8px;
     content: '';
     display: block;
     height: 72px;
@@ -137,7 +137,7 @@
     background-image: url('img/festival_board.png');
     background-size: 100% 100%;
     border: 2px solid #50332b;
-    border-radius: 18px;
+    border-radius: 12px;
     box-shadow: 0 20px 40px rgba(53, 31, 20, 0.15);
     overflow: visible;
     position: relative;
@@ -170,8 +170,7 @@
 
 .card-node {
     background-repeat: no-repeat;
-    border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(53, 31, 20, 0.24);
+    border-radius: 6px;
     display: block;
     transition: transform 160ms ease, box-shadow 160ms ease;
 }
@@ -234,34 +233,46 @@
 #player-zones {
     display: grid;
     gap: 14px;
+    justify-content: center;
 }
 
 .tomatoss-player-zone {
     --player-zone-scale: 0.8;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 22px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.4);
+    border: 2px solid white;
+    border-radius: 15px;
     display: grid;
-    gap: 10px;
-    padding: 14px 18px 16px;
+    gap: 0;
+    padding: 0;
     position: relative;
+    width: min(100%, 860px);
 }
 
 .tomatoss-player-zone.is-self {
     border-color: #d9483b;
-    box-shadow: 0 0 0 2px rgba(217, 72, 59, 0.12);
 }
 
 .tomatoss-player-zone__name {
     color: var(--ink);
-    font-size: 15px;
+    font-size: 20px;
     font-weight: 700;
 }
 
+.tomatoss-player-zone__namebar {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.67);
+    display: flex;
+    justify-content: center;
+    min-height: 42px;
+    padding: 4px 12px;
+}
+
 .tomatoss-player-zone__top {
-    min-height: 72px;
+    background: rgba(255, 255, 255, 0.67);
+    min-height: 178px;
     overflow-x: auto;
+    overflow-y: hidden;
+    padding: 14px 20px 10px;
 }
 
 .self-hand-row {
@@ -269,6 +280,7 @@
     display: inline-flex;
     gap: 6px;
     min-width: 100%;
+    padding-bottom: 8px;
     width: max-content;
 }
 
@@ -279,13 +291,14 @@
 .player-hand-fan {
     align-items: center;
     display: flex;
-    min-height: 70px;
-    padding-left: 12px;
+    min-height: 132px;
+    padding-left: 20px;
 }
 
 .tomatoss-player-zone__bottom {
-    min-height: calc(250px * var(--player-zone-scale));
+    min-height: calc(220px * var(--player-zone-scale) + 68px);
     position: relative;
+    padding: 18px 24px 18px;
 }
 
 .tomatoss-player-board {
@@ -324,7 +337,7 @@
     min-height: calc(220px * var(--player-zone-scale));
     position: absolute;
     transform: translateX(-50%);
-    width: calc(360px * var(--player-zone-scale));
+    width: calc(560px * var(--player-zone-scale));
     z-index: 1;
 }
 
@@ -345,8 +358,7 @@
 }
 
 .captured-mission {
-    bottom: 0;
-    position: absolute;
+    position: relative;
 }
 
 @media (max-width: 900px) {
@@ -356,5 +368,13 @@
 
     #player-zones {
         grid-template-columns: 1fr;
+    }
+
+    .tomatoss-player-zone__top {
+        min-height: 132px;
+    }
+
+    .tomatoss-player-zone {
+        width: 100%;
     }
 }

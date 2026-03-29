@@ -19,6 +19,10 @@ class SpriteStyles {
         return document.getElementById('festival-stage')?.clientWidth ?? 560;
     }
 
+    getStageScale() {
+        return Math.min(1, this.getStageWidth() / 1000);
+    }
+
     getBoardScale() {
         const board = document.getElementById('festival-board');
         return board ? Math.min(1, board.clientWidth / 569) : 1;
@@ -28,13 +32,13 @@ class SpriteStyles {
         const stage = document.getElementById('festival-stage');
         if (stage) {
             stage.style.setProperty('--board-scale', String(this.getBoardScale()));
+            stage.style.setProperty('--stage-scale', String(this.getStageScale()));
         }
     }
 
     getCardScale(kind) {
-        const width = this.getStageWidth() * (kind === 'mission' ? 0.165 : 0.16);
-        const sourceWidth = kind === 'mission' ? 157.5 : 155;
-        return width / sourceWidth;
+        void kind;
+        return Math.min(1, this.getStageScale() * 1.22);
     }
 
     missionCardStyle(targetId, scale) {
@@ -363,8 +367,10 @@ class PlayerZonesView {
             const isSelf = Number(player.id) === Number(this.game.bga.player_id);
             root.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
-                    <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
                     <div class="tomatoss-player-zone__top" id="player-zone-top-${player.id}"></div>
+                    <div class="tomatoss-player-zone__namebar">
+                        <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
+                    </div>
                     <div class="tomatoss-player-zone__bottom">
                         <div class="captured-band" id="captured-band-${player.id}">
                             <div class="captured-stack normal" id="captured-normal-${player.id}"></div>
