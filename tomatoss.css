@@ -352,20 +352,10 @@
 }
 
 .tomatoss-player-zone__top {
-    border-radius: 13px 13px 0 0;
+    background: rgba(255, 255, 255, 0.34);
+    border-radius: 15px 15px 0 0;
     overflow: visible;
     padding: 12px 18px;
-    position: relative;
-    isolation: isolate;
-}
-
-.tomatoss-player-zone__top::before {
-    background: rgba(255, 255, 255, 0.34);
-    border-radius: inherit;
-    content: '';
-    inset: 0;
-    position: absolute;
-    z-index: -1;
 }
 
 .self-hand-row {
