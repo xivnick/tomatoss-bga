@@ -352,7 +352,6 @@
 
 .tomatoss-player-zone__top {
     background: rgba(255, 255, 255, 0.67);
-    min-height: calc(var(--card-h) + 28px);
     overflow: visible;
     padding: 14px 20px 10px;
 }
@@ -382,24 +381,23 @@
     align-items: center;
     display: flex;
     justify-content: flex-start;
-    min-height: var(--card-h);
     padding-left: 0;
 }
 
 .tomatoss-player-zone__bottom {
-    min-height: calc(var(--player-board-size) + var(--card-h) * 0.42);
+    align-items: flex-start;
+    display: flex;
+    justify-content: center;
     position: relative;
-    padding: 18px 18px 18px;
+    padding: 18px 18px 28px;
 }
 
 .tomatoss-player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
-    bottom: 0;
+    flex: 0 0 auto;
     height: var(--player-board-size);
-    left: 50%;
-    position: absolute;
-    transform: translateX(-50%);
+    position: relative;
     width: var(--player-board-size);
     z-index: 3;
 }
@@ -423,9 +421,8 @@
 .basket-token.full { background-position: 100% 0; }
 
 .captured-band {
-    bottom: 0;
+    bottom: 28px;
     left: 50%;
-    min-height: var(--player-board-size);
     position: absolute;
     transform: translateX(-50%);
     width: calc(var(--player-board-size) + var(--mission-card-w) * 2.5);
