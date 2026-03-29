@@ -72,7 +72,7 @@ class SpriteStyles {
             layout.style.setProperty('--tomato-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--mission-card-w', `${sharedCardWidth}px`);
             layout.style.setProperty('--card-h', `${sharedCardHeight}px`);
-            layout.style.setProperty('--player-board-size', `${220 * stageScale}px`);
+            layout.style.setProperty('--player-board-size', `${250 * stageScale}px`);
             layout.style.setProperty('--tomato-card-scale', String(tomatoCardScale));
             layout.style.setProperty('--mission-card-scale', String(missionCardScale));
         }
@@ -412,6 +412,18 @@ class PlayerZonesView {
         this.registry = registry;
     }
 
+    getOrderedPlayers() {
+        const localPlayerId = this.game.getLocalPlayerId();
+        return Object.values(this.game.gamedatas.players ?? {}).sort((a, b) => {
+            const aSelf = Number(a.id) === localPlayerId ? 1 : 0;
+            const bSelf = Number(b.id) === localPlayerId ? 1 : 0;
+            if (aSelf !== bSelf) {
+                return bSelf - aSelf;
+            }
+            return Number(a.id) - Number(b.id);
+        });
+    }
+
     setup() {
         const root = document.getElementById('player-zones');
         if (!root) {
@@ -419,7 +431,7 @@ class PlayerZonesView {
         }
 
         root.innerHTML = '';
-        Object.values(this.game.gamedatas.players ?? {}).forEach(player => {
+        this.getOrderedPlayers().forEach(player => {
             const isSelf = Number(player.id) === this.game.getLocalPlayerId();
             root.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
@@ -442,7 +454,7 @@ class PlayerZonesView {
     }
 
     renderAll() {
-        Object.values(this.game.gamedatas.players ?? {}).forEach(player => this.renderPlayer(Number(player.id)));
+        this.getOrderedPlayers().forEach(player => this.renderPlayer(Number(player.id)));
     }
 
     renderPlayer(playerId) {

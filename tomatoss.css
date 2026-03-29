@@ -17,9 +17,11 @@
     --stage-width: 760px;
     --stage-height: 603px;
     --card-radius: calc(var(--tomato-card-w) * 0.0483871);
+    box-sizing: border-box;
     display: grid;
     gap: 18px;
     margin: 12px 0 20px;
+    padding-inline: 16px;
 }
 
 #full-table {
@@ -36,7 +38,7 @@
     display: grid;
     gap: 18px;
     justify-items: center;
-    width: min(100%, var(--stage-width));
+    width: min(100%, calc(var(--stage-width) + 32px));
 }
 
 #table-center {
@@ -44,7 +46,8 @@
     border: 2px solid white;
     border-radius: 18px;
     padding: 18px;
-    width: min(100%, calc(var(--stage-width) + 36px));
+    box-sizing: border-box;
+    width: 100%;
 }
 
 #festival-stage {
@@ -345,23 +348,27 @@
 .tomatoss-player-zone__top {
     background: rgba(255, 255, 255, 0.67);
     min-height: calc(var(--card-h) + 28px);
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: visible;
     padding: 14px 20px 10px;
 }
 
 .self-hand-row {
     align-items: flex-end;
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;
-    min-width: 0;
+    min-width: 100%;
     padding-bottom: 8px;
-    width: max-content;
+    width: 100%;
 }
 
 .hand-card-button.is-selected {
     transform: translateY(-8px);
+}
+
+.hand-card-button {
+    flex: 0 0 auto;
 }
 
 .player-hand-fan {
@@ -369,7 +376,7 @@
     display: flex;
     justify-content: flex-start;
     min-height: var(--card-h);
-    padding-left: 20px;
+    padding-left: 0;
 }
 
 .tomatoss-player-zone__bottom {
