@@ -14,6 +14,7 @@
     --mission-card-w: 120px;
     --card-h: 168px;
     --player-board-size: 168px;
+    --layout-width: 700px;
     --stage-width: 760px;
     --stage-height: 603px;
     --card-radius: calc(var(--tomato-card-w) * 0.0483871);
@@ -39,7 +40,7 @@
     gap: 18px;
     justify-items: center;
     margin-inline: auto;
-    width: min(100%, var(--stage-width));
+    width: min(100%, var(--layout-width));
 }
 
 #table-center {
@@ -343,28 +344,31 @@
 
 .tomatoss-player-zone__namebar {
     align-items: center;
-    background: rgba(255, 255, 255, 0.67);
+    background: rgba(255, 255, 255, 0.95);
     display: flex;
     justify-content: center;
-    min-height: 42px;
-    padding: 4px 12px;
+    min-height: 34px;
+    padding: 2px 12px;
 }
 
 .tomatoss-player-zone__top {
-    background: rgba(255, 255, 255, 0.67);
+    background: rgba(255, 255, 255, 0.34);
     overflow: visible;
-    padding: 14px 20px 10px;
+    padding: 12px 18px;
 }
 
 .self-hand-row {
     align-content: flex-start;
     align-items: flex-end;
+    background: rgba(255, 255, 255, 0.46);
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: 14px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;
     min-width: 0;
-    padding-bottom: 8px;
+    padding: 10px 12px;
     width: 100%;
 }
 
@@ -379,9 +383,12 @@
 
 .player-hand-fan {
     align-items: center;
+    background: rgba(255, 255, 255, 0.46);
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: 14px;
     display: flex;
     justify-content: flex-start;
-    padding-left: 0;
+    padding: 10px 12px;
 }
 
 .tomatoss-player-zone__bottom {
@@ -389,7 +396,7 @@
     display: flex;
     justify-content: center;
     position: relative;
-    padding: 18px 18px 28px;
+    padding: 22px 18px;
 }
 
 .tomatoss-player-board {
@@ -421,7 +428,7 @@
 .basket-token.full { background-position: 100% 0; }
 
 .captured-band {
-    bottom: 28px;
+    bottom: 22px;
     left: 50%;
     position: absolute;
     transform: translateX(-50%);
