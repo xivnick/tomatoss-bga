@@ -15,12 +15,16 @@ const TOKEN_SLOTS = [
 ];
 
 class SpriteStyles {
+    getStageElement() {
+        return document.getElementById('festival-stage');
+    }
+
     getStageWidth() {
-        return document.getElementById('festival-stage')?.clientWidth ?? 560;
+        return this.getStageElement()?.clientWidth ?? 720;
     }
 
     getStageScale() {
-        return Math.min(1, this.getStageWidth() / 1000);
+        return Math.min(1, this.getStageWidth() / 860);
     }
 
     getBoardScale() {
@@ -29,16 +33,24 @@ class SpriteStyles {
     }
 
     updateBoardScale() {
-        const stage = document.getElementById('festival-stage');
+        const stage = this.getStageElement();
         if (stage) {
-            stage.style.setProperty('--board-scale', String(this.getBoardScale()));
-            stage.style.setProperty('--stage-scale', String(this.getStageScale()));
+            const stageScale = this.getStageScale();
+            const boardScale = this.getBoardScale();
+            const cardScale = Math.min(1, stageScale * 0.76);
+            stage.style.setProperty('--board-scale', String(boardScale));
+            stage.style.setProperty('--stage-scale', String(stageScale));
+            stage.style.setProperty('--card-scale', String(cardScale));
+            stage.style.setProperty('--tomato-card-w', `${155 * cardScale}px`);
+            stage.style.setProperty('--mission-card-w', `${157.5 * cardScale}px`);
+            stage.style.setProperty('--card-h', `${220 * cardScale}px`);
+            stage.style.setProperty('--player-board-size', `${220 * cardScale}px`);
         }
     }
 
     getCardScale(kind) {
         void kind;
-        return Math.min(1, this.getStageScale() * 1.22);
+        return Math.min(1, this.getStageScale() * 0.76);
     }
 
     missionCardStyle(targetId, scale) {
@@ -326,7 +338,8 @@ class FestivalStageView {
 
         const target = document.createElement('div');
         target.className = 'recent-throw__target';
-        target.style.cssText = this.sprites.missionCardStyle(Number(recent.targetId), 0.18);
+        const scale = Math.max(0.42, this.sprites.getCardScale('mission') * 0.9);
+        target.style.cssText = this.sprites.missionCardStyle(Number(recent.targetId), scale);
         wrap.appendChild(target);
 
         const cards = document.createElement('div');
@@ -334,14 +347,14 @@ class FestivalStageView {
         target.appendChild(cards);
 
         (recent.cards ?? []).forEach((value, index) => {
-            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, 0.12);
-            node.style.left = `${index * 26}px`;
+            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, scale * 0.68);
+            node.style.left = `${index * (34 * scale)}px`;
             cards.appendChild(node);
         });
 
         if (recent.revealed) {
-            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, 0.12, ['reveal']);
-            node.style.left = `${(recent.cards?.length ?? 0) * 26}px`;
+            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, scale * 0.68, ['reveal']);
+            node.style.left = `${(recent.cards?.length ?? 0) * (34 * scale)}px`;
             cards.appendChild(node);
         }
 
@@ -468,7 +481,7 @@ class PlayerZonesView {
                 keepKeys.push(key);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
-                wrapper.style.right = `${index * 76 * scale}px`;
+                wrapper.style.right = `${index * 52 * scale}px`;
                 wrapper.style.zIndex = String(100 - index);
                 normalHost.appendChild(wrapper);
                 this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
@@ -482,7 +495,7 @@ class PlayerZonesView {
                 keepKeys.push(key);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'captured-card-host';
-                wrapper.style.left = `${index * 76 * scale}px`;
+                wrapper.style.left = `${index * 52 * scale}px`;
                 wrapper.style.zIndex = String(100 - index);
                 quickHost.appendChild(wrapper);
                 this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));
@@ -579,6 +592,16 @@ export class Game {
         this.isCurrentPlayerActive = false;
         this.recentThrow = null;
         this.recentThrowTimeout = null;
+        this.resizeRaf = null;
+        this.onWindowResize = () => {
+            if (this.resizeRaf !== null) {
+                cancelAnimationFrame(this.resizeRaf);
+            }
+            this.resizeRaf = requestAnimationFrame(() => {
+                this.resizeRaf = null;
+                this.renderState(this.gamedatas);
+            });
+        };
 
         this.sprites = new SpriteStyles();
         this.registry = new CardRegistry(this, this.sprites);
@@ -603,43 +626,52 @@ export class Game {
         document.getElementById('tomatoss-layout')?.remove();
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
             <div id="tomatoss-layout">
-                <div id="festival-stage">
-                    <div id="festival-canvas">
-                        <div id="recent-throw-area" data-visible="false"></div>
-                        <div id="mission-deck-slot" class="stage-slot stage-deck-slot"></div>
-                        ${[0, 1, 2].map(index => `
-                            <div id="mission-slot-${index}" class="stage-slot">
-                                <button class="stage-slot-button mission-slot-button" data-space="${index + 3}">
-                                    <div class="slot-card-host" data-empty="true"></div>
-                                </button>
+                <div id="full-table">
+                    <div id="centered-table">
+                        <div id="tables-and-center">
+                            <div id="table-center">
+                                <div id="festival-stage">
+                                    <div id="festival-stage-canvas">
+                                        <div id="recent-throw-area" data-visible="false"></div>
+                                        <div id="mission-deck-slot" class="stage-slot stage-deck-slot"></div>
+                                        ${[0, 1, 2].map(index => `
+                                            <div id="mission-slot-${index}" class="stage-slot mission-slot">
+                                                <button class="stage-slot-button mission-slot-button" data-space="${index + 3}">
+                                                    <div class="slot-card-host" data-empty="true"></div>
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                        <div id="festival-board-wrap">
+                                            <div id="festival-board">
+                                                <div id="festival-slot-layer"></div>
+                                                <div id="festival-token-layer"></div>
+                                            </div>
+                                        </div>
+                                        <div id="discard-slot" class="stage-slot side-slot">
+                                            <div class="slot-card-host" data-empty="true"></div>
+                                        </div>
+                                        <div id="token-reserve" class="stage-slot"></div>
+                                        ${[0, 1, 2].map(index => `
+                                            <div id="tomato-slot-${index}" class="stage-slot tomato-slot">
+                                                <button class="stage-slot-button tomato-slot-button" data-space="${index}">
+                                                    <div class="slot-card-host" data-empty="true"></div>
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                        <div id="tomato-deck-slot" class="stage-slot stage-deck-slot"></div>
+                                    </div>
+                                </div>
                             </div>
-                        `).join('')}
-                        <div id="festival-board-wrap">
-                            <div id="festival-board">
-                                <div id="festival-slot-layer"></div>
-                                <div id="festival-token-layer"></div>
-                            </div>
+                            <div id="player-zones"></div>
                         </div>
-                        <div id="discard-slot" class="stage-slot">
-                            <div class="slot-card-host" data-empty="true"></div>
-                        </div>
-                        <div id="token-reserve" class="stage-slot"></div>
-                        ${[0, 1, 2].map(index => `
-                            <div id="tomato-slot-${index}" class="stage-slot">
-                                <button class="stage-slot-button tomato-slot-button" data-space="${index}">
-                                    <div class="slot-card-host" data-empty="true"></div>
-                                </button>
-                            </div>
-                        `).join('')}
-                        <div id="tomato-deck-slot" class="stage-slot stage-deck-slot"></div>
                     </div>
                 </div>
-                <div id="player-zones"></div>
             </div>
         `);
 
         this.playerZonesView.setup();
         this.bindRootEvents();
+        window.addEventListener('resize', this.onWindowResize);
         this.renderState(gamedatas);
         this.setupNotifications();
     }
