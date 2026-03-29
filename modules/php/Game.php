@@ -582,7 +582,7 @@ class Game extends \Bga\GameFramework\Table
         $this->moveCardsToDiscard($cardIds);
 
         $scoreGained = 0;
-        $newTarget = null;
+        $replacementTarget = null;
         if ($success) {
             $scoreGained = $quickToss ? self::TARGET_DEFS[$targetId]['toss'] : self::TARGET_DEFS[$targetId]['base'];
             $this->bga->playerScore->inc($playerId, $scoreGained);
@@ -597,7 +597,7 @@ class Game extends \Bga\GameFramework\Table
 
             $replacement = $this->drawCard('target', 'target_deck', 'board_target', $targetSlot);
             if ($replacement !== null) {
-                $newTarget = $this->buildTargetData((int) $replacement['id'], (int) $replacement['typeArg']);
+                $replacementTarget = $this->buildTargetData((int) $replacement['id'], (int) $replacement['typeArg']);
             }
         }
 
@@ -610,7 +610,7 @@ class Game extends \Bga\GameFramework\Table
             'success' => $success,
             'scoreGained' => $scoreGained,
             'targetId' => $targetId,
-            'newTarget' => $newTarget,
+            'replacementTarget' => $replacementTarget,
             'remainingHand' => $this->getHandForPlayer($playerId),
             'publicDiscardCount' => $this->getPublicDiscardCount(),
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),

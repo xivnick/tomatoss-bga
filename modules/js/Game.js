@@ -1088,9 +1088,9 @@ export class Game {
 
     applyThrowAction(args) {
         const slotIndex = Number(args.targetIndex);
-        if (args.newTarget !== undefined) {
+        if (args.replacementTarget) {
             this.gamedatas.boardTargets = [...(this.gamedatas.boardTargets ?? [])];
-            this.gamedatas.boardTargets[slotIndex] = args.newTarget;
+            this.gamedatas.boardTargets[slotIndex] = args.replacementTarget;
         }
         this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;

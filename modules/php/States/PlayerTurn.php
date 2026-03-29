@@ -118,7 +118,7 @@ class PlayerTurn extends GameState
                 'targetId' => $result['targetId'],
                 'revealed' => $result['revealed'],
                 'scoreGained' => $result['scoreGained'],
-                'newTarget' => $result['newTarget'],
+                'replacementTarget' => $result['replacementTarget'],
                 'publicDiscardCount' => $result['publicDiscardCount'],
                 'latestDiscardTomato' => $result['latestDiscardTomato'],
                 'targetDeckCount' => $result['targetDeckCount'],
