@@ -592,8 +592,8 @@ class PlayerTurnState {
         this.game.clearPendingAction();
         this.game.renderState(args);
         this.game.setStatePrompt(isCurrentPlayerActive
-            ? _('Select a tomato card and a board slot, then confirm with the action buttons.')
-            : _('Waiting for the active player to choose an action.'));
+            ? _('Choose a slot or cards, then confirm.')
+            : _('Waiting for the active player.'));
         this.game.updateActionButtons();
     }
 
@@ -614,7 +614,7 @@ class ResolveBonusState {
         this.game.isCurrentPlayerActive = false;
         this.game.clearPendingAction();
         this.game.renderState(args);
-        this.game.setStatePrompt(_('Resolving bonus.'));
+        this.game.setStatePrompt(_('Resolving bonus'));
         this.game.bga.statusBar.removeActionButtons();
     }
 }
@@ -631,8 +631,8 @@ class DiscardDownState {
         this.game.clearSelection();
         this.game.renderState(args);
         this.game.setStatePrompt(isCurrentPlayerActive
-            ? _('Select a tomato card to discard, then confirm with the action buttons.')
-            : _('Waiting for the active player to discard down.'));
+            ? _('Choose cards to discard down to 8.')
+            : _('Waiting for discard.'));
         this.game.updateActionButtons();
     }
 
@@ -851,9 +851,17 @@ export class Game {
         }
 
         const cardId = Number(button.dataset.cardId);
+        const wasSelected = this.selectedCardIds.includes(cardId);
         if (this.currentUiMode === 'discard') {
+            if (wasSelected) {
+                this.confirmDiscard();
+                return;
+            }
             this.selectedCardIds = [cardId];
         } else if (this.selectedCardIds.includes(cardId)) {
+            if (this.tryAutoConfirmPendingThrow()) {
+                return;
+            }
             this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
         } else {
             this.selectedCardIds = [...this.selectedCardIds, cardId];
@@ -867,6 +875,16 @@ export class Game {
         const action = space < 3 ? 'actCollectTomato' : 'actTossToTarget';
         if (!this.canInteract(action)) {
             return;
+        }
+
+        if (this.pendingSpace === space) {
+            if (space < 3) {
+                this.confirmCollect();
+                return;
+            }
+            if (this.tryAutoConfirmPendingThrow()) {
+                return;
+            }
         }
 
         this.pendingSpace = space;
@@ -885,6 +903,35 @@ export class Game {
             normal: this.targetMatches(targetId, [...values]),
             quick: [1, 2, 3, 4, 5, 6, 7].some(next => this.targetMatches(targetId, [...values, next])),
         };
+    }
+
+    tryAutoConfirmPendingThrow() {
+        if (this.pendingSpace === null || this.pendingSpace < 3) {
+            return false;
+        }
+
+        const target = (this.gamedatas.boardTargets ?? [])[this.pendingSpace - 3];
+        if (!target) {
+            this.bga.dialogs.showMessage(_('No target in that slot'), 'error');
+            return true;
+        }
+
+        const { normal, quick } = this.getThrowOptions(Number(target.targetId));
+        if (normal && !quick) {
+            this.confirmToss(false);
+            return true;
+        }
+        if (!normal && quick) {
+            this.confirmToss(true);
+            return true;
+        }
+        if (!normal && !quick) {
+            this.bga.dialogs.showMessage(_('Choose cards that can toss to this target'), 'error');
+            return true;
+        }
+
+        this.bga.dialogs.showMessage(_('Both Toss and Quick toss are possible. Use the action buttons.'), 'error');
+        return true;
     }
 
     updateActionButtons() {
@@ -920,7 +967,6 @@ export class Game {
             });
             this.bga.statusBar.addActionButton(_('Quick toss'), () => this.confirmToss(true), {
                 id: 'quick_toss_button',
-                color: 'secondary',
                 disabled: !quick,
             });
         }
