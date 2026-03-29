@@ -14,6 +14,9 @@ const TOKEN_SLOTS = [
     { space: 2, left: 74.51, top: 65.79 },
 ];
 
+const STAGE_DESIGN_WIDTH = 900;
+const STAGE_DESIGN_HEIGHT = 640;
+
 class SpriteStyles {
     getLayoutElement() {
         return document.getElementById('tomatoss-layout');
@@ -24,11 +27,20 @@ class SpriteStyles {
     }
 
     getStageWidth() {
-        return this.getStageElement()?.clientWidth ?? 720;
+        const leftSide = document.getElementById('left-side');
+        const gameAreaWrap = document.getElementById('game_play_area_wrap');
+        const tableCenter = document.getElementById('table-center');
+        const layoutParent = this.getLayoutElement()?.parentElement;
+        const available = leftSide?.clientWidth
+            ?? gameAreaWrap?.clientWidth
+            ?? tableCenter?.clientWidth
+            ?? layoutParent?.clientWidth
+            ?? STAGE_DESIGN_WIDTH;
+        return Math.min(STAGE_DESIGN_WIDTH, Math.max(360, available - 40));
     }
 
     getStageScale() {
-        return Math.min(1, this.getStageWidth() / 860);
+        return Math.min(1, this.getStageWidth() / STAGE_DESIGN_WIDTH);
     }
 
     getBoardScale() {
@@ -44,6 +56,8 @@ class SpriteStyles {
         const cardScale = stageScale;
 
         if (layout) {
+            layout.style.setProperty('--stage-width', `${this.getStageWidth()}px`);
+            layout.style.setProperty('--stage-height', `${STAGE_DESIGN_HEIGHT * stageScale}px`);
             layout.style.setProperty('--card-scale', String(cardScale));
             layout.style.setProperty('--tomato-card-w', `${155 * cardScale}px`);
             layout.style.setProperty('--mission-card-w', `${157.5 * cardScale}px`);
