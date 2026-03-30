@@ -843,7 +843,10 @@ export class Game {
                 return;
             }
             this.selectedCardIds = [cardId];
-        } else if (wasSelected) {
+        } else if (this.selectedCardIds.includes(cardId)) {
+            if (this.tryAutoConfirmPendingThrow()) {
+                return;
+            }
             this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
         } else {
             this.selectedCardIds = [...this.selectedCardIds, cardId];
