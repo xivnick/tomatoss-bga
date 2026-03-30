@@ -233,10 +233,10 @@
     border: 2px solid rgba(176, 38, 31, 0.38);
     border-radius: 999px;
     cursor: pointer;
-    height: calc(116px * var(--board-scale));
+    height: calc(324px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%);
-    width: calc(116px * var(--board-scale));
+    width: calc(324px * var(--board-scale));
 }
 
 .board-token-slot:hover {
