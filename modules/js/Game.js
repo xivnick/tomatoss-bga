@@ -831,7 +831,7 @@ export class Game {
             return;
         }
 
-        const action = this.currentUiMode === 'discard' ? 'actDiscardCard' : 'actTossToTarget';
+        const action = this.currentUiMode === 'discard' ? 'actDiscardCards' : 'actTossToTarget';
         if (!this.canInteract(action)) {
             return;
         }
