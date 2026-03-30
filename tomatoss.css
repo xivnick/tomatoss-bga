@@ -421,8 +421,8 @@
     background-image: url('img/basket_tokens.png');
     background-repeat: no-repeat;
     background-size: 200% 100%;
-    height: calc(239px / 880 * var(--player-board-size));
-    width: calc(300px / 880 * var(--player-board-size));
+    height: calc(239 / 880 * var(--player-board-size));
+    width: calc(300 / 880 * var(--player-board-size));
 }
 
 .basket-token.empty { background-position: 0 0; }
