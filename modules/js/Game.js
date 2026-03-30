@@ -52,7 +52,7 @@ class SpriteStyles {
 
     getBoardScale() {
         const board = document.getElementById('festival-board');
-        return board ? Math.min(1, board.clientWidth / 569) : 1;
+        return board ? Math.min(1, board.clientWidth / 2275) : 1;
     }
 
     updateBoardScale() {
