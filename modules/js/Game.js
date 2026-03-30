@@ -615,17 +615,35 @@ class FestivalStageView {
         }
 
         const counts = new Map();
-        tokenLayer.innerHTML = (this.game.gamedatas.currentTurnActions ?? []).map(action => {
+        const actions = this.game.gamedatas.currentTurnActions ?? [];
+        const keep = new Set();
+        actions.forEach((action, index) => {
             const slot = TOKEN_SLOTS.find(item => item.space === Number(action.space));
             if (!slot) {
-                return '';
+                return;
             }
 
             const stackIndex = counts.get(slot.space) ?? 0;
             counts.set(slot.space, stackIndex + 1);
             const kind = (action.actionKind ?? action.action_kind) === 'collect' ? 'whole' : 'splat';
-            return `<div class="placed-token ${kind}" style="left:${slot.left}%; top:calc(${slot.top}% - ${stackIndex * 18}px);"></div>`;
-        }).join('');
+            const key = `placed-${index}`;
+            keep.add(key);
+            let node = tokenLayer.querySelector(`[data-key="${key}"]`);
+            if (!node) {
+                node = document.createElement('div');
+                node.dataset.key = key;
+                tokenLayer.appendChild(node);
+            }
+            node.className = `placed-token ${kind}`;
+            node.style.left = `${slot.left}%`;
+            node.style.top = `calc(${slot.top}% - ${stackIndex * 18}px)`;
+        });
+
+        [...tokenLayer.children].forEach(child => {
+            if (!keep.has(child.dataset.key)) {
+                child.remove();
+            }
+        });
     }
 
     renderReserveTokens() {
@@ -635,9 +653,24 @@ class FestivalStageView {
         }
 
         const remaining = Number(this.game.gamedatas.placementsRemaining ?? 0);
-        reserve.innerHTML = Array.from({ length: remaining }, (_, index) =>
-            `<div class="reserve-token reserve-token-${index + 1}"></div>`
-        ).join('');
+        const keep = new Set();
+        Array.from({ length: remaining }, (_, index) => index).forEach(index => {
+            const key = `reserve-${index}`;
+            keep.add(key);
+            let node = reserve.querySelector(`[data-key="${key}"]`);
+            if (!node) {
+                node = document.createElement('div');
+                node.dataset.key = key;
+                reserve.appendChild(node);
+            }
+            node.className = `reserve-token reserve-token-${index + 1}`;
+        });
+
+        [...reserve.children].forEach(child => {
+            if (!keep.has(child.dataset.key)) {
+                child.remove();
+            }
+        });
     }
 
     renderRecentThrow() {
@@ -763,25 +796,65 @@ class PlayerZonesView {
         this.renderOpponentHand(top, playerId);
     }
 
+    ensureSingleChild(parent, selector, className) {
+        let child = parent.querySelector(selector);
+        if (!child) {
+            child = document.createElement('div');
+            child.className = className;
+            parent.replaceChildren(child);
+        } else if (parent.childElementCount !== 1 || parent.firstElementChild !== child) {
+            parent.replaceChildren(child);
+        }
+        return child;
+    }
+
+    syncOrderedChildren(container, items, keyFn, createChild, updateChild) {
+        const seen = new Set();
+        items.forEach((item, index) => {
+            const key = keyFn(item, index);
+            seen.add(key);
+            let child = container.querySelector(`[data-key="${key}"]`);
+            if (!child) {
+                child = createChild(item, index, key);
+                child.dataset.key = key;
+            }
+            updateChild(child, item, index, key);
+            container.appendChild(child);
+        });
+
+        [...container.children].forEach(child => {
+            if (!seen.has(child.dataset.key)) {
+                child.remove();
+            }
+        });
+    }
+
     renderSelfHand(top) {
         const scale = this.sprites.getCardScale('tomato');
         const keepKeys = [];
-        top.innerHTML = `<div class="self-hand-row"></div>`;
-        const row = top.firstElementChild;
+        const row = this.ensureSingleChild(top, '.self-hand-row', 'self-hand-row');
 
-        (this.game.gamedatas.playerHand ?? []).forEach(card => {
-            const key = `tomato-${card.id}`;
-            keepKeys.push(key);
-            const button = document.createElement('button');
-            button.className = `hand-card-button ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}`;
-            button.dataset.cardId = String(card.id);
-            button.dataset.value = String(card.value);
-            const host = document.createElement('div');
-            host.className = 'hand-card-host';
-            button.appendChild(host);
-            row.appendChild(button);
-            this.registry.mount(host, this.registry.getTomatoNode(card, scale));
-        });
+        this.syncOrderedChildren(
+            row,
+            this.game.gamedatas.playerHand ?? [],
+            card => String(card.id),
+            (card) => {
+                const button = document.createElement('button');
+                button.className = 'hand-card-button';
+                button.innerHTML = '<div class="hand-card-host"></div>';
+                button.dataset.cardId = String(card.id);
+                return button;
+            },
+            (button, card) => {
+                const key = `tomato-${card.id}`;
+                keepKeys.push(key);
+                button.className = `hand-card-button ${this.game.selectedCardIds.includes(card.id) ? 'is-selected' : ''}`;
+                button.dataset.cardId = String(card.id);
+                button.dataset.value = String(card.value);
+                const host = button.querySelector('.hand-card-host');
+                this.registry.mount(host, this.registry.getTomatoNode(card, scale));
+            }
+        );
 
         this.registry.removeMissing(['tomato-'], [
             ...keepKeys,
@@ -793,15 +866,22 @@ class PlayerZonesView {
     renderOpponentHand(top, playerId) {
         const scale = this.sprites.getCardScale('tomato');
         const count = this.game.gamedatas.handCountsByPlayer?.[playerId] ?? 0;
-        top.innerHTML = `<div class="player-hand-fan"></div>`;
-        const fan = top.firstElementChild;
-        for (let index = 0; index < count; index += 1) {
-            const host = document.createElement('div');
-            host.className = 'player-hand-back-host';
-            host.style.marginLeft = index === 0 ? '0' : `${-Math.round(0.68 * 155 * scale)}px`;
-            fan.appendChild(host);
-            this.registry.mount(host, this.registry.getBackNode(`back-opponent-${playerId}-${index}`, 'tomato', scale));
-        }
+        const fan = this.ensureSingleChild(top, '.player-hand-fan', 'player-hand-fan');
+        const entries = Array.from({ length: count }, (_, index) => index);
+        this.syncOrderedChildren(
+            fan,
+            entries,
+            index => String(index),
+            () => {
+                const host = document.createElement('div');
+                host.className = 'player-hand-back-host';
+                return host;
+            },
+            (host, index) => {
+                host.style.marginLeft = index === 0 ? '0' : `${-Math.round(0.68 * 155 * scale)}px`;
+                this.registry.mount(host, this.registry.getBackNode(`back-opponent-${playerId}-${index}`, 'tomato', scale));
+            }
+        );
     }
 
     renderBoard(playerId) {
@@ -819,25 +899,37 @@ class PlayerZonesView {
         const scale = this.sprites.getCardScale('mission');
 
         if (normalHost) {
-            normalHost.replaceChildren();
-            captured.normal.forEach((card, index) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'captured-card-host';
-                wrapper.style.zIndex = String(100 - index);
-                normalHost.appendChild(wrapper);
-                this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
-            });
+            this.syncOrderedChildren(
+                normalHost,
+                captured.normal,
+                card => String(card.id),
+                () => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'captured-card-host';
+                    return wrapper;
+                },
+                (wrapper, card, index) => {
+                    wrapper.style.zIndex = String(100 - index);
+                    this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
+                }
+            );
         }
 
         if (quickHost) {
-            quickHost.replaceChildren();
-            captured.quick.forEach((card, index) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'captured-card-host';
-                wrapper.style.zIndex = String(100 - index);
-                quickHost.appendChild(wrapper);
-                this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));
-            });
+            this.syncOrderedChildren(
+                quickHost,
+                captured.quick,
+                card => String(card.id),
+                () => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'captured-card-host';
+                    return wrapper;
+                },
+                (wrapper, card, index) => {
+                    wrapper.style.zIndex = String(100 - index);
+                    this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));
+                }
+            );
         }
 
     }
@@ -1397,6 +1489,35 @@ export class Game {
         await Promise.all([movePromise, flipPromise]);
     }
 
+    async animateBonusCardToHand(args) {
+        if (Number(args.player_id) !== this.getLocalPlayerId() || !args.bonusCard) {
+            return;
+        }
+
+        const sourceRect = this.motionLayer.getTomatoDeckRect();
+        const destinationElement = document.querySelector(`.hand-card-button[data-card-id="${args.bonusCard.id}"] .card-node`);
+        const destinationRect = this.motionLayer.getRect(destinationElement);
+        if (!sourceRect || !destinationRect) {
+            return;
+        }
+
+        const restore = this.hideElementDuringAnimation(destinationElement);
+        const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
+        const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
+        const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+            duration: CARD_MOVE_MS,
+            easing: CARD_EASING,
+        });
+        const flipPromise = this.motionLayer.animateFlip(
+            backNode,
+            () => this.motionLayer.createTomatoFaceNode(args.bonusCard.value, sourceRect),
+            FLIP_MS
+        );
+
+        await Promise.all([movePromise, flipPromise]);
+        restore();
+    }
+
     async animateTurnCleanup(turnActions) {
         if (!turnActions?.length) {
             return;
@@ -1931,6 +2052,9 @@ export class Game {
             this.updateHandCount(args.player_id, args.playerHand.length);
         }
         this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+        if (args.mode === 'bonus' && args.bonusCard) {
+            await this.animateBonusCardToHand(args);
+        }
         this.updateActionButtons();
     }
 }
