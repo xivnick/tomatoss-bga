@@ -30,13 +30,13 @@ const TARGET_CARD_POSITIONS = [
 const RECENT_THROW_Y = 100;
 const RECENT_THROW_X_OFFSET = -150;
 const RECENT_THROW_X_STEP = 260;
-const THROW_CUTSCENE_MS = 3200;
+const THROW_CUTSCENE_MS = 2200;
 const THROW_RESOLVE_DELAY_MS = 180;
 const TOKEN_MOVE_MS = 380;
 const CARD_MOVE_MS = 560;
 const FLIP_MS = 520;
 const REFILL_PAUSE_MS = 180;
-const THROW_RESULT_PAUSE_MS = 360;
+const THROW_RESULT_PAUSE_MS = 220;
 const TURN_CLEANUP_MS = 320;
 const TOKEN_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
@@ -924,6 +924,8 @@ export class Game {
         this.recentThrowTimeout = null;
         this.pendingThrowResolution = null;
         this.turnCleanupPromise = null;
+        this.deferredTurnCleanupActions = null;
+        this.actionAnimationDepth = 0;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1085,11 +1087,8 @@ export class Game {
 
         const nextTurnActions = this.gamedatas.currentTurnActions ?? [];
         if (previousTurnActions.length > 0 && nextTurnActions.length === 0 && !this.turnCleanupPromise) {
-            this.turnCleanupPromise = this.animateTurnCleanup(previousTurnActions).finally(() => {
-                this.turnCleanupPromise = null;
-                this.stageView.renderPlacedTokens();
-                this.stageView.renderReserveTokens();
-            });
+            this.deferredTurnCleanupActions = previousTurnActions;
+            this.flushDeferredTurnCleanup();
         }
     }
 
@@ -1124,6 +1123,33 @@ export class Game {
         };
     }
 
+    beginActionAnimation() {
+        this.actionAnimationDepth += 1;
+    }
+
+    endActionAnimation() {
+        this.actionAnimationDepth = Math.max(0, this.actionAnimationDepth - 1);
+        this.flushDeferredTurnCleanup();
+    }
+
+    isActionAnimationRunning() {
+        return this.actionAnimationDepth > 0 || Boolean(this.pendingThrowResolution) || Boolean(this.recentThrow);
+    }
+
+    flushDeferredTurnCleanup() {
+        if (this.turnCleanupPromise || !this.deferredTurnCleanupActions || this.isActionAnimationRunning()) {
+            return;
+        }
+
+        const actions = this.deferredTurnCleanupActions;
+        this.deferredTurnCleanupActions = null;
+        this.turnCleanupPromise = this.animateTurnCleanup(actions).finally(() => {
+            this.turnCleanupPromise = null;
+            this.stageView.renderPlacedTokens();
+            this.stageView.renderReserveTokens();
+        });
+    }
+
     animateReserveTokenToSpace(space) {
         const fromRect = this.motionLayer.getReserveTokenRect();
         const toRect = this.motionLayer.getBoardSlotRect(space);
@@ -1154,11 +1180,11 @@ export class Game {
 
         const node = this.motionLayer.createTomatoFaceNode(card.value, sourceRect);
         const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-        const restore = this.hideElementDuringAnimation(sourceElement);
+        this.hideElementDuringAnimation(sourceElement);
         return this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
             duration: CARD_MOVE_MS,
             easing: CARD_EASING,
-        }).finally(restore);
+        });
     }
 
     animateCollectRefill(args) {
@@ -1336,7 +1362,8 @@ export class Game {
 
         const node = this.motionLayer.createMissionFaceNode(Number(args.targetId), sourceRect);
         const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-        const restore = this.hideElementDuringAnimation(sourceElement);
+        const shouldHideSource = Boolean(args.replacementTarget);
+        const restore = shouldHideSource ? this.hideElementDuringAnimation(sourceElement) : () => {};
         await this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
             duration: CARD_MOVE_MS,
             easing: CARD_EASING,
@@ -1817,14 +1844,20 @@ export class Game {
             this.pendingThrowResolution = null;
             if (pending) {
                 setTimeout(async () => {
-                    await this.animateThrownCardsToDiscard(pending);
-                    await this.wait(THROW_RESULT_PAUSE_MS);
-                    await this.animateCapturedTarget(pending);
-                    await this.animateReplacementTarget(pending);
-                    this.applyThrowAction(pending);
-                    this.afterPublicChange();
+                    try {
+                        await this.animateThrownCardsToDiscard(pending);
+                        await this.wait(THROW_RESULT_PAUSE_MS);
+                        await this.animateCapturedTarget(pending);
+                        await this.animateReplacementTarget(pending);
+                        this.applyThrowAction(pending);
+                        this.afterPublicChange();
+                    } finally {
+                        this.endActionAnimation();
+                    }
                 }, THROW_RESOLVE_DELAY_MS);
+                return;
             }
+            this.endActionAnimation();
         }, THROW_CUTSCENE_MS);
     }
 
@@ -1836,6 +1869,7 @@ export class Game {
 
     async notif_turnAction(args) {
         const isCollect = Object.prototype.hasOwnProperty.call(args, 'refill');
+        this.beginActionAnimation();
         this.pushTurnAction({
             space: Number(args.space),
             actionKind: isCollect ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss'),
@@ -1845,26 +1879,32 @@ export class Game {
             scoreGained: args.scoreGained ?? 0,
         });
 
-        if (isCollect) {
-            await this.animateReserveTokenToSpace(Number(args.space));
-            await this.animateCollectMotion(args);
-            await this.wait(REFILL_PAUSE_MS);
-            await this.animateCollectRefill(args);
-            this.applyCollectAction(args);
-            this.clearPendingAction();
-            this.afterPublicChange();
-        } else {
-            const selectedIds = [...this.selectedCardIds];
-            const throwAnimation = this.animateThrowEntry(args, selectedIds);
-            this.applyImmediateThrowHandChange(args);
-            this.pendingThrowResolution = args;
-            this.clearSelection();
-            this.clearPendingAction();
-            this.stageView.renderAll();
-            this.playerZonesView.renderAll();
-            this.updateActionButtons();
-            await throwAnimation;
-            this.showRecentThrow(args);
+        try {
+            if (isCollect) {
+                await this.animateReserveTokenToSpace(Number(args.space));
+                await this.animateCollectMotion(args);
+                await this.wait(REFILL_PAUSE_MS);
+                await this.animateCollectRefill(args);
+                this.applyCollectAction(args);
+                this.clearPendingAction();
+                this.afterPublicChange();
+            } else {
+                const selectedIds = [...this.selectedCardIds];
+                const throwAnimation = this.animateThrowEntry(args, selectedIds);
+                this.applyImmediateThrowHandChange(args);
+                this.pendingThrowResolution = args;
+                this.clearSelection();
+                this.clearPendingAction();
+                this.stageView.renderAll();
+                this.playerZonesView.renderAll();
+                this.updateActionButtons();
+                await throwAnimation;
+                this.showRecentThrow(args);
+            }
+        } finally {
+            if (isCollect) {
+                this.endActionAnimation();
+            }
         }
     }
 
