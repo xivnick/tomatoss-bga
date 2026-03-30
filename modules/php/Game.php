@@ -254,16 +254,38 @@ class Game extends \Bga\GameFramework\Table
         }
     }
 
-    public function assertCanDiscard(int $playerId, int $cardValue): void
+    public function getDiscardCountNeeded(int $playerId): int
+    {
+        $handSize = (int) $this->getUniqueValueFromDb(
+            'SELECT COUNT(*) FROM `card` '
+            . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId"
+        );
+
+        return max(0, $handSize - 8);
+    }
+
+    public function assertCanDiscard(int $playerId, array $cardIds): void
     {
         if (!$this->shouldEnterDiscardDown($playerId)) {
             throw new \Bga\GameFramework\UserException(clienttranslate('You do not need to discard now'));
         }
 
-        $count = (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId AND `card_type_arg` = $cardValue"
+        $needed = $this->getDiscardCountNeeded($playerId);
+        $uniqueCardIds = array_values(array_unique(array_map('intval', $cardIds)));
+        if (count($uniqueCardIds) !== $needed) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('Select exactly the required number of cards to discard'));
+        }
+
+        if ($uniqueCardIds === []) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('Invalid hand selection'));
+        }
+
+        $rows = $this->getCollectionFromDb(
+            "SELECT `card_id` AS `id` FROM `card` "
+            . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
+            . 'AND `card_id` IN (' . implode(',', $uniqueCardIds) . ')'
         );
-        if ($count === 0) {
+        if (count($rows) !== $needed) {
             throw new \Bga\GameFramework\UserException(clienttranslate('You do not have that card'));
         }
     }
@@ -482,11 +504,44 @@ class Game extends \Bga\GameFramework\Table
         return $result;
     }
 
+    public function discardCardsByIds(int $playerId, array $cardIds): array
+    {
+        $this->assertCanDiscard($playerId, $cardIds);
+        $uniqueCardIds = array_values(array_unique(array_map('intval', $cardIds)));
+        $cards = array_values($this->getCollectionFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
+            . "FROM `card` "
+            . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
+            . 'AND `card_id` IN (' . implode(',', $uniqueCardIds) . ') '
+            . 'ORDER BY `card_id` ASC'
+        ));
+        if ($cards === []) {
+            throw new \Bga\GameFramework\UserException(clienttranslate('You do not have that card'));
+        }
+
+        $discarded = [];
+        foreach ($cards as $card) {
+            static::DbQuery(
+                "UPDATE `card` SET `card_location` = 'tomato_discard', `card_location_arg` = " . $this->getNextDiscardIndex() . " WHERE `card_id` = " . (int) $card['id']
+            );
+
+            $discarded[] = [
+                'id' => (int) $card['id'],
+                'value' => (int) $card['value'],
+            ];
+        }
+
+        return [
+            'discarded' => $discarded,
+            'remainingHand' => $this->getHandForPlayer($playerId),
+            'latestDiscardTomato' => $this->getLatestDiscardTomato(),
+        ];
+    }
+
     public function discardCardByValue(int $playerId, int $cardValue): array
     {
-        $this->assertCanDiscard($playerId, $cardValue);
         $card = $this->getObjectFromDb(
-            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
+            "SELECT `card_id` AS `id` "
             . "FROM `card` "
             . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
             . "AND `card_type_arg` = $cardValue "
@@ -496,18 +551,7 @@ class Game extends \Bga\GameFramework\Table
             throw new \Bga\GameFramework\UserException(clienttranslate('You do not have that card'));
         }
 
-        static::DbQuery(
-            "UPDATE `card` SET `card_location` = 'tomato_discard', `card_location_arg` = " . $this->getNextDiscardIndex() . " WHERE `card_id` = " . (int) $card['id']
-        );
-
-        return [
-            'discarded' => [
-                'id' => (int) $card['id'],
-                'value' => (int) $card['value'],
-            ],
-            'remainingHand' => $this->getHandForPlayer($playerId),
-            'latestDiscardTomato' => $this->getLatestDiscardTomato(),
-        ];
+        return $this->discardCardsByIds($playerId, [(int) $card['id']]);
     }
 
     public function finalizeScores(): array

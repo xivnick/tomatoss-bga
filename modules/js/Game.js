@@ -751,6 +751,7 @@ export class Game {
             currentTurnActions: source.currentTurnActions ?? this.gamedatas.currentTurnActions ?? [],
             placementsRemaining: source.placementsRemaining ?? this.gamedatas.placementsRemaining ?? 3,
             capturedTargetsByPlayer: source.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer ?? {},
+            discardCountNeeded: source.discardCountNeeded ?? this.gamedatas.discardCountNeeded ?? 0,
         };
 
         if (this.pendingThrowResolution) {
@@ -839,12 +840,14 @@ export class Game {
         const wasSelected = this.selectedCardIds.includes(cardId);
         if (this.currentUiMode === 'discard') {
             if (wasSelected) {
-                this.clearSelection();
-                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
-                this.updateActionButtons();
-                return;
+                this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
+            } else {
+                const discardNeeded = Number(this.gamedatas.discardCountNeeded ?? 0);
+                if (this.selectedCardIds.length >= discardNeeded) {
+                    return;
+                }
+                this.selectedCardIds = [...this.selectedCardIds, cardId];
             }
-            this.selectedCardIds = [cardId];
         } else if (wasSelected) {
             this.selectedCardIds = this.selectedCardIds.filter(id => id !== cardId);
         } else {
@@ -986,12 +989,13 @@ export class Game {
     }
 
     renderDiscardButtons() {
-        const selectedCard = (this.gamedatas.playerHand ?? []).find(card => this.selectedCardIds.includes(card.id));
+        const discardNeeded = Number(this.gamedatas.discardCountNeeded ?? 0);
+        const hasExactSelection = this.selectedCardIds.length === discardNeeded && discardNeeded > 0;
         this.bga.statusBar.addActionButton(_('Discard selected'), () => this.confirmDiscard(), {
             color: 'alert',
-            disabled: !selectedCard,
+            disabled: !hasExactSelection,
         });
-        if (selectedCard) {
+        if (this.selectedCardIds.length > 0) {
             this.bga.statusBar.addActionButton(_('Clear selection'), () => {
                 this.clearSelection();
                 this.playerZonesView.renderHandArea(this.getLocalPlayerId());
@@ -1036,12 +1040,12 @@ export class Game {
     }
 
     confirmDiscard() {
-        const selectedCard = (this.gamedatas.playerHand ?? []).find(card => this.selectedCardIds.includes(card.id));
-        if (!selectedCard) {
+        const discardNeeded = Number(this.gamedatas.discardCountNeeded ?? 0);
+        if (this.selectedCardIds.length !== discardNeeded || discardNeeded <= 0) {
             return;
         }
 
-        this.bga.actions.performAction('actDiscardCard', { cardValue: Number(selectedCard.value) });
+        this.bga.actions.performAction('actDiscardCards', { cardsJson: JSON.stringify(this.selectedCardIds) });
     }
 
     targetMatches(targetId, cards) {

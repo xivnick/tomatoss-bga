@@ -22,6 +22,7 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
     public function getArgs(): array
     {
         return [
+            'discardCountNeeded' => $this->game->getDiscardCountNeeded((int) $this->game->getActivePlayerId()),
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
             'placementsRemaining' => $this->game->getPlacementsRemaining(),
             'boardTomatoes' => $this->game->getBoardTomatoSlots(),
@@ -35,17 +36,20 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
     }
 
     #[PossibleAction]
-    public function actDiscardCard(int $cardValue, int $activePlayerId)
+    public function actDiscardCards(string $cardsJson, int $activePlayerId)
     {
-        if ($cardValue < 1 || $cardValue > 7) {
+        $cardIds = json_decode($cardsJson, true);
+        if (!is_array($cardIds)) {
             throw new UserException(clienttranslate('Invalid discard choice'));
         }
 
-        $result = $this->game->discardCardByValue($activePlayerId, $cardValue);
-        $this->bga->notify->all('discardCard', clienttranslate('${player_name} discards a card'), [
+        $result = $this->game->discardCardsByIds($activePlayerId, $cardIds);
+        $discardValues = array_map(static fn(array $card): int => (int) $card['value'], $result['discarded']);
+
+        $this->bga->notify->all('discardCard', clienttranslate('${player_name} discards cards'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
-            'cardValue' => $cardValue,
+            'cardValues' => $discardValues,
             'latestDiscardTomato' => $result['latestDiscardTomato'],
             'handCount' => count($result['remainingHand']),
         ]);
@@ -60,6 +64,10 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
 
     public function zombie(int $playerId)
     {
-        return $this->actDiscardCard(1, $playerId);
+        $hand = $this->game->getHandForPlayer($playerId);
+        $needed = $this->game->getDiscardCountNeeded($playerId);
+        $cardIds = array_map(static fn(array $card): int => (int) $card['id'], array_slice($hand, 0, $needed));
+
+        return $this->actDiscardCards((string) json_encode($cardIds), $playerId);
     }
 }
