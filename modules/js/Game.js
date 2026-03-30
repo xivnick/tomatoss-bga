@@ -336,7 +336,9 @@ class FestivalStageView {
         }
 
         const remaining = Number(this.game.gamedatas.placementsRemaining ?? 0);
-        reserve.innerHTML = Array.from({ length: remaining }, () => '<div class="reserve-token"></div>').join('');
+        reserve.innerHTML = Array.from({ length: remaining }, (_, index) =>
+            `<div class="reserve-token reserve-token-${index + 1}"></div>`
+        ).join('');
     }
 
     renderRecentThrow() {
