@@ -16,6 +16,7 @@ class Game extends \Bga\GameFramework\Table
     private const G_TURN_NO = 'turnNo';
     private const G_ACTION_INDEX = 'actionIndex';
     private const G_START_PLAYER_ID = 'startPlayerId';
+    private bool $schemaEnsured = false;
 
     private const TOMATO_CARD_COUNTS = [
         1 => 3,
@@ -89,13 +90,13 @@ class Game extends \Bga\GameFramework\Table
     {
         unset($from_version);
 
-        $this->ensureCardTableSchema();
-        $this->ensurePlayerTableSchema();
-        $this->ensureTurnActionTableSchema();
+        $this->ensureSchemaReady();
     }
 
     protected function getAllDatas(int $currentPlayerId): array
     {
+        $this->ensureSchemaReady();
+
         return [
             'viewerPlayerId' => $currentPlayerId,
             'players' => $this->getCollectionFromDb(
@@ -124,6 +125,7 @@ class Game extends \Bga\GameFramework\Table
     protected function setupNewGame($players, $options = [])
     {
         unset($options);
+        $this->ensureSchemaReady();
 
         $gameinfos = $this->getGameinfos();
         $default_colors = $gameinfos['player_colors'];
@@ -764,6 +766,18 @@ class Game extends \Bga\GameFramework\Table
         return $this->getObjectFromDb(
             "SHOW COLUMNS FROM `" . addslashes($table) . "` LIKE '" . addslashes($column) . "'"
         ) !== null;
+    }
+
+    public function ensureSchemaReady(): void
+    {
+        if ($this->schemaEnsured) {
+            return;
+        }
+
+        $this->ensureCardTableSchema();
+        $this->ensurePlayerTableSchema();
+        $this->ensureTurnActionTableSchema();
+        $this->schemaEnsured = true;
     }
 
     private function dealStartingHands(array $orderedPlayerIds): void
