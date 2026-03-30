@@ -355,6 +355,10 @@ class MotionLayer {
         return this.getRect(document.querySelector(`#tomato-slot-${slot} .card-node`));
     }
 
+    getBoardTargetRect(slot) {
+        return this.getRect(document.querySelector(`#mission-slot-${slot} .card-node`));
+    }
+
     getSelfHandCardRect(cardId) {
         return this.getRect(document.querySelector(`.hand-card-button[data-card-id="${cardId}"] .card-node`));
     }
@@ -417,6 +421,35 @@ class MotionLayer {
             top: canvasRect.top + RECENT_THROW_Y * stageScale,
             width: CARD_DESIGN_WIDTH * stageScale,
             height: CARD_DESIGN_HEIGHT * stageScale,
+        };
+    }
+
+    getCapturedTargetRect(playerId, quickToss, capturedCount) {
+        const boardRect = this.getRect(document.getElementById(`player-board-${playerId}`));
+        if (!boardRect) {
+            return null;
+        }
+
+        const cardWidth = CARD_DESIGN_WIDTH * this.sprites.getStageScale();
+        const cardHeight = CARD_DESIGN_HEIGHT * this.sprites.getStageScale();
+        const overlap = cardWidth * 0.7;
+        const cardOffset = Math.max(0, capturedCount - 1) * (cardWidth - overlap);
+        const top = boardRect.bottom - cardHeight - 22;
+
+        if (quickToss) {
+            return {
+                left: boardRect.right + cardOffset,
+                top,
+                width: cardWidth,
+                height: cardHeight,
+            };
+        }
+
+        return {
+            left: boardRect.left - cardWidth - cardOffset,
+            top,
+            width: cardWidth,
+            height: cardHeight,
         };
     }
 }
@@ -1149,6 +1182,32 @@ export class Game {
         await Promise.all(animations);
     }
 
+    async animateCapturedTarget(args) {
+        if (!args.success) {
+            return;
+        }
+
+        const slotIndex = Number(args.targetIndex ?? 0);
+        const playerId = Number(args.player_id);
+        const quickToss = Boolean(args.quickToss);
+        const sourceRect = this.motionLayer.getBoardTargetRect(slotIndex);
+        const currentCaptured = this.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
+        const capturedCount = quickToss ? currentCaptured.quick.length + 1 : currentCaptured.normal.length + 1;
+        const destinationRect = this.motionLayer.getCapturedTargetRect(playerId, quickToss, capturedCount);
+        if (!sourceRect || !destinationRect || !args.targetId) {
+            return;
+        }
+
+        const node = document.createElement('div');
+        node.className = 'card-node board-mission-card motion-card';
+        node.style.cssText = this.sprites.missionCardStyle(Number(args.targetId), this.sprites.getCardScale('mission'));
+        const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
+        await this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+            duration: CARD_MOVE_MS,
+            easing: CARD_EASING,
+        });
+    }
+
     renderOverallPlayerBoards() {
         Object.values(this.gamedatas.players ?? {}).forEach(player => {
             const playerId = Number(player.id);
@@ -1565,7 +1624,8 @@ export class Game {
             const pending = this.pendingThrowResolution;
             this.pendingThrowResolution = null;
             if (pending) {
-                setTimeout(() => {
+                setTimeout(async () => {
+                    await this.animateCapturedTarget(pending);
                     this.applyThrowAction(pending);
                     this.afterPublicChange();
                 }, THROW_RESOLVE_DELAY_MS);
