@@ -780,6 +780,7 @@ export class Game {
         this.gamedatas = { ...this.gamedatas, ...this.buildRenderData(source) };
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
+        this.renderOverallPlayerBoards();
         this.cleanupMissionNodes();
         this.updateActionButtons();
     }
@@ -795,6 +796,30 @@ export class Game {
 
     setStatePrompt(text) {
         this.bga.statusBar.setTitle(text);
+    }
+
+    renderOverallPlayerBoards() {
+        Object.values(this.gamedatas.players ?? {}).forEach(player => {
+            const playerId = Number(player.id);
+            const panel = document.getElementById(`overall_player_board_${playerId}`);
+            if (!panel) {
+                return;
+            }
+
+            let counter = panel.querySelector('.tomatoss-overall-hand');
+            if (!counter) {
+                counter = document.createElement('div');
+                counter.className = 'tomatoss-overall-hand';
+                counter.innerHTML = `
+                    <div class="tomatoss-overall-hand__icon"></div>
+                    <span class="tomatoss-overall-hand__count"></span>
+                `;
+                panel.appendChild(counter);
+            }
+
+            const count = Number(this.gamedatas.handCountsByPlayer?.[playerId] ?? 0);
+            counter.querySelector('.tomatoss-overall-hand__count').textContent = String(count);
+        });
     }
 
     getLocalPlayerId() {
@@ -1131,6 +1156,7 @@ export class Game {
             ...(this.gamedatas.handCountsByPlayer ?? {}),
             [playerId]: handCount,
         };
+        this.renderOverallPlayerBoards();
     }
 
     applyCollectAction(args) {

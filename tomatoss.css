@@ -325,6 +325,30 @@
     width: 100%;
 }
 
+.tomatoss-overall-hand {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.tomatoss-overall-hand__icon {
+    background-image: url('img/card_backs.jpg');
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+    border-radius: 3px;
+    height: 22px;
+    width: 16px;
+}
+
+.tomatoss-overall-hand__count {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .tomatoss-player-zone {
     background: rgba(255, 255, 255, 0.4);
     border: 2px solid white;
