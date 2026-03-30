@@ -561,7 +561,7 @@ class PlayerTurnState {
         this.game.clearPendingAction();
         this.game.renderState(args);
         this.game.setStatePrompt(isCurrentPlayerActive
-            ? _('Choose a slot or cards, then confirm.')
+            ? this.game.getPlayerTurnPrompt()
             : _('Waiting for the active player.'));
         this.game.updateActionButtons();
     }
@@ -916,8 +916,25 @@ export class Game {
         return true;
     }
 
+    getPlayerTurnPrompt() {
+        if (this.pendingSpace !== null && this.pendingSpace < 3) {
+            return _('Pick up the selected tomato card.');
+        }
+
+        if (this.pendingSpace !== null && this.pendingSpace >= 3) {
+            return _('Choose tomato cards to toss.');
+        }
+
+        return _('Choose an action.');
+    }
+
     updateActionButtons() {
         this.bga.statusBar.removeActionButtons();
+        if (this.currentUiMode === 'playerTurn') {
+            this.setStatePrompt(this.isCurrentPlayerActive
+                ? this.getPlayerTurnPrompt()
+                : _('Waiting for the active player.'));
+        }
         if (!this.isCurrentPlayerActive) {
             return;
         }
