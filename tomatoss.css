@@ -24,6 +24,27 @@
     padding-inline: 16px;
 }
 
+#animation-layer {
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    z-index: 200;
+}
+
+.motion-wrapper {
+    pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    z-index: 200;
+}
+
+.motion-wrapper .motion-card {
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+}
+
 #full-table {
     position: relative;
 }
