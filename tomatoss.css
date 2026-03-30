@@ -278,10 +278,10 @@
 }
 
 .placed-token {
-    height: calc(63px * var(--board-scale));
+    height: calc(300px * var(--board-scale));
     position: absolute;
     transform: translate(-50%, -50%) rotate(-8deg);
-    width: calc(63px * var(--board-scale));
+    width: calc(300px * var(--board-scale));
 }
 
 .placed-token.whole,
