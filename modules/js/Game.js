@@ -32,9 +32,13 @@ const RECENT_THROW_X_OFFSET = -150;
 const RECENT_THROW_X_STEP = 260;
 const THROW_CUTSCENE_MS = 3200;
 const THROW_RESOLVE_DELAY_MS = 180;
-const TOKEN_MOVE_MS = 260;
-const CARD_MOVE_MS = 380;
-const FLIP_MS = 420;
+const TOKEN_MOVE_MS = 380;
+const CARD_MOVE_MS = 560;
+const FLIP_MS = 520;
+const TOKEN_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
+const FLIP_IN_EASING = 'cubic-bezier(0.55, 0.08, 0.68, 0.53)';
+const FLIP_OUT_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
 class SpriteStyles {
     getLayoutElement() {
@@ -276,7 +280,10 @@ class MotionLayer {
         return element?.getBoundingClientRect() ?? null;
     }
 
-    async animateRect(wrapper, fromRect, toRect, duration = CARD_MOVE_MS) {
+    async animateRect(wrapper, fromRect, toRect, {
+        duration = CARD_MOVE_MS,
+        easing = CARD_EASING,
+    } = {}) {
         if (!wrapper || !fromRect || !toRect) {
             wrapper?.remove();
             return;
@@ -289,10 +296,14 @@ class MotionLayer {
 
         await wrapper.animate([
             { transform: 'translate(0px, 0px) scale(1, 1)' },
+            {
+                transform: `translate(${dx * 0.55}px, ${dy * 0.55}px) scale(${1 + (sx - 1) * 0.45}, ${1 + (sy - 1) * 0.45})`,
+                offset: 0.6,
+            },
             { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
         ], {
             duration,
-            easing: 'ease-in-out',
+            easing,
             fill: 'forwards',
         }).finished;
 
@@ -314,7 +325,7 @@ class MotionLayer {
             { transform: 'rotateY(90deg)' },
         ], {
             duration: half,
-            easing: 'ease-in',
+            easing: FLIP_IN_EASING,
             fill: 'forwards',
         }).finished.then(() => {
             node.replaceWith(frontNode);
@@ -323,7 +334,7 @@ class MotionLayer {
                 { transform: 'rotateY(0deg)' },
             ], {
                 duration: half,
-                easing: 'ease-out',
+                easing: FLIP_OUT_EASING,
                 fill: 'forwards',
             }).finished;
         });
@@ -1008,7 +1019,10 @@ export class Game {
 
         const tokenNode = this.motionLayer.createReserveTokenNode();
         const wrapper = this.motionLayer.createWrapper(tokenNode, fromRect, 'motion-token');
-        return this.motionLayer.animateRect(wrapper, fromRect, toRect, TOKEN_MOVE_MS);
+        return this.motionLayer.animateRect(wrapper, fromRect, toRect, {
+            duration: TOKEN_MOVE_MS,
+            easing: TOKEN_EASING,
+        });
     }
 
     animateCollectMotion(args) {
@@ -1025,15 +1039,17 @@ export class Game {
 
         const node = this.motionLayer.createTomatoFaceNode(card.value, sourceRect);
         const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-        return this.motionLayer.animateRect(wrapper, sourceRect, destinationRect);
+        return this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+            duration: CARD_MOVE_MS,
+            easing: CARD_EASING,
+        });
     }
 
-    async animateThrowEntry(args) {
+    animateThrowCards(args, selectedIds) {
         const playerId = Number(args.player_id);
         const isLocalPlayer = playerId === this.getLocalPlayerId();
-        const selectedIds = isLocalPlayer ? [...this.selectedCardIds] : [];
         const targetIndex = Number(args.targetIndex ?? 0);
-        const animations = [this.animateReserveTokenToSpace(Number(args.space))];
+        const animations = [];
 
         (args.cards ?? []).forEach((value, index) => {
             const sourceRect = isLocalPlayer
@@ -1048,7 +1064,10 @@ export class Game {
                 ? this.motionLayer.createTomatoFaceNode(value, sourceRect)
                 : this.motionLayer.createTomatoBackNode(sourceRect);
             const wrapper = this.motionLayer.createWrapper(startNode, sourceRect, 'motion-card-wrapper');
-            const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, isLocalPlayer ? CARD_MOVE_MS : FLIP_MS);
+            const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+                duration: CARD_MOVE_MS,
+                easing: CARD_EASING,
+            });
 
             if (isLocalPlayer) {
                 animations.push(movePromise);
@@ -1063,23 +1082,40 @@ export class Game {
             animations.push(Promise.all([movePromise, flipPromise]));
         });
 
-        if (args.quickToss && args.revealed?.value) {
-            const sourceRect = this.motionLayer.getRect(document.querySelector('#tomato-deck-slot .card-node'));
-            const destinationRect = this.motionLayer.getRecentThrowCardRect(targetIndex, (args.cards ?? []).length);
-            if (sourceRect && destinationRect) {
-                const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
-                const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
-                const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, FLIP_MS);
-                const flipPromise = this.motionLayer.animateFlip(
-                    backNode,
-                    () => this.motionLayer.createTomatoFaceNode(args.revealed.value, sourceRect),
-                    FLIP_MS
-                );
-                animations.push(Promise.all([movePromise, flipPromise]));
-            }
+        return Promise.all(animations);
+    }
+
+    animateQuickReveal(args) {
+        if (!args.quickToss || !args.revealed?.value) {
+            return Promise.resolve();
         }
 
-        await Promise.all(animations);
+        const targetIndex = Number(args.targetIndex ?? 0);
+        const sourceRect = this.motionLayer.getRect(document.querySelector('#tomato-deck-slot .card-node'));
+        const destinationRect = this.motionLayer.getRecentThrowCardRect(targetIndex, (args.cards ?? []).length);
+        if (!sourceRect || !destinationRect) {
+            return Promise.resolve();
+        }
+
+        const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
+        const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
+        const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+            duration: CARD_MOVE_MS,
+            easing: CARD_EASING,
+        });
+        const flipPromise = this.motionLayer.animateFlip(
+            backNode,
+            () => this.motionLayer.createTomatoFaceNode(args.revealed.value, sourceRect),
+            FLIP_MS
+        );
+
+        return Promise.all([movePromise, flipPromise]);
+    }
+
+    async animateThrowEntry(args, selectedIds) {
+        await this.animateReserveTokenToSpace(Number(args.space));
+        await this.animateThrowCards(args, selectedIds);
+        await this.animateQuickReveal(args);
     }
 
     async animateDiscardMotion(args) {
@@ -1104,7 +1140,10 @@ export class Game {
                 ? this.motionLayer.createTomatoFaceNode(value, sourceRect)
                 : this.motionLayer.createTomatoBackNode(sourceRect);
             const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-            return this.motionLayer.animateRect(wrapper, sourceRect, discardRect);
+            return this.motionLayer.animateRect(wrapper, sourceRect, discardRect, {
+                duration: CARD_MOVE_MS,
+                easing: CARD_EASING,
+            });
         });
 
         await Promise.all(animations);
@@ -1552,15 +1591,14 @@ export class Game {
         });
 
         if (isCollect) {
-            await Promise.all([
-                this.animateReserveTokenToSpace(Number(args.space)),
-                this.animateCollectMotion(args),
-            ]);
+            await this.animateReserveTokenToSpace(Number(args.space));
+            await this.animateCollectMotion(args);
             this.applyCollectAction(args);
             this.clearPendingAction();
             this.afterPublicChange();
         } else {
-            const throwAnimation = this.animateThrowEntry(args);
+            const selectedIds = [...this.selectedCardIds];
+            const throwAnimation = this.animateThrowEntry(args, selectedIds);
             this.applyImmediateThrowHandChange(args);
             this.pendingThrowResolution = args;
             this.clearSelection();
