@@ -412,9 +412,9 @@
 }
 
 .basket-anchor {
-    left: calc(290px / 880px * 100%);
+    left: calc(290 / 880 * var(--player-board-size));
     position: absolute;
-    top: calc(585px / 880px * 100%);
+    top: calc(585 / 880 * var(--player-board-size));
 }
 
 .basket-token {
