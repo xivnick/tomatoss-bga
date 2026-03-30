@@ -355,6 +355,7 @@
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;
+    min-height: var(--card-h);
     min-width: 0;
     padding: 0;
     width: 100%;
