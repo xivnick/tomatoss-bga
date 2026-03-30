@@ -257,6 +257,49 @@ class MotionLayer {
         return wrapper;
     }
 
+    async moveNodeToHost(node, destinationHost, {
+        duration = CARD_MOVE_MS,
+        easing = CARD_EASING,
+        className = 'motion-card-wrapper',
+    } = {}) {
+        if (!node || !destinationHost) {
+            return;
+        }
+
+        const fromRect = this.getRect(node);
+        const toRect = this.getRect(destinationHost);
+        if (!fromRect || !toRect) {
+            return;
+        }
+
+        const wrapper = this.createWrapper(node, fromRect, className);
+        await this.animateRect(wrapper, fromRect, toRect, { duration, easing });
+        const finalNode = wrapper?.firstElementChild ?? node;
+        destinationHost.dataset.empty = 'false';
+        destinationHost.replaceChildren(finalNode);
+    }
+
+    async moveNewNodeToHost(node, fromRect, destinationHost, {
+        duration = CARD_MOVE_MS,
+        easing = CARD_EASING,
+        className = 'motion-card-wrapper',
+    } = {}) {
+        if (!node || !fromRect || !destinationHost) {
+            return;
+        }
+
+        const toRect = this.getRect(destinationHost);
+        if (!toRect) {
+            return;
+        }
+
+        const wrapper = this.createWrapper(node, fromRect, className);
+        await this.animateRect(wrapper, fromRect, toRect, { duration, easing });
+        const finalNode = wrapper?.firstElementChild ?? node;
+        destinationHost.dataset.empty = 'false';
+        destinationHost.replaceChildren(finalNode);
+    }
+
     createReserveTokenNode() {
         const node = document.createElement('div');
         node.className = 'reserve-token';
@@ -439,51 +482,6 @@ class MotionLayer {
         return this.getOpponentHandRect(playerId);
     }
 
-    getRecentThrowCardRect(targetIndex, cardIndex) {
-        const canvasRect = this.getStageCanvasRect();
-        const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
-        const stageScale = this.sprites.getStageScale();
-        if (!canvasRect) {
-            return null;
-        }
-
-        return {
-            left: canvasRect.left + (targetPos.x + RECENT_THROW_X_OFFSET + RECENT_THROW_X_STEP * cardIndex) * stageScale,
-            top: canvasRect.top + RECENT_THROW_Y * stageScale,
-            width: CARD_DESIGN_WIDTH * stageScale,
-            height: CARD_DESIGN_HEIGHT * stageScale,
-        };
-    }
-
-    getCapturedTargetRect(playerId, quickToss, capturedCount) {
-        const boardRect = this.getRect(document.getElementById(`player-board-${playerId}`));
-        if (!boardRect) {
-            return null;
-        }
-
-        const cardWidth = CARD_DESIGN_WIDTH * this.sprites.getStageScale();
-        const cardHeight = CARD_DESIGN_HEIGHT * this.sprites.getStageScale();
-        const overlap = cardWidth * 0.7;
-        const cardOffset = Math.max(0, capturedCount - 1) * (cardWidth - overlap);
-        const top = boardRect.bottom - cardHeight - 22;
-
-        if (quickToss) {
-            return {
-                left: boardRect.right + cardOffset,
-                top,
-                width: cardWidth,
-                height: cardHeight,
-            };
-        }
-
-        return {
-            left: boardRect.left - cardWidth - cardOffset,
-            top,
-            width: cardWidth,
-            height: cardHeight,
-        };
-    }
-
     getReserveTokenDesignRect(index) {
         const canvasRect = this.getStageCanvasRect();
         const stageScale = this.sprites.getStageScale();
@@ -590,7 +588,7 @@ class FestivalStageView {
             deck.insertAdjacentHTML('beforeend', `<div class="deck-count">${this.game.gamedatas.tomatoDeckCount ?? 0}</div>`);
         }
 
-        this.registry.removeMissing(['tomato-'], keepKeys);
+        this.registry.removeMissing(['tomato-'], [...keepKeys, ...this.game.movingTomatoKeys]);
     }
 
     renderActionSlots() {
@@ -673,6 +671,58 @@ class FestivalStageView {
         });
     }
 
+    ensureRecentThrowWrap(targetIndex, success) {
+        const area = document.getElementById('recent-throw-area');
+        if (!area) {
+            return null;
+        }
+
+        area.dataset.visible = 'true';
+        let wrap = area.querySelector('.recent-throw');
+        if (!wrap) {
+            wrap = document.createElement('div');
+            area.replaceChildren(wrap);
+        }
+
+        wrap.className = `recent-throw ${success ? 'is-success' : 'is-fail'}`;
+        wrap.style.position = 'absolute';
+        wrap.style.height = `${CARD_DESIGN_HEIGHT * this.sprites.getStageScale()}px`;
+        const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
+        wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
+        wrap.style.top = `${100 * this.sprites.getStageScale()}px`;
+
+        let cards = wrap.querySelector('.recent-throw__cards');
+        if (!cards) {
+            cards = document.createElement('div');
+            cards.className = 'recent-throw__cards';
+            wrap.appendChild(cards);
+        }
+
+        return cards;
+    }
+
+    ensureRecentThrowHost(index, classes = []) {
+        const cards = this.ensureRecentThrowWrap(
+            Math.max(0, Number(this.game.recentThrow?.targetIndex ?? 0)),
+            Boolean(this.game.recentThrow?.success)
+        );
+        if (!cards) {
+            return null;
+        }
+
+        const key = `recent-host-${index}`;
+        let host = cards.querySelector(`[data-key="${key}"]`);
+        if (!host) {
+            host = document.createElement('div');
+            host.dataset.key = key;
+            host.className = 'recent-throw__host';
+            cards.appendChild(host);
+        }
+
+        host.className = ['recent-throw__host', ...classes].join(' ');
+        return host;
+    }
+
     renderRecentThrow() {
         const area = document.getElementById('recent-throw-area');
         if (!area) {
@@ -683,44 +733,28 @@ class FestivalStageView {
         if (!recent) {
             area.dataset.visible = 'false';
             area.replaceChildren();
-            this.registry.clearTemporary('recent-');
             return;
         }
 
-        area.dataset.visible = 'true';
-        this.registry.clearTemporary('recent-');
-
-        const wrap = document.createElement('div');
-        wrap.className = `recent-throw ${recent.success ? 'is-success' : 'is-fail'}`;
-        wrap.style.position = 'absolute';
-        wrap.style.height = `${CARD_DESIGN_HEIGHT * this.sprites.getStageScale()}px`;
-
-        const tomatoScale = this.sprites.getCardScale('tomato');
-        const targetIndex = Math.max(0, Number(recent.targetIndex ?? 0));
-        const targetPos = TARGET_CARD_POSITIONS[targetIndex] ?? TARGET_CARD_POSITIONS[0];
-        wrap.style.left = `${(targetPos.x - 150) * this.sprites.getStageScale()}px`;
-        wrap.style.top = `${100 * this.sprites.getStageScale()}px`;
-
-        const cards = document.createElement('div');
-        cards.className = 'recent-throw__cards';
-        wrap.appendChild(cards);
-
-        (recent.cards ?? []).forEach((value, index) => {
-            const classes = index > 0 ? ['is-overlap'] : [];
-            const node = this.registry.getTemporaryTomatoNode(`recent-card-${index}`, value, tomatoScale, classes);
-            cards.appendChild(node);
-        });
-
-        if (recent.revealed) {
-            const classes = ['reveal'];
-            if ((recent.cards?.length ?? 0) > 0) {
-                classes.push('is-overlap');
+        const cards = this.ensureRecentThrowWrap(
+            Math.max(0, Number(recent.targetIndex ?? 0)),
+            Boolean(recent.success)
+        );
+        const keep = new Set();
+        const total = (recent.cards?.length ?? 0) + (recent.revealed ? 1 : 0);
+        for (let index = 0; index < total; index += 1) {
+            keep.add(`recent-host-${index}`);
+            const host = this.ensureRecentThrowHost(index, [index > 0 ? 'is-overlap' : '', index === total - 1 && recent.revealed ? 'reveal' : ''].filter(Boolean));
+            if (host && !host.firstElementChild) {
+                host.dataset.empty = 'true';
             }
-            const node = this.registry.getTemporaryTomatoNode('recent-reveal', recent.revealed, tomatoScale, classes);
-            cards.appendChild(node);
         }
 
-        area.replaceChildren(wrap);
+        [...cards.children].forEach(child => {
+            if (!keep.has(child.dataset.key)) {
+                child.remove();
+            }
+        });
     }
 }
 
@@ -860,6 +894,7 @@ class PlayerZonesView {
             ...keepKeys,
             ...this.getBoardTomatoKeys(),
             ...this.getDiscardTomatoKeys(),
+            ...this.game.movingTomatoKeys,
         ]);
     }
 
@@ -890,6 +925,48 @@ class PlayerZonesView {
         if (basketAnchor && player) {
             basketAnchor.innerHTML = `<div class="basket-token ${player.basketFull ? 'full' : 'empty'}"></div>`;
         }
+    }
+
+    ensureSelfHandPlaceholder(card) {
+        const top = document.getElementById(`player-zone-top-${this.game.getLocalPlayerId()}`);
+        if (!top || !card) {
+            return null;
+        }
+
+        const row = this.ensureSingleChild(top, '.self-hand-row', 'self-hand-row');
+        let button = row.querySelector(`.hand-card-button[data-card-id="${card.id}"]`);
+        if (!button) {
+            button = document.createElement('button');
+            button.className = 'hand-card-button';
+            button.innerHTML = '<div class="hand-card-host"></div>';
+            button.dataset.cardId = String(card.id);
+            row.appendChild(button);
+        }
+
+        button.className = 'hand-card-button';
+        button.dataset.cardId = String(card.id);
+        button.dataset.value = String(card.value);
+        const host = button.querySelector('.hand-card-host');
+        host.dataset.empty = 'true';
+        return host;
+    }
+
+    ensureCapturedPlaceholder(playerId, quickToss, cardId) {
+        const stack = document.getElementById(`captured-${quickToss ? 'quick' : 'normal'}-${playerId}`);
+        if (!stack) {
+            return null;
+        }
+
+        let wrapper = stack.querySelector(`.captured-card-host[data-key="${cardId}"]`);
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'captured-card-host';
+            wrapper.dataset.key = String(cardId);
+            stack.appendChild(wrapper);
+        }
+
+        wrapper.style.zIndex = '0';
+        return wrapper;
     }
 
     renderCaptured(playerId) {
@@ -1015,9 +1092,12 @@ export class Game {
         this.recentThrow = null;
         this.recentThrowTimeout = null;
         this.pendingThrowResolution = null;
+        this.pendingCollectAnimation = null;
         this.turnCleanupPromise = null;
         this.deferredTurnCleanupActions = null;
         this.actionAnimationDepth = 0;
+        this.movingTomatoKeys = new Set();
+        this.movingMissionKeys = new Set();
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1102,6 +1182,22 @@ export class Game {
         window.addEventListener('resize', this.onWindowResize);
         this.renderState(gamedatas);
         this.setupNotifications();
+    }
+
+    rememberMovingTomatoKey(cardId) {
+        this.movingTomatoKeys.add(`tomato-${cardId}`);
+    }
+
+    forgetMovingTomatoKey(cardId) {
+        this.movingTomatoKeys.delete(`tomato-${cardId}`);
+    }
+
+    rememberMovingMissionKey(cardId) {
+        this.movingMissionKeys.add(`mission-${cardId}`);
+    }
+
+    forgetMovingMissionKey(cardId) {
+        this.movingMissionKeys.delete(`mission-${cardId}`);
     }
 
     bindRootEvents() {
@@ -1190,7 +1286,7 @@ export class Game {
             ...((captured?.normal ?? []).map(card => `mission-${card.id}`)),
             ...((captured?.quick ?? []).map(card => `mission-${card.id}`)),
         ]);
-        this.registry.removeMissing(['mission-'], [...boardKeys, ...capturedKeys]);
+        this.registry.removeMissing(['mission-'], [...boardKeys, ...capturedKeys, ...this.movingMissionKeys]);
     }
 
     setStatePrompt(text) {
@@ -1279,6 +1375,24 @@ export class Game {
         });
     }
 
+    async animateLocalCollectToHand(publicArgs, collectedCard) {
+        if (!publicArgs || !collectedCard) {
+            return;
+        }
+
+        const sourceNode = document.querySelector(`#tomato-slot-${Number(publicArgs.space)} .card-node`);
+        const destinationHost = this.playerZonesView.ensureSelfHandPlaceholder(collectedCard);
+        if (!sourceNode || !destinationHost) {
+            return;
+        }
+
+        this.rememberMovingTomatoKey(collectedCard.id);
+        await this.motionLayer.moveNodeToHost(sourceNode, destinationHost, {
+            duration: CARD_MOVE_MS,
+            easing: CARD_EASING,
+        });
+    }
+
     animateCollectRefill(args) {
         if (!args.refill) {
             return Promise.resolve();
@@ -1308,23 +1422,18 @@ export class Game {
     animateThrowCards(args, selectedIds) {
         const playerId = Number(args.player_id);
         const isLocalPlayer = playerId === this.getLocalPlayerId();
-        const targetIndex = Number(args.targetIndex ?? 0);
         const animations = [];
 
         (args.cards ?? []).forEach((value, index) => {
-            const sourceRect = isLocalPlayer
-                ? this.motionLayer.getSelfHandCardRect(selectedIds[index])
-                : this.motionLayer.getOpponentHandRect(playerId);
-            const destinationRect = this.motionLayer.getRecentThrowCardRect(targetIndex, index);
-            if (!sourceRect || !destinationRect) {
+            const sourceNode = isLocalPlayer
+                ? document.querySelector(`.hand-card-button[data-card-id="${selectedIds[index]}"] .card-node`)
+                : [...document.querySelectorAll(`#player-zone-top-${playerId} .player-hand-back-host .card-node`)].pop();
+            const destinationHost = this.stageView.ensureRecentThrowHost(index, [index > 0 ? 'is-overlap' : '']);
+            if (!sourceNode || !destinationHost) {
                 return;
             }
 
-            const startNode = isLocalPlayer
-                ? this.motionLayer.createTomatoFaceNode(value, sourceRect)
-                : this.motionLayer.createTomatoBackNode(sourceRect);
-            const wrapper = this.motionLayer.createWrapper(startNode, sourceRect, 'motion-card-wrapper');
-            const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+            const movePromise = this.motionLayer.moveNodeToHost(sourceNode, destinationHost, {
                 duration: CARD_MOVE_MS,
                 easing: CARD_EASING,
             });
@@ -1335,8 +1444,10 @@ export class Game {
             }
 
             const flipPromise = this.motionLayer.animateFlip(
-                startNode,
-                () => this.motionLayer.createTomatoFaceNode(value, sourceRect),
+                sourceNode,
+                () => this.motionLayer.createTomatoFaceNode(value, {
+                    width: sourceNode.getBoundingClientRect().width || (155 * this.sprites.getCardScale('tomato')),
+                }),
                 FLIP_MS
             );
             animations.push(Promise.all([movePromise, flipPromise]));
@@ -1350,16 +1461,17 @@ export class Game {
             return Promise.resolve();
         }
 
-        const targetIndex = Number(args.targetIndex ?? 0);
         const sourceRect = this.motionLayer.getRect(document.querySelector('#tomato-deck-slot .card-node'));
-        const destinationRect = this.motionLayer.getRecentThrowCardRect(targetIndex, (args.cards ?? []).length);
-        if (!sourceRect || !destinationRect) {
+        const destinationHost = this.stageView.ensureRecentThrowHost((args.cards ?? []).length, [
+            (args.cards?.length ?? 0) > 0 ? 'is-overlap' : '',
+            'reveal',
+        ].filter(Boolean));
+        if (!sourceRect || !destinationHost) {
             return Promise.resolve();
         }
 
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
-        const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
-        const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
             duration: CARD_MOVE_MS,
             easing: CARD_EASING,
         });
@@ -1388,17 +1500,34 @@ export class Game {
 
         const values = args.cardValues ?? [];
         const selectedIds = isLocalPlayer ? [...this.selectedCardIds] : [];
-        const animations = values.map((value, index) => {
-            const sourceRect = isLocalPlayer
-                ? this.motionLayer.getSelfHandCardRect(selectedIds[index])
-                : this.motionLayer.getOpponentHandRect(playerId);
+        if (isLocalPlayer) {
+            const discardHost = document.querySelector('#discard-slot .slot-card-host');
+            if (!discardHost) {
+                return;
+            }
+
+            for (const cardId of selectedIds) {
+                const sourceNode = document.querySelector(`.hand-card-button[data-card-id="${cardId}"] .card-node`);
+                if (!sourceNode) {
+                    continue;
+                }
+
+                this.rememberMovingTomatoKey(cardId);
+                await this.motionLayer.moveNodeToHost(sourceNode, discardHost, {
+                    duration: CARD_MOVE_MS,
+                    easing: CARD_EASING,
+                });
+            }
+            return;
+        }
+
+        const animations = values.map(() => {
+            const sourceRect = this.motionLayer.getOpponentHandRect(playerId);
             if (!sourceRect) {
                 return Promise.resolve();
             }
 
-            const node = isLocalPlayer
-                ? this.motionLayer.createTomatoFaceNode(value, sourceRect)
-                : this.motionLayer.createTomatoBackNode(sourceRect);
+            const node = this.motionLayer.createTomatoBackNode(sourceRect);
             const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
             return this.motionLayer.animateRect(wrapper, sourceRect, discardRect, {
                 duration: CARD_MOVE_MS,
@@ -1410,8 +1539,8 @@ export class Game {
     }
 
     async animateThrownCardsToDiscard(args) {
-        const discardRect = this.motionLayer.getDiscardPileRect();
-        if (!discardRect) {
+        const discardHost = document.querySelector('#discard-slot .slot-card-host');
+        if (!discardHost) {
             return;
         }
 
@@ -1421,14 +1550,12 @@ export class Game {
         }
 
         await Promise.all(thrownValues.map((value, index) => {
-            const sourceRect = this.motionLayer.getRecentThrowCardRect(Number(args.targetIndex ?? 0), index);
-            if (!sourceRect) {
+            const sourceNode = document.querySelector(`.recent-throw__host[data-key="recent-host-${index}"] .card-node`);
+            if (!sourceNode) {
                 return Promise.resolve();
             }
 
-            const node = this.motionLayer.createTomatoFaceNode(value, sourceRect);
-            const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-            return this.motionLayer.animateRect(wrapper, sourceRect, discardRect, {
+            return this.motionLayer.moveNodeToHost(sourceNode, discardHost, {
                 duration: CARD_MOVE_MS,
                 easing: CARD_EASING,
             });
@@ -1440,27 +1567,19 @@ export class Game {
             return;
         }
 
-        const slotIndex = Number(args.targetIndex ?? 0);
         const playerId = Number(args.player_id);
         const quickToss = Boolean(args.quickToss);
-        const sourceElement = document.querySelector(`#mission-slot-${slotIndex} .card-node`);
-        const sourceRect = this.motionLayer.getRect(sourceElement);
-        const currentCaptured = this.gamedatas.capturedTargetsByPlayer?.[playerId] ?? { normal: [], quick: [] };
-        const capturedCount = quickToss ? currentCaptured.quick.length + 1 : currentCaptured.normal.length + 1;
-        const destinationRect = this.motionLayer.getCapturedTargetRect(playerId, quickToss, capturedCount);
-        if (!sourceRect || !destinationRect || !args.targetId) {
+        const sourceElement = document.querySelector(`#mission-slot-${Number(args.targetIndex ?? 0)} .card-node`);
+        const destinationHost = this.playerZonesView.ensureCapturedPlaceholder(playerId, quickToss, args.targetId);
+        if (!sourceElement || !destinationHost || !args.targetId) {
             return;
         }
 
-        const node = this.motionLayer.createMissionFaceNode(Number(args.targetId), sourceRect);
-        const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-        const shouldHideSource = Boolean(args.replacementTarget);
-        const restore = shouldHideSource ? this.hideElementDuringAnimation(sourceElement) : () => {};
-        await this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+        this.rememberMovingMissionKey(args.targetId);
+        await this.motionLayer.moveNodeToHost(sourceElement, destinationHost, {
             duration: CARD_MOVE_MS,
             easing: CARD_EASING,
         });
-        restore();
     }
 
     async animateReplacementTarget(args) {
@@ -1469,20 +1588,21 @@ export class Game {
         }
 
         const sourceRect = this.motionLayer.getMissionDeckRect();
-        const destinationRect = this.motionLayer.getTargetSlotRect(Number(args.targetIndex ?? 0));
-        if (!sourceRect || !destinationRect) {
+        const destinationHost = document.querySelector(`#mission-slot-${Number(args.targetIndex ?? 0)} .slot-card-host`);
+        if (!sourceRect || !destinationHost) {
             return;
         }
 
         const backNode = this.motionLayer.createMissionBackNode(sourceRect);
-        const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
-        const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+        const missionNode = this.registry.getMissionNode(args.replacementTarget, this.sprites.getCardScale('mission'));
+        this.rememberMovingMissionKey(args.replacementTarget.id);
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
             duration: CARD_MOVE_MS,
             easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
-            () => this.motionLayer.createMissionFaceNode(args.replacementTarget.targetId, sourceRect),
+            () => missionNode,
             FLIP_MS
         );
 
@@ -1495,27 +1615,25 @@ export class Game {
         }
 
         const sourceRect = this.motionLayer.getTomatoDeckRect();
-        const destinationElement = document.querySelector(`.hand-card-button[data-card-id="${args.bonusCard.id}"] .card-node`);
-        const destinationRect = this.motionLayer.getRect(destinationElement);
-        if (!sourceRect || !destinationRect) {
+        const destinationHost = this.playerZonesView.ensureSelfHandPlaceholder(args.bonusCard);
+        if (!sourceRect || !destinationHost) {
             return;
         }
 
-        const restore = this.hideElementDuringAnimation(destinationElement);
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
-        const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
-        const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+        const tomatoNode = this.registry.getTomatoNode(args.bonusCard, this.sprites.getCardScale('tomato'));
+        this.rememberMovingTomatoKey(args.bonusCard.id);
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
             duration: CARD_MOVE_MS,
             easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
-            () => this.motionLayer.createTomatoFaceNode(args.bonusCard.value, sourceRect),
+            () => tomatoNode,
             FLIP_MS
         );
 
         await Promise.all([movePromise, flipPromise]);
-        restore();
     }
 
     async animateTurnCleanup(turnActions) {
@@ -1943,24 +2061,13 @@ export class Game {
 
         this.gamedatas.playerHand = (this.gamedatas.playerHand ?? []).filter(card => !playedIds.has(Number(card.id)));
         this.updateHandCount(args.player_id, this.gamedatas.playerHand.length);
-        this.playerZonesView.renderHandArea(this.getLocalPlayerId());
     }
 
     showRecentThrow(args) {
         if (this.recentThrowTimeout) {
             clearTimeout(this.recentThrowTimeout);
         }
-        this.recentThrow = {
-            targetId: args.targetId,
-            targetIndex: Number(args.targetIndex),
-            cards: args.cards ?? [],
-            revealed: args.revealed?.value ?? null,
-            success: Boolean(args.success),
-        };
-        this.stageView.renderRecentThrow();
         this.recentThrowTimeout = setTimeout(() => {
-            this.recentThrow = null;
-            this.stageView.renderRecentThrow();
             const pending = this.pendingThrowResolution;
             this.pendingThrowResolution = null;
             if (pending) {
@@ -1970,6 +2077,15 @@ export class Game {
                         await this.wait(THROW_RESULT_PAUSE_MS);
                         await this.animateCapturedTarget(pending);
                         await this.animateReplacementTarget(pending);
+                        (pending.playedCardIds ?? []).forEach(cardId => this.forgetMovingTomatoKey(cardId));
+                        if (pending.targetId) {
+                            this.forgetMovingMissionKey(pending.targetId);
+                        }
+                        if (pending.replacementTarget?.id) {
+                            this.forgetMovingMissionKey(pending.replacementTarget.id);
+                        }
+                        this.recentThrow = null;
+                        this.stageView.renderRecentThrow();
                         this.applyThrowAction(pending);
                         this.afterPublicChange();
                     } finally {
@@ -1978,8 +2094,21 @@ export class Game {
                 }, THROW_RESOLVE_DELAY_MS);
                 return;
             }
+            this.recentThrow = null;
+            this.stageView.renderRecentThrow();
             this.endActionAnimation();
         }, THROW_CUTSCENE_MS);
+    }
+
+    prepareRecentThrow(args) {
+        this.recentThrow = {
+            targetId: args.targetId,
+            targetIndex: Number(args.targetIndex),
+            cards: args.cards ?? [],
+            revealed: args.revealed?.value ?? null,
+            success: Boolean(args.success),
+        };
+        this.stageView.renderRecentThrow();
     }
 
     afterPublicChange() {
@@ -1990,6 +2119,7 @@ export class Game {
 
     async notif_turnAction(args) {
         const isCollect = Object.prototype.hasOwnProperty.call(args, 'refill');
+        let finishInPrivateUpdate = false;
         this.beginActionAnimation();
         this.pushTurnAction({
             space: Number(args.space),
@@ -2003,6 +2133,17 @@ export class Game {
         try {
             if (isCollect) {
                 await this.animateReserveTokenToSpace(Number(args.space));
+                const isLocalCollect = Number(args.player_id) === this.getLocalPlayerId();
+                if (isLocalCollect) {
+                    finishInPrivateUpdate = true;
+                    this.pendingCollectAnimation = args;
+                    this.clearPendingAction();
+                    this.stageView.renderPlacedTokens();
+                    this.stageView.renderReserveTokens();
+                    this.updateActionButtons();
+                    return;
+                }
+
                 await this.animateCollectMotion(args);
                 await this.wait(REFILL_PAUSE_MS);
                 await this.animateCollectRefill(args);
@@ -2011,19 +2152,21 @@ export class Game {
                 this.afterPublicChange();
             } else {
                 const selectedIds = [...this.selectedCardIds];
+                selectedIds.forEach(cardId => this.rememberMovingTomatoKey(cardId));
+                this.prepareRecentThrow(args);
                 const throwAnimation = this.animateThrowEntry(args, selectedIds);
                 this.applyImmediateThrowHandChange(args);
-                this.pendingThrowResolution = args;
+                this.pendingThrowResolution = { ...args, playedCardIds: selectedIds };
                 this.clearSelection();
                 this.clearPendingAction();
-                this.stageView.renderAll();
-                this.playerZonesView.renderAll();
                 this.updateActionButtons();
                 await throwAnimation;
+                this.stageView.renderPlacedTokens();
+                this.stageView.renderReserveTokens();
                 this.showRecentThrow(args);
             }
         } finally {
-            if (isCollect) {
+            if (isCollect && !finishInPrivateUpdate) {
                 this.endActionAnimation();
             }
         }
@@ -2039,7 +2182,9 @@ export class Game {
     }
 
     async notif_discardCard(args) {
+        const discardedIds = [...this.selectedCardIds];
         await this.animateDiscardMotion(args);
+        discardedIds.forEach(cardId => this.forgetMovingTomatoKey(cardId));
         this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
         this.updateHandCount(args.player_id, args.handCount);
         this.clearSelection();
@@ -2047,13 +2192,33 @@ export class Game {
     }
 
     async notif_privateHandUpdate(args) {
+        const isLocalPlayer = Number(args.player_id) === this.getLocalPlayerId();
         if (Array.isArray(args.playerHand)) {
             this.gamedatas.playerHand = args.playerHand;
             this.updateHandCount(args.player_id, args.playerHand.length);
         }
+
+        if (args.mode === 'collect' && isLocalPlayer && this.pendingCollectAnimation && args.collected) {
+            try {
+                await this.animateLocalCollectToHand(this.pendingCollectAnimation, args.collected);
+                await this.wait(REFILL_PAUSE_MS);
+                await this.animateCollectRefill(this.pendingCollectAnimation);
+                this.forgetMovingTomatoKey(args.collected.id);
+                this.applyCollectAction(this.pendingCollectAnimation);
+                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+                this.pendingCollectAnimation = null;
+                this.afterPublicChange();
+            } finally {
+                this.endActionAnimation();
+            }
+            return;
+        }
+
         this.playerZonesView.renderHandArea(this.getLocalPlayerId());
         if (args.mode === 'bonus' && args.bonusCard) {
             await this.animateBonusCardToHand(args);
+            this.forgetMovingTomatoKey(args.bonusCard.id);
+            this.playerZonesView.renderHandArea(this.getLocalPlayerId());
         }
         this.updateActionButtons();
     }

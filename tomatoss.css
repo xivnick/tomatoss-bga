@@ -159,17 +159,18 @@
     top: 0;
 }
 
-.recent-throw__tomato {
-    border-radius: var(--card-radius);
+.recent-throw__host {
     flex: 0 0 auto;
-    position: static;
+    height: var(--card-h);
+    position: relative;
+    width: var(--tomato-card-w);
 }
 
-.recent-throw__tomato.is-overlap {
+.recent-throw__host.is-overlap {
     margin-left: calc(-360px * var(--stage-scale));
 }
 
-.recent-throw__tomato.reveal {
+.recent-throw__host.reveal {
     margin-top: calc(-8px * var(--stage-scale));
 }
 
