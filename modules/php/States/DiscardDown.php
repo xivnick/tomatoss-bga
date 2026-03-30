@@ -21,8 +21,6 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
 
     public function getArgs(): array
     {
-        $this->game->ensureSchemaReady();
-
         return [
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
             'placementsRemaining' => $this->game->getPlacementsRemaining(),

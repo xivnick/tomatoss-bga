@@ -16,7 +16,7 @@ class Game extends \Bga\GameFramework\Table
     private const G_TURN_NO = 'turnNo';
     private const G_ACTION_INDEX = 'actionIndex';
     private const G_START_PLAYER_ID = 'startPlayerId';
-    private bool $schemaEnsured = false;
+    private const G_END_AFTER_TURN = 'endAfterTurn';
 
     private const TOMATO_CARD_COUNTS = [
         1 => 3,
@@ -69,6 +69,7 @@ class Game extends \Bga\GameFramework\Table
             self::G_TURN_NO => 10,
             self::G_ACTION_INDEX => 11,
             self::G_START_PLAYER_ID => 12,
+            self::G_END_AFTER_TURN => 13,
         ]);
     }
 
@@ -89,14 +90,10 @@ class Game extends \Bga\GameFramework\Table
     public function upgradeTableDb($from_version)
     {
         unset($from_version);
-
-        $this->ensureSchemaReady();
     }
 
     protected function getAllDatas(int $currentPlayerId): array
     {
-        $this->ensureSchemaReady();
-
         return [
             'viewerPlayerId' => $currentPlayerId,
             'players' => $this->getCollectionFromDb(
@@ -125,7 +122,6 @@ class Game extends \Bga\GameFramework\Table
     protected function setupNewGame($players, $options = [])
     {
         unset($options);
-        $this->ensureSchemaReady();
 
         $gameinfos = $this->getGameinfos();
         $default_colors = $gameinfos['player_colors'];
@@ -156,6 +152,7 @@ class Game extends \Bga\GameFramework\Table
         $firstPlayerId = (int) $this->activeNextPlayer();
         $this->setGameStateInitialValue(self::G_TURN_NO, 1);
         $this->setGameStateInitialValue(self::G_ACTION_INDEX, 0);
+        $this->setGameStateInitialValue(self::G_END_AFTER_TURN, 0);
         $this->setGameStateInitialValue(self::G_START_PLAYER_ID, $firstPlayerId);
 
         $this->bga->playerStats->init([
@@ -325,16 +322,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function isGameEndPending(): bool
     {
-        $deckCount = $this->getTargetDeckCount();
-        if ($deckCount !== 0) {
-            return false;
-        }
-
-        $boardCount = (int) $this->getUniqueValueFromDb(
-            "SELECT COUNT(*) FROM `card` WHERE `card_type` = 'target' AND `card_location` = 'board_target'"
-        );
-
-        return $boardCount < 3;
+        return (int) $this->getGameStateValue(self::G_END_AFTER_TURN) === 1;
     }
 
     public function getBoardTomatoSlots(): array
@@ -607,6 +595,8 @@ class Game extends \Bga\GameFramework\Table
             $replacement = $this->drawCard('target', 'target_deck', 'board_target', $targetSlot);
             if ($replacement !== null) {
                 $replacementTarget = $this->buildTargetData((int) $replacement['id'], (int) $replacement['typeArg']);
+            } else {
+                $this->setGameStateValue(self::G_END_AFTER_TURN, 1);
             }
         }
 
@@ -706,78 +696,6 @@ class Game extends \Bga\GameFramework\Table
             'INSERT INTO `card` (`card_id`, `card_type`, `card_type_arg`, `card_location`, `card_location_arg`) VALUES '
             . implode(',', $values)
         );
-    }
-
-    private function ensureCardTableSchema(): void
-    {
-        static::DbQuery(
-            "CREATE TABLE IF NOT EXISTS `card` ("
-            . "`card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
-            . "`card_type` VARCHAR(16) NOT NULL,"
-            . "`card_type_arg` INT NOT NULL,"
-            . "`card_location` VARCHAR(32) NOT NULL,"
-            . "`card_location_arg` INT NOT NULL DEFAULT 0,"
-            . "PRIMARY KEY (`card_id`),"
-            . "KEY `card_location` (`card_location`, `card_location_arg`)"
-            . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
-        );
-    }
-
-    private function ensurePlayerTableSchema(): void
-    {
-        if (!$this->columnExists('player', 'player_basket_full')) {
-            static::DbQuery("ALTER TABLE `player` ADD `player_basket_full` TINYINT(1) NOT NULL DEFAULT 1");
-        }
-        if (!$this->columnExists('player', 'player_start_order')) {
-            static::DbQuery("ALTER TABLE `player` ADD `player_start_order` TINYINT UNSIGNED NOT NULL DEFAULT 0");
-        }
-        if (!$this->columnExists('player', 'player_captured_count')) {
-            static::DbQuery("ALTER TABLE `player` ADD `player_captured_count` SMALLINT UNSIGNED NOT NULL DEFAULT 0");
-        }
-    }
-
-    private function ensureTurnActionTableSchema(): void
-    {
-        static::DbQuery(
-            "CREATE TABLE IF NOT EXISTS `turn_action` ("
-            . "`turn_action_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
-            . "`turn_no` INT UNSIGNED NOT NULL,"
-            . "`player_id` INT UNSIGNED NOT NULL,"
-            . "`action_index` TINYINT UNSIGNED NOT NULL,"
-            . "`space` TINYINT UNSIGNED NOT NULL,"
-            . "`action_kind` VARCHAR(16) NOT NULL,"
-            . "`cards_json` VARCHAR(64) NOT NULL DEFAULT '[]',"
-            . "`quick_toss` TINYINT(1) NOT NULL DEFAULT 0,"
-            . "`target_id` TINYINT UNSIGNED DEFAULT NULL,"
-            . "`revealed_card` TINYINT UNSIGNED DEFAULT NULL,"
-            . "`score_gained` SMALLINT NOT NULL DEFAULT 0,"
-            . "PRIMARY KEY (`turn_action_id`),"
-            . "KEY `turn_no_player` (`turn_no`, `player_id`)"
-            . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
-        );
-
-        if (!$this->columnExists('turn_action', 'target_id')) {
-            static::DbQuery("ALTER TABLE `turn_action` ADD `target_id` TINYINT UNSIGNED DEFAULT NULL AFTER `quick_toss`");
-        }
-    }
-
-    private function columnExists(string $table, string $column): bool
-    {
-        return $this->getObjectFromDb(
-            "SHOW COLUMNS FROM `" . addslashes($table) . "` LIKE '" . addslashes($column) . "'"
-        ) !== null;
-    }
-
-    public function ensureSchemaReady(): void
-    {
-        if ($this->schemaEnsured) {
-            return;
-        }
-
-        $this->ensureCardTableSchema();
-        $this->ensurePlayerTableSchema();
-        $this->ensureTurnActionTableSchema();
-        $this->schemaEnsured = true;
     }
 
     private function dealStartingHands(array $orderedPlayerIds): void

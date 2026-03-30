@@ -22,8 +22,6 @@ class PlayerTurn extends GameState
 
     public function getArgs(): array
     {
-        $this->game->ensureSchemaReady();
-
         return [
             'placementsRemaining' => $this->game->getPlacementsRemaining(),
             'boardTomatoes' => $this->game->getBoardTomatoSlots(),
