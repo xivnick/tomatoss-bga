@@ -21,6 +21,7 @@ const CARD_DESIGN_HEIGHT = 880;
 const PLAYER_BOARD_DESIGN_SIZE = 880;
 const MAX_LAYOUT_WIDTH = 700;
 const LAYOUT_HORIZONTAL_CHROME = 40;
+const LAYOUT_HORIZONTAL_PADDING = 32;
 const TARGET_CARD_POSITIONS = [
     { x: 841, y: 370 },
     { x: 1592, y: 370 },
@@ -38,7 +39,10 @@ class SpriteStyles {
         const layoutParent = this.getLayoutElement()?.parentElement;
         const leftSide = document.getElementById('left-side');
         const available = layoutParent?.clientWidth ?? leftSide?.clientWidth ?? STAGE_DESIGN_WIDTH;
-        const usable = Math.max(320, Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME);
+        const usable = Math.max(
+            320,
+            Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME - LAYOUT_HORIZONTAL_PADDING
+        );
         return Math.min(STAGE_DESIGN_WIDTH, usable);
     }
 
