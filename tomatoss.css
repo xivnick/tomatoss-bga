@@ -510,7 +510,9 @@
 
 .captured-card-host {
     flex: 0 0 auto;
+    height: var(--card-h);
     position: relative;
+    width: var(--mission-card-w);
 }
 
 .captured-stack.normal .captured-card-host {

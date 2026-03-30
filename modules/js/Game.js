@@ -413,6 +413,25 @@ class MotionLayer {
         return this.getRect(document.querySelector(`.board-token-slot[data-space="${space}"]`));
     }
 
+    getPlacedTokenRect(space, stackIndex) {
+        const board = document.getElementById('festival-board');
+        const boardRect = this.getRect(board);
+        if (!boardRect) {
+            return null;
+        }
+
+        const slot = TOKEN_SLOTS.find(item => item.space === Number(space));
+        if (!slot) {
+            return null;
+        }
+
+        const width = 300 * this.sprites.getBoardScale();
+        const height = 300 * this.sprites.getBoardScale();
+        const left = boardRect.left + (slot.left / 100) * boardRect.width - (width / 2);
+        const top = boardRect.top + (slot.top / 100) * boardRect.height - (height / 2) - (stackIndex * 18);
+        return { left, top, width, height };
+    }
+
     getBoardTomatoRect(slot) {
         return this.getRect(document.querySelector(`#tomato-slot-${slot} .card-node`));
     }
@@ -1338,9 +1357,16 @@ export class Game {
         });
     }
 
+    getActionStackIndex(space) {
+        return Math.max(
+            0,
+            (this.gamedatas.currentTurnActions ?? []).filter(action => Number(action.space) === Number(space)).length - 1
+        );
+    }
+
     animateReserveTokenToSpace(space) {
         const fromRect = this.motionLayer.getReserveTokenRect();
-        const toRect = this.motionLayer.getBoardSlotRect(space);
+        const toRect = this.motionLayer.getPlacedTokenRect(space, this.getActionStackIndex(space));
         if (!fromRect || !toRect) {
             return Promise.resolve();
         }
