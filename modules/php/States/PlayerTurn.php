@@ -50,6 +50,8 @@ class PlayerTurn extends GameState
             'targetIndex' => null,
             'refill' => $result['refill'],
             'tomatoDeckCount' => $result['tomatoDeckCount'],
+            'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
+            'latestDiscardTomato' => $result['latestDiscardTomato'],
             'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
         ]);
         $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
@@ -123,6 +125,7 @@ class PlayerTurn extends GameState
                 'latestDiscardTomato' => $result['latestDiscardTomato'],
                 'targetDeckCount' => $result['targetDeckCount'],
                 'tomatoDeckCount' => $result['tomatoDeckCount'],
+                'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
                 'capturedTargetsByPlayer' => $result['capturedTargetsByPlayer'],
                 'handCount' => count($result['remainingHand']),
             ]

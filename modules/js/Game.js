@@ -319,6 +319,29 @@ class MotionLayer {
         });
     }
 
+    async animateDiscardRecycleToDeck(latestDiscardTomato) {
+        const discardRect = this.getDiscardPileRect();
+        const deckRect = this.getTomatoDeckRect();
+        if (!discardRect || !deckRect) {
+            return;
+        }
+
+        const startNode = latestDiscardTomato
+            ? this.createTomatoFaceNode(latestDiscardTomato.value, discardRect)
+            : this.createTomatoBackNode(discardRect);
+        const wrapper = this.createWrapper(startNode, discardRect, 'motion-card-wrapper');
+        const movePromise = this.animateRect(wrapper, discardRect, deckRect, {
+            duration: CARD_MOVE_MS,
+            easing: CARD_EASING,
+        });
+        const flipPromise = this.animateFlip(
+            startNode,
+            () => this.createTomatoBackNode(deckRect),
+            FLIP_MS
+        );
+        await Promise.all([movePromise, flipPromise]);
+    }
+
     createTomatoFaceNode(value, rect) {
         const scale = rect.width / 155;
         const node = document.createElement('div');
@@ -1464,6 +1487,10 @@ export class Game {
             return Promise.resolve();
         }
 
+        const recyclePromise = args.recycledTomatoDiscard
+            ? this.motionLayer.animateDiscardRecycleToDeck(this.gamedatas.latestDiscardTomato)
+            : Promise.resolve();
+
         const sourceRect = this.motionLayer.getTomatoDeckRect();
         const destinationRect = this.motionLayer.getRect(document.querySelector(`#tomato-slot-${Number(args.space)} .slot-card-host`));
         if (!sourceRect || !destinationRect) {
@@ -1482,7 +1509,7 @@ export class Game {
             FLIP_MS
         );
 
-        return Promise.all([movePromise, flipPromise]);
+        return recyclePromise.then(() => Promise.all([movePromise, flipPromise]));
     }
 
     animateThrowCards(args, selectedIds) {
@@ -1527,6 +1554,11 @@ export class Game {
             return Promise.resolve();
         }
 
+        const recyclePromise = args.recycledTomatoDiscard
+            ? this.motionLayer.animateDiscardRecycleToDeck(this.gamedatas.latestDiscardTomato)
+            : Promise.resolve();
+
+        return recyclePromise.then(() => {
         const sourceRect = this.motionLayer.getRect(document.querySelector('#tomato-deck-slot .card-node'));
         const destinationHost = this.stageView.ensureRecentThrowHost((args.cards ?? []).length, [
             (args.cards?.length ?? 0) > 0 ? 'is-overlap' : '',
@@ -1548,6 +1580,7 @@ export class Game {
         );
 
         return Promise.all([movePromise, flipPromise]);
+        });
     }
 
     async animateThrowEntry(args, selectedIds) {
@@ -1680,6 +1713,10 @@ export class Game {
     async animateBonusCardToHand(args) {
         if (Number(args.player_id) !== this.getLocalPlayerId() || !args.bonusCard) {
             return;
+        }
+
+        if (args.recycledTomatoDiscard) {
+            await this.motionLayer.animateDiscardRecycleToDeck(this.gamedatas.latestDiscardTomato);
         }
 
         const sourceRect = this.motionLayer.getTomatoDeckRect();
@@ -2100,6 +2137,7 @@ export class Game {
         this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
         this.gamedatas.boardTomatoes[slotIndex] = args.refill;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
+        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
         this.updateHandCount(args.player_id, args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1));
     }
 
@@ -2190,6 +2228,8 @@ export class Game {
         if (this.gamedatas.players?.[args.player_id]) {
             this.gamedatas.players[args.player_id].basketFull = args.basketFull;
         }
+        this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
+        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
         this.updateHandCount(args.player_id, args.handCount);
         this.playerZonesView.renderPlayer(args.player_id);
         this.updateActionButtons();

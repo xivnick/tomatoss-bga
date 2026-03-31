@@ -13,6 +13,8 @@ use Bga\Games\tomatoss\States\PlayerTurn;
 
 class Game extends \Bga\GameFramework\Table
 {
+    private bool $tomatoDiscardRecycledOnLastDraw = false;
+
     private const G_TURN_NO = 'turnNo';
     private const G_ACTION_INDEX = 'actionIndex';
     private const G_START_PLAYER_ID = 'startPlayerId';
@@ -482,6 +484,7 @@ class Game extends \Bga\GameFramework\Table
                 $result['bonusCard'] = [
                     'id' => (int) $bonusCard['id'],
                     'value' => (int) $bonusCard['typeArg'],
+                    'recycledTomatoDiscard' => $bonusCard['recycledTomatoDiscard'] ?? false,
                 ];
             }
         } elseif (in_array(2, $counts, true)) {
@@ -493,6 +496,7 @@ class Game extends \Bga\GameFramework\Table
                     $result['bonusCard'] = [
                         'id' => (int) $bonusCard['id'],
                         'value' => (int) $bonusCard['typeArg'],
+                        'recycledTomatoDiscard' => $bonusCard['recycledTomatoDiscard'] ?? false,
                     ];
                 }
             } else {
@@ -616,6 +620,7 @@ class Game extends \Bga\GameFramework\Table
                 $checkCards[] = (int) $revealed['typeArg'];
             }
         }
+        $recycledTomatoDiscard = $revealed['recycledTomatoDiscard'] ?? false;
 
         $targetId = (int) $targetCard['targetId'];
         $success = $this->targetMatches($targetId, $checkCards);
@@ -660,6 +665,7 @@ class Game extends \Bga\GameFramework\Table
             'targetDeckCount' => $this->getTargetDeckCount(),
             'tomatoDeckCount' => $this->getTomatoDeckCount(),
             'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
+            'recycledTomatoDiscard' => $recycledTomatoDiscard,
         ];
     }
 
@@ -689,6 +695,8 @@ class Game extends \Bga\GameFramework\Table
                 'value' => (int) $refill['typeArg'],
             ],
             'tomatoDeckCount' => $this->getTomatoDeckCount(),
+            'recycledTomatoDiscard' => $refill['recycledTomatoDiscard'] ?? false,
+            'latestDiscardTomato' => $this->getLatestDiscardTomato(),
         ];
     }
 
@@ -762,6 +770,7 @@ class Game extends \Bga\GameFramework\Table
 
     private function drawCard(string $cardType, string $fromLocation, string $toLocation, int $toArg): ?array
     {
+        $this->tomatoDiscardRecycledOnLastDraw = false;
         if ($cardType === 'tomato' && $fromLocation === 'tomato_deck') {
             $this->recycleTomatoDiscardIntoDeckIfNeeded();
         }
@@ -787,6 +796,7 @@ class Game extends \Bga\GameFramework\Table
         return [
             'id' => (int) $card['id'],
             'typeArg' => (int) $card['typeArg'],
+            'recycledTomatoDiscard' => $this->tomatoDiscardRecycledOnLastDraw,
         ];
     }
 
@@ -803,6 +813,8 @@ class Game extends \Bga\GameFramework\Table
         if ($discardCards === []) {
             return;
         }
+
+        $this->tomatoDiscardRecycledOnLastDraw = true;
 
         shuffle($discardCards);
         foreach ($discardCards as $index => $card) {
