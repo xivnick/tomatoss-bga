@@ -2137,7 +2137,9 @@ export class Game {
         this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
         this.gamedatas.boardTomatoes[slotIndex] = args.refill;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
+            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
         this.updateHandCount(args.player_id, args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1));
     }
 
@@ -2150,7 +2152,9 @@ export class Game {
         this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
         this.gamedatas.targetDeckCount = args.targetDeckCount ?? this.gamedatas.targetDeckCount;
-        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
+            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
         this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
     }
 
@@ -2229,7 +2233,9 @@ export class Game {
             this.gamedatas.players[args.player_id].basketFull = args.basketFull;
         }
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
+            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
         this.updateHandCount(args.player_id, args.handCount);
         this.playerZonesView.renderPlayer(args.player_id);
         this.updateActionButtons();
@@ -2368,7 +2374,9 @@ export class Game {
 
     async notif_discardCard(args) {
         if (!this.shouldAnimateNotifications()) {
-            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+            if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
+                this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+            }
             this.updateHandCount(args.player_id, args.handCount);
             this.clearSelection();
             this.afterPublicChange();
@@ -2378,7 +2386,9 @@ export class Game {
         const discardedIds = [...this.selectedCardIds];
         await this.animateDiscardMotion(args);
         discardedIds.forEach(cardId => this.forgetMovingTomatoKey(cardId));
-        this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+        if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
+            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
         this.updateHandCount(args.player_id, args.handCount);
         this.clearSelection();
         this.afterPublicChange();
