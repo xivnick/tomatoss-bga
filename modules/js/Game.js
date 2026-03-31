@@ -306,6 +306,19 @@ class MotionLayer {
         return node;
     }
 
+    animateTokenFaceChange(node, nextClass, delay = TOKEN_MOVE_MS / 2) {
+        if (!node) {
+            return Promise.resolve();
+        }
+
+        return new Promise(resolve => {
+            setTimeout(() => {
+                node.className = nextClass;
+                resolve();
+            }, delay);
+        });
+    }
+
     createTomatoFaceNode(value, rect) {
         const scale = rect.width / 155;
         const node = document.createElement('div');
@@ -632,7 +645,7 @@ class FestivalStageView {
         }
 
         const counts = new Map();
-        const actions = this.game.gamedatas.currentTurnActions ?? [];
+        const actions = this.game.getDisplayedTurnActions();
         const keep = new Set();
         actions.forEach((action, index) => {
             const slot = TOKEN_SLOTS.find(item => item.space === Number(action.space));
@@ -669,7 +682,7 @@ class FestivalStageView {
             return;
         }
 
-        const remaining = Number(this.game.gamedatas.placementsRemaining ?? 0);
+        const remaining = this.game.getDisplayedPlacementsRemaining();
         const keep = new Set();
         Array.from({ length: remaining }, (_, index) => index).forEach(index => {
             const key = `reserve-${index}`;
@@ -1114,6 +1127,7 @@ export class Game {
         this.pendingCollectAnimation = null;
         this.deferredResolveBonusArgs = null;
         this.deferredBonusHandUpdateArgs = null;
+        this.cleanupDisplayActions = null;
         this.turnCleanupPromise = null;
         this.deferredTurnCleanupActions = null;
         this.actionAnimationDepth = 0;
@@ -1221,6 +1235,17 @@ export class Game {
         this.movingMissionKeys.delete(`mission-${cardId}`);
     }
 
+    getDisplayedTurnActions() {
+        return this.cleanupDisplayActions ?? this.gamedatas.currentTurnActions ?? [];
+    }
+
+    getDisplayedPlacementsRemaining() {
+        if (this.cleanupDisplayActions) {
+            return 0;
+        }
+        return Number(this.gamedatas.placementsRemaining ?? 0);
+    }
+
     bindRootEvents() {
         const root = document.getElementById('tomatoss-layout');
         if (!root || root.dataset.bound === 'true') {
@@ -1287,18 +1312,20 @@ export class Game {
 
     renderState(source) {
         const previousTurnActions = [...(this.gamedatas?.currentTurnActions ?? [])];
-        this.gamedatas = { ...this.gamedatas, ...this.buildRenderData(source) };
+        const nextData = { ...this.gamedatas, ...this.buildRenderData(source) };
+        const nextTurnActions = nextData.currentTurnActions ?? [];
+        if (previousTurnActions.length > 0 && nextTurnActions.length === 0 && !this.turnCleanupPromise) {
+            this.deferredTurnCleanupActions = previousTurnActions;
+            this.cleanupDisplayActions = previousTurnActions;
+        }
+
+        this.gamedatas = nextData;
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
         this.renderOverallPlayerBoards();
         this.cleanupMissionNodes();
         this.updateActionButtons();
-
-        const nextTurnActions = this.gamedatas.currentTurnActions ?? [];
-        if (previousTurnActions.length > 0 && nextTurnActions.length === 0 && !this.turnCleanupPromise) {
-            this.deferredTurnCleanupActions = previousTurnActions;
-            this.flushDeferredTurnCleanup();
-        }
+        this.flushDeferredTurnCleanup();
     }
 
     cleanupMissionNodes() {
@@ -1358,6 +1385,7 @@ export class Game {
         this.deferredTurnCleanupActions = null;
         this.turnCleanupPromise = this.animateTurnCleanup(actions).finally(() => {
             this.turnCleanupPromise = null;
+            this.cleanupDisplayActions = null;
             this.stageView.renderPlacedTokens();
             this.stageView.renderReserveTokens();
         });
@@ -1379,10 +1407,16 @@ export class Game {
 
         const tokenNode = this.motionLayer.createReserveTokenNode();
         const wrapper = this.motionLayer.createWrapper(tokenNode, fromRect, 'motion-token');
-        return this.motionLayer.animateRect(wrapper, fromRect, toRect, {
+        const movePromise = this.motionLayer.animateRect(wrapper, fromRect, toRect, {
             duration: TOKEN_MOVE_MS,
             easing: TOKEN_EASING,
         });
+        if (Number(space) < 3) {
+            return movePromise;
+        }
+
+        const facePromise = this.motionLayer.animateTokenFaceChange(tokenNode, 'placed-token splat');
+        return Promise.all([movePromise, facePromise]);
     }
 
     animateCollectMotion(args) {
