@@ -1314,7 +1314,6 @@ export class Game {
             currentTurnActions: source.currentTurnActions ?? this.gamedatas.currentTurnActions ?? [],
             placementsRemaining: source.placementsRemaining ?? this.gamedatas.placementsRemaining ?? 3,
             capturedTargetsByPlayer: source.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer ?? {},
-            availableQuickRevealValues: source.availableQuickRevealValues ?? this.gamedatas.availableQuickRevealValues ?? [],
             discardCountNeeded: source.discardCountNeeded ?? this.gamedatas.discardCountNeeded ?? 0,
         };
 
@@ -1892,12 +1891,9 @@ export class Game {
 
     getThrowOptions(targetId, cardIds = this.selectedCardIds) {
         const values = this.getSelectedValues(cardIds);
-        const revealValues = (this.gamedatas.availableQuickRevealValues?.length ?? 0) > 0
-            ? this.gamedatas.availableQuickRevealValues
-            : [1, 2, 3, 4, 5, 6, 7];
         return {
             normal: this.targetMatches(targetId, [...values]),
-            quick: revealValues.some(next => this.targetMatches(targetId, [...values, next])),
+            quick: [1, 2, 3, 4, 5, 6, 7].some(next => this.targetMatches(targetId, [...values, next])),
         };
     }
 
@@ -2144,9 +2140,6 @@ export class Game {
         this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
         this.gamedatas.boardTomatoes[slotIndex] = args.refill;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-        if (Object.prototype.hasOwnProperty.call(args, 'availableQuickRevealValues')) {
-            this.gamedatas.availableQuickRevealValues = args.availableQuickRevealValues;
-        }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
@@ -2164,9 +2157,6 @@ export class Game {
         this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
         this.gamedatas.targetDeckCount = args.targetDeckCount ?? this.gamedatas.targetDeckCount;
-        if (Object.prototype.hasOwnProperty.call(args, 'availableQuickRevealValues')) {
-            this.gamedatas.availableQuickRevealValues = args.availableQuickRevealValues;
-        }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
@@ -2248,9 +2238,6 @@ export class Game {
             this.gamedatas.players[args.player_id].basketFull = args.basketFull;
         }
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
-        if (Object.prototype.hasOwnProperty.call(args, 'availableQuickRevealValues')) {
-            this.gamedatas.availableQuickRevealValues = args.availableQuickRevealValues;
-        }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
@@ -2395,9 +2382,6 @@ export class Game {
             if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
                 this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
             }
-            if (Object.prototype.hasOwnProperty.call(args, 'availableQuickRevealValues')) {
-                this.gamedatas.availableQuickRevealValues = args.availableQuickRevealValues;
-            }
             this.updateHandCount(args.player_id, args.handCount);
             this.clearSelection();
             this.afterPublicChange();
@@ -2409,9 +2393,6 @@ export class Game {
         discardedIds.forEach(cardId => this.forgetMovingTomatoKey(cardId));
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
-        }
-        if (Object.prototype.hasOwnProperty.call(args, 'availableQuickRevealValues')) {
-            this.gamedatas.availableQuickRevealValues = args.availableQuickRevealValues;
         }
         this.updateHandCount(args.player_id, args.handCount);
         this.clearSelection();

@@ -167,7 +167,6 @@ class Game extends \Bga\GameFramework\Table
             'handCountsByPlayer' => $this->getHandCountsByPlayer(),
             'currentTurnActions' => $this->getCurrentTurnActionLog(),
             'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
-            'availableQuickRevealValues' => $this->getAvailableQuickRevealValues(),
         ];
     }
 
@@ -291,7 +290,7 @@ class Game extends \Bga\GameFramework\Table
         $targetId = (int) $targetCard['targetId'];
 
         if ($quickToss) {
-            foreach ($this->getAvailableQuickRevealValues() as $nextCard) {
+            foreach (range(1, 7) as $nextCard) {
                 $checkCards = $values;
                 $checkCards[] = $nextCard;
                 if ($this->targetMatches($targetId, $checkCards)) {
@@ -1041,18 +1040,6 @@ class Game extends \Bga\GameFramework\Table
         static::DbQuery(
             "UPDATE `player` SET `player_basket_full` = " . ($basketFull ? 1 : 0) . " WHERE `player_id` = $playerId"
         );
-    }
-
-    public function getAvailableQuickRevealValues(): array
-    {
-        $rows = array_values($this->getCollectionFromDb(
-            "SELECT DISTINCT `card_type_arg` AS `value` "
-            . "FROM `card` "
-            . "WHERE `card_type` = 'tomato' AND `card_location` IN ('tomato_deck', 'tomato_discard') "
-            . 'ORDER BY `card_type_arg` ASC'
-        ));
-
-        return array_map(static fn(array $row): int => (int) $row['value'], $rows);
     }
 
     private function tableExists(string $tableName): bool

@@ -30,7 +30,6 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
             'targetDeckCount' => $this->game->getTargetDeckCount(),
             'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
-            'availableQuickRevealValues' => $this->game->getAvailableQuickRevealValues(),
             'handCountsByPlayer' => $this->game->getHandCountsByPlayer(),
             'capturedTargetsByPlayer' => $this->game->getCapturedTargetsByPlayer(),
         ];
@@ -52,7 +51,6 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'cardValues' => $discardValues,
             'latestDiscardTomato' => $result['latestDiscardTomato'],
-            'availableQuickRevealValues' => $this->game->getAvailableQuickRevealValues(),
             'handCount' => count($result['remainingHand']),
         ]);
         $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [

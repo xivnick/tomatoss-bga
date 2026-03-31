@@ -29,7 +29,6 @@ class PlayerTurn extends GameState
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
             'targetDeckCount' => $this->game->getTargetDeckCount(),
             'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
-            'availableQuickRevealValues' => $this->game->getAvailableQuickRevealValues(),
             'handCountsByPlayer' => $this->game->getHandCountsByPlayer(),
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
             'capturedTargetsByPlayer' => $this->game->getCapturedTargetsByPlayer(),
@@ -53,7 +52,6 @@ class PlayerTurn extends GameState
             'tomatoDeckCount' => $result['tomatoDeckCount'],
             'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
             'latestDiscardTomato' => $result['latestDiscardTomato'],
-            'availableQuickRevealValues' => $this->game->getAvailableQuickRevealValues(),
             'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
         ]);
         $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
@@ -129,7 +127,6 @@ class PlayerTurn extends GameState
                 'tomatoDeckCount' => $result['tomatoDeckCount'],
                 'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
                 'capturedTargetsByPlayer' => $result['capturedTargetsByPlayer'],
-                'availableQuickRevealValues' => $this->game->getAvailableQuickRevealValues(),
                 'handCount' => count($result['remainingHand']),
             ]
         );
