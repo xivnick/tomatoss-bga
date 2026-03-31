@@ -30,13 +30,13 @@ const TARGET_CARD_POSITIONS = [
 const RECENT_THROW_Y = 100;
 const RECENT_THROW_X_OFFSET = -150;
 const RECENT_THROW_X_STEP = 260;
-const THROW_CUTSCENE_MS = 1350;
-const THROW_RESOLVE_DELAY_MS = 180;
+const THROW_CUTSCENE_MS = 760;
+const THROW_RESOLVE_DELAY_MS = 60;
 const TOKEN_MOVE_MS = 380;
 const CARD_MOVE_MS = 560;
 const FLIP_MS = 520;
 const REFILL_PAUSE_MS = 180;
-const THROW_RESULT_PAUSE_MS = 220;
+const THROW_RESULT_PAUSE_MS = 120;
 const TURN_CLEANUP_MS = 320;
 const TOKEN_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
@@ -1112,6 +1112,8 @@ export class Game {
         this.recentThrowTimeout = null;
         this.pendingThrowResolution = null;
         this.pendingCollectAnimation = null;
+        this.deferredResolveBonusArgs = null;
+        this.deferredBonusHandUpdateArgs = null;
         this.turnCleanupPromise = null;
         this.deferredTurnCleanupActions = null;
         this.actionAnimationDepth = 0;
@@ -2120,6 +2122,7 @@ export class Game {
                         this.stageView.renderRecentThrow();
                         this.applyThrowAction(pending);
                         this.afterPublicChange();
+                        await this.flushDeferredPostThrowNotifications();
                     } finally {
                         this.endActionAnimation();
                     }
@@ -2147,6 +2150,61 @@ export class Game {
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
         this.updateActionButtons();
+    }
+
+    applyResolveBonusNotification(args) {
+        if (this.gamedatas.players?.[args.player_id]) {
+            this.gamedatas.players[args.player_id].basketFull = args.basketFull;
+        }
+        this.updateHandCount(args.player_id, args.handCount);
+        this.playerZonesView.renderPlayer(args.player_id);
+        this.updateActionButtons();
+    }
+
+    async applyPrivateHandUpdateNotification(args) {
+        const isLocalPlayer = Number(args.player_id) === this.getLocalPlayerId();
+        if (Array.isArray(args.playerHand)) {
+            this.gamedatas.playerHand = args.playerHand;
+            this.updateHandCount(args.player_id, args.playerHand.length);
+        }
+
+        if (args.mode === 'collect' && isLocalPlayer && this.pendingCollectAnimation && args.collected) {
+            try {
+                await this.animateLocalCollectToHand(this.pendingCollectAnimation, args.collected);
+                await this.wait(REFILL_PAUSE_MS);
+                await this.animateCollectRefill(this.pendingCollectAnimation);
+                this.forgetMovingTomatoKey(args.collected.id);
+                this.applyCollectAction(this.pendingCollectAnimation);
+                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+                this.pendingCollectAnimation = null;
+                this.afterPublicChange();
+            } finally {
+                this.endActionAnimation();
+            }
+            return;
+        }
+
+        this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+        if (args.mode === 'bonus' && args.bonusCard) {
+            await this.animateBonusCardToHand(args);
+            this.forgetMovingTomatoKey(args.bonusCard.id);
+            this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+        }
+        this.updateActionButtons();
+    }
+
+    async flushDeferredPostThrowNotifications() {
+        if (this.deferredResolveBonusArgs) {
+            const args = this.deferredResolveBonusArgs;
+            this.deferredResolveBonusArgs = null;
+            this.applyResolveBonusNotification(args);
+        }
+
+        if (this.deferredBonusHandUpdateArgs) {
+            const args = this.deferredBonusHandUpdateArgs;
+            this.deferredBonusHandUpdateArgs = null;
+            await this.applyPrivateHandUpdateNotification(args);
+        }
     }
 
     async notif_turnAction(args) {
@@ -2226,12 +2284,12 @@ export class Game {
     }
 
     async notif_resolveBonus(args) {
-        if (this.gamedatas.players?.[args.player_id]) {
-            this.gamedatas.players[args.player_id].basketFull = args.basketFull;
+        if (this.recentThrow || this.pendingThrowResolution) {
+            this.deferredResolveBonusArgs = args;
+            return;
         }
-        this.updateHandCount(args.player_id, args.handCount);
-        this.playerZonesView.renderPlayer(args.player_id);
-        this.updateActionButtons();
+
+        this.applyResolveBonusNotification(args);
     }
 
     async notif_discardCard(args) {
@@ -2253,7 +2311,11 @@ export class Game {
     }
 
     async notif_privateHandUpdate(args) {
-        const isLocalPlayer = Number(args.player_id) === this.getLocalPlayerId();
+        if (args.mode === 'bonus' && (this.recentThrow || this.pendingThrowResolution)) {
+            this.deferredBonusHandUpdateArgs = args;
+            return;
+        }
+
         if (!this.shouldAnimateNotifications()) {
             if (Array.isArray(args.playerHand)) {
                 this.gamedatas.playerHand = args.playerHand;
@@ -2264,33 +2326,6 @@ export class Game {
             return;
         }
 
-        if (Array.isArray(args.playerHand)) {
-            this.gamedatas.playerHand = args.playerHand;
-            this.updateHandCount(args.player_id, args.playerHand.length);
-        }
-
-        if (args.mode === 'collect' && isLocalPlayer && this.pendingCollectAnimation && args.collected) {
-            try {
-                await this.animateLocalCollectToHand(this.pendingCollectAnimation, args.collected);
-                await this.wait(REFILL_PAUSE_MS);
-                await this.animateCollectRefill(this.pendingCollectAnimation);
-                this.forgetMovingTomatoKey(args.collected.id);
-                this.applyCollectAction(this.pendingCollectAnimation);
-                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
-                this.pendingCollectAnimation = null;
-                this.afterPublicChange();
-            } finally {
-                this.endActionAnimation();
-            }
-            return;
-        }
-
-        this.playerZonesView.renderHandArea(this.getLocalPlayerId());
-        if (args.mode === 'bonus' && args.bonusCard) {
-            await this.animateBonusCardToHand(args);
-            this.forgetMovingTomatoKey(args.bonusCard.id);
-            this.playerZonesView.renderHandArea(this.getLocalPlayerId());
-        }
-        this.updateActionButtons();
+        await this.applyPrivateHandUpdateNotification(args);
     }
 }
