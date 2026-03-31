@@ -300,20 +300,22 @@ class MotionLayer {
         destinationHost.replaceChildren(finalNode);
     }
 
-    createReserveTokenNode() {
+    createReserveTokenNode(face = 'whole') {
         const node = document.createElement('div');
-        node.className = 'reserve-token';
+        node.className = `moving-token ${face}`;
+        node.style.width = '100%';
+        node.style.height = '100%';
         return node;
     }
 
-    animateTokenFaceChange(node, nextClass, delay = TOKEN_MOVE_MS / 2) {
+    animateTokenFaceChange(node, nextFace, delay = TOKEN_MOVE_MS / 2) {
         if (!node) {
             return Promise.resolve();
         }
 
         return new Promise(resolve => {
             setTimeout(() => {
-                node.className = nextClass;
+                node.className = `moving-token ${nextFace}`;
                 resolve();
             }, delay);
         });
@@ -1438,7 +1440,7 @@ export class Game {
             return movePromise;
         }
 
-        const facePromise = this.motionLayer.animateTokenFaceChange(tokenNode, 'placed-token splat');
+        const facePromise = this.motionLayer.animateTokenFaceChange(tokenNode, 'splat');
         return Promise.all([movePromise, facePromise]);
     }
 
@@ -1758,8 +1760,9 @@ export class Game {
                 return Promise.resolve();
             }
 
-            const clone = document.createElement('div');
-            clone.className = token.className;
+            const clone = this.motionLayer.createReserveTokenNode(
+                token.classList.contains('splat') ? 'splat' : 'whole'
+            );
             const wrapper = this.motionLayer.createWrapper(clone, fromRect, 'motion-token');
             token.style.visibility = 'hidden';
             return this.motionLayer.animateRect(wrapper, fromRect, toRect, {

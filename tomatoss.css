@@ -293,7 +293,8 @@
 }
 
 .placed-token,
-.reserve-token {
+.reserve-token,
+.moving-token {
     background-image: url('img/tomato_tokens.png');
     background-repeat: no-repeat;
     background-size: 200% 100%;
@@ -307,11 +308,13 @@
 }
 
 .placed-token.whole,
-.reserve-token {
+.reserve-token,
+.moving-token.whole {
     background-position: 0 0;
 }
 
-.placed-token.splat {
+.placed-token.splat,
+.moving-token.splat {
     background-position: 100% 0;
 }
 
@@ -321,6 +324,13 @@
     height: calc(300px * var(--stage-scale));
     position: absolute;
     width: calc(300px * var(--stage-scale));
+}
+
+.moving-token {
+    border: 2px solid rgba(110, 44, 20, 0.35);
+    border-radius: 999px;
+    height: 100%;
+    width: 100%;
 }
 
 .reserve-token-1 {
