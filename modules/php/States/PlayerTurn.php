@@ -50,6 +50,7 @@ class PlayerTurn extends GameState
             'targetIndex' => null,
             'refill' => $result['refill'],
             'tomatoDeckCount' => $result['tomatoDeckCount'],
+            'publicDiscardCount' => $result['publicDiscardCount'],
             'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
             'latestDiscardTomato' => $result['latestDiscardTomato'],
             'handCount' => count($this->game->getHandForPlayer($activePlayerId)),

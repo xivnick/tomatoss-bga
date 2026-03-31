@@ -1308,6 +1308,7 @@ export class Game {
             boardTargets: source.boardTargets ?? this.gamedatas.boardTargets ?? [null, null, null],
             tomatoDeckCount: source.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount ?? 0,
             targetDeckCount: source.targetDeckCount ?? this.gamedatas.targetDeckCount ?? 0,
+            publicDiscardCount: source.publicDiscardCount ?? this.gamedatas.publicDiscardCount ?? 0,
             latestDiscardTomato: source.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato ?? null,
             playerHand: source.playerHand ?? this.gamedatas.playerHand ?? [],
             handCountsByPlayer: source.handCountsByPlayer ?? this.gamedatas.handCountsByPlayer ?? {},
@@ -1330,6 +1331,7 @@ export class Game {
             boardTargets: this.gamedatas.boardTargets ?? [null, null, null],
             tomatoDeckCount: this.gamedatas.tomatoDeckCount ?? 0,
             targetDeckCount: this.gamedatas.targetDeckCount ?? 0,
+            publicDiscardCount: this.gamedatas.publicDiscardCount ?? 0,
             latestDiscardTomato: this.gamedatas.latestDiscardTomato ?? null,
             capturedTargetsByPlayer: this.gamedatas.capturedTargetsByPlayer ?? {},
         };
@@ -1489,8 +1491,11 @@ export class Game {
             return Promise.resolve();
         }
 
+        const recycledDiscardTop = args.recycledTomatoDiscard
+            ? this.prepareRecycleTomatoDiscardVisualState()
+            : null;
         const recyclePromise = args.recycledTomatoDiscard
-            ? this.motionLayer.animateDiscardRecycleToDeck(this.gamedatas.latestDiscardTomato)
+            ? this.motionLayer.animateDiscardRecycleToDeck(recycledDiscardTop)
             : Promise.resolve();
 
         const sourceRect = this.motionLayer.getTomatoDeckRect();
@@ -1556,8 +1561,11 @@ export class Game {
             return Promise.resolve();
         }
 
+        const recycledDiscardTop = args.recycledTomatoDiscard
+            ? this.prepareRecycleTomatoDiscardVisualState()
+            : null;
         const recyclePromise = args.recycledTomatoDiscard
-            ? this.motionLayer.animateDiscardRecycleToDeck(this.gamedatas.latestDiscardTomato)
+            ? this.motionLayer.animateDiscardRecycleToDeck(recycledDiscardTop)
             : Promise.resolve();
 
         return recyclePromise.then(() => {
@@ -1718,7 +1726,8 @@ export class Game {
         }
 
         if (args.recycledTomatoDiscard) {
-            await this.motionLayer.animateDiscardRecycleToDeck(this.gamedatas.latestDiscardTomato);
+            const recycledDiscardTop = this.prepareRecycleTomatoDiscardVisualState();
+            await this.motionLayer.animateDiscardRecycleToDeck(recycledDiscardTop);
         }
 
         const sourceRect = this.motionLayer.getTomatoDeckRect();
@@ -2140,6 +2149,9 @@ export class Game {
         this.gamedatas.boardTomatoes = [...(this.gamedatas.boardTomatoes ?? [])];
         this.gamedatas.boardTomatoes[slotIndex] = args.refill;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
+        if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
+            this.gamedatas.publicDiscardCount = args.publicDiscardCount;
+        }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
@@ -2157,6 +2169,9 @@ export class Game {
         this.gamedatas.capturedTargetsByPlayer = args.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer;
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
         this.gamedatas.targetDeckCount = args.targetDeckCount ?? this.gamedatas.targetDeckCount;
+        if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
+            this.gamedatas.publicDiscardCount = args.publicDiscardCount;
+        }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
@@ -2176,6 +2191,20 @@ export class Game {
 
         this.gamedatas.playerHand = (this.gamedatas.playerHand ?? []).filter(card => !playedIds.has(Number(card.id)));
         this.updateHandCount(args.player_id, this.gamedatas.playerHand.length);
+    }
+
+    prepareRecycleTomatoDiscardVisualState() {
+        const recycledDiscardTop = this.gamedatas.latestDiscardTomato ?? null;
+        const recycledCount = Number(this.gamedatas.publicDiscardCount ?? 0);
+        if (recycledCount <= 0) {
+            return recycledDiscardTop;
+        }
+
+        this.gamedatas.latestDiscardTomato = null;
+        this.gamedatas.publicDiscardCount = 0;
+        this.gamedatas.tomatoDeckCount = Number(this.gamedatas.tomatoDeckCount ?? 0) + recycledCount;
+        this.stageView.renderTomatoRow();
+        return recycledDiscardTop;
     }
 
     showRecentThrow(args) {
@@ -2238,6 +2267,9 @@ export class Game {
             this.gamedatas.players[args.player_id].basketFull = args.basketFull;
         }
         this.gamedatas.tomatoDeckCount = args.tomatoDeckCount ?? this.gamedatas.tomatoDeckCount;
+        if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
+            this.gamedatas.publicDiscardCount = args.publicDiscardCount;
+        }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
@@ -2382,6 +2414,9 @@ export class Game {
             if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
                 this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
             }
+            if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
+                this.gamedatas.publicDiscardCount = args.publicDiscardCount;
+            }
             this.updateHandCount(args.player_id, args.handCount);
             this.clearSelection();
             this.afterPublicChange();
@@ -2393,6 +2428,9 @@ export class Game {
         discardedIds.forEach(cardId => this.forgetMovingTomatoKey(cardId));
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
+        if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
+            this.gamedatas.publicDiscardCount = args.publicDiscardCount;
         }
         this.updateHandCount(args.player_id, args.handCount);
         this.clearSelection();

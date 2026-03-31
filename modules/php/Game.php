@@ -587,6 +587,7 @@ class Game extends \Bga\GameFramework\Table
         return [
             'discarded' => $discarded,
             'remainingHand' => $this->getHandForPlayer($playerId),
+            'publicDiscardCount' => $this->getPublicDiscardCount(),
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),
         ];
     }
@@ -744,6 +745,7 @@ class Game extends \Bga\GameFramework\Table
                 'value' => (int) $refill['typeArg'],
             ],
             'tomatoDeckCount' => $this->getTomatoDeckCount(),
+            'publicDiscardCount' => $this->getPublicDiscardCount(),
             'recycledTomatoDiscard' => $refill['recycledTomatoDiscard'] ?? false,
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),
         ];

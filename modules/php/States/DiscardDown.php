@@ -50,6 +50,7 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'cardValues' => $discardValues,
+            'publicDiscardCount' => $result['publicDiscardCount'],
             'latestDiscardTomato' => $result['latestDiscardTomato'],
             'handCount' => count($result['remainingHand']),
         ]);
