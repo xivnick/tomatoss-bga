@@ -30,7 +30,7 @@ const TARGET_CARD_POSITIONS = [
 const RECENT_THROW_Y = 100;
 const RECENT_THROW_X_OFFSET = -150;
 const RECENT_THROW_X_STEP = 260;
-const THROW_CUTSCENE_MS = 2200;
+const THROW_CUTSCENE_MS = 1350;
 const THROW_RESOLVE_DELAY_MS = 180;
 const TOKEN_MOVE_MS = 380;
 const CARD_MOVE_MS = 560;
@@ -1339,6 +1339,10 @@ export class Game {
         this.flushDeferredTurnCleanup();
     }
 
+    shouldAnimateNotifications() {
+        return !document.hidden && document.hasFocus();
+    }
+
     isActionAnimationRunning() {
         return this.actionAnimationDepth > 0 || Boolean(this.pendingThrowResolution) || Boolean(this.recentThrow);
     }
@@ -1512,6 +1516,8 @@ export class Game {
 
     async animateThrowEntry(args, selectedIds) {
         await this.animateReserveTokenToSpace(Number(args.space));
+        this.stageView.renderPlacedTokens();
+        this.stageView.renderReserveTokens();
         await this.animateThrowCards(args, selectedIds);
         await this.animateQuickReveal(args);
     }
@@ -2145,6 +2151,29 @@ export class Game {
 
     async notif_turnAction(args) {
         const isCollect = Object.prototype.hasOwnProperty.call(args, 'refill');
+        if (!this.shouldAnimateNotifications()) {
+            this.pushTurnAction({
+                space: Number(args.space),
+                actionKind: isCollect ? 'collect' : (args.quickToss ? 'quick_toss' : 'normal_toss'),
+                cards: args.cards ?? [],
+                revealed: args.revealed ?? null,
+                targetId: args.targetId ?? null,
+                scoreGained: args.scoreGained ?? 0,
+            });
+            if (isCollect) {
+                this.applyCollectAction(args);
+                this.clearPendingAction();
+                this.afterPublicChange();
+            } else {
+                this.applyImmediateThrowHandChange(args);
+                this.applyThrowAction({ ...args, playedCardIds: this.selectedCardIds });
+                this.clearSelection();
+                this.clearPendingAction();
+                this.afterPublicChange();
+            }
+            return;
+        }
+
         let finishInPrivateUpdate = false;
         this.beginActionAnimation();
         this.pushTurnAction({
@@ -2159,13 +2188,13 @@ export class Game {
         try {
             if (isCollect) {
                 await this.animateReserveTokenToSpace(Number(args.space));
+                this.stageView.renderPlacedTokens();
+                this.stageView.renderReserveTokens();
                 const isLocalCollect = Number(args.player_id) === this.getLocalPlayerId();
                 if (isLocalCollect) {
                     finishInPrivateUpdate = true;
                     this.pendingCollectAnimation = args;
                     this.clearPendingAction();
-                    this.stageView.renderPlacedTokens();
-                    this.stageView.renderReserveTokens();
                     this.updateActionButtons();
                     return;
                 }
@@ -2187,8 +2216,6 @@ export class Game {
                 this.clearPendingAction();
                 this.updateActionButtons();
                 await throwAnimation;
-                this.stageView.renderPlacedTokens();
-                this.stageView.renderReserveTokens();
                 this.showRecentThrow(args);
             }
         } finally {
@@ -2208,6 +2235,14 @@ export class Game {
     }
 
     async notif_discardCard(args) {
+        if (!this.shouldAnimateNotifications()) {
+            this.gamedatas.latestDiscardTomato = args.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato;
+            this.updateHandCount(args.player_id, args.handCount);
+            this.clearSelection();
+            this.afterPublicChange();
+            return;
+        }
+
         const discardedIds = [...this.selectedCardIds];
         await this.animateDiscardMotion(args);
         discardedIds.forEach(cardId => this.forgetMovingTomatoKey(cardId));
@@ -2219,6 +2254,16 @@ export class Game {
 
     async notif_privateHandUpdate(args) {
         const isLocalPlayer = Number(args.player_id) === this.getLocalPlayerId();
+        if (!this.shouldAnimateNotifications()) {
+            if (Array.isArray(args.playerHand)) {
+                this.gamedatas.playerHand = args.playerHand;
+                this.updateHandCount(args.player_id, args.playerHand.length);
+            }
+            this.playerZonesView.renderHandArea(this.getLocalPlayerId());
+            this.updateActionButtons();
+            return;
+        }
+
         if (Array.isArray(args.playerHand)) {
             this.gamedatas.playerHand = args.playerHand;
             this.updateHandCount(args.player_id, args.playerHand.length);
