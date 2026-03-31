@@ -92,6 +92,55 @@ class Game extends \Bga\GameFramework\Table
     public function upgradeTableDb($from_version)
     {
         unset($from_version);
+
+        if (!$this->tableExists('card')) {
+            static::DbQuery(
+                "CREATE TABLE IF NOT EXISTS `card` ("
+                . "`card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
+                . "`card_type` VARCHAR(16) NOT NULL,"
+                . "`card_type_arg` INT NOT NULL,"
+                . "`card_location` VARCHAR(32) NOT NULL,"
+                . "`card_location_arg` INT NOT NULL DEFAULT 0,"
+                . "PRIMARY KEY (`card_id`),"
+                . "KEY `card_location` (`card_location`, `card_location_arg`)"
+                . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
+            );
+        }
+
+        $this->ensurePlayerColumn('player_basket_full', "ALTER TABLE `player` ADD `player_basket_full` TINYINT(1) NOT NULL DEFAULT 1");
+        $this->ensurePlayerColumn('player_start_order', "ALTER TABLE `player` ADD `player_start_order` TINYINT UNSIGNED NOT NULL DEFAULT 0");
+        $this->ensurePlayerColumn('player_captured_count', "ALTER TABLE `player` ADD `player_captured_count` SMALLINT UNSIGNED NOT NULL DEFAULT 0");
+
+        if (!$this->tableExists('turn_action')) {
+            static::DbQuery(
+                "CREATE TABLE IF NOT EXISTS `turn_action` ("
+                . "`turn_action_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
+                . "`turn_no` INT UNSIGNED NOT NULL,"
+                . "`player_id` INT UNSIGNED NOT NULL,"
+                . "`action_index` TINYINT UNSIGNED NOT NULL,"
+                . "`space` TINYINT UNSIGNED NOT NULL,"
+                . "`action_kind` VARCHAR(16) NOT NULL,"
+                . "`cards_json` VARCHAR(64) NOT NULL DEFAULT '[]',"
+                . "`quick_toss` TINYINT(1) NOT NULL DEFAULT 0,"
+                . "`target_id` TINYINT UNSIGNED DEFAULT NULL,"
+                . "`revealed_card` TINYINT UNSIGNED DEFAULT NULL,"
+                . "`score_gained` SMALLINT NOT NULL DEFAULT 0,"
+                . "PRIMARY KEY (`turn_action_id`),"
+                . "KEY `turn_no_player` (`turn_no`, `player_id`)"
+                . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
+            );
+            return;
+        }
+
+        if (!$this->columnExists('turn_action', 'target_id')) {
+            static::DbQuery("ALTER TABLE `turn_action` ADD `target_id` TINYINT UNSIGNED DEFAULT NULL AFTER `quick_toss`");
+        }
+        if (!$this->columnExists('turn_action', 'revealed_card')) {
+            static::DbQuery("ALTER TABLE `turn_action` ADD `revealed_card` TINYINT UNSIGNED DEFAULT NULL AFTER `target_id`");
+        }
+        if (!$this->columnExists('turn_action', 'score_gained')) {
+            static::DbQuery("ALTER TABLE `turn_action` ADD `score_gained` SMALLINT NOT NULL DEFAULT 0 AFTER `revealed_card`");
+        }
     }
 
     protected function getAllDatas(int $currentPlayerId): array
@@ -118,6 +167,7 @@ class Game extends \Bga\GameFramework\Table
             'handCountsByPlayer' => $this->getHandCountsByPlayer(),
             'currentTurnActions' => $this->getCurrentTurnActionLog(),
             'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
+            'availableQuickRevealValues' => $this->getAvailableQuickRevealValues(),
         ];
     }
 
@@ -241,7 +291,7 @@ class Game extends \Bga\GameFramework\Table
         $targetId = (int) $targetCard['targetId'];
 
         if ($quickToss) {
-            foreach (range(1, 7) as $nextCard) {
+            foreach ($this->getAvailableQuickRevealValues() as $nextCard) {
                 $checkCards = $values;
                 $checkCards[] = $nextCard;
                 if ($this->targetMatches($targetId, $checkCards)) {
@@ -991,5 +1041,36 @@ class Game extends \Bga\GameFramework\Table
         static::DbQuery(
             "UPDATE `player` SET `player_basket_full` = " . ($basketFull ? 1 : 0) . " WHERE `player_id` = $playerId"
         );
+    }
+
+    public function getAvailableQuickRevealValues(): array
+    {
+        $rows = array_values($this->getCollectionFromDb(
+            "SELECT DISTINCT `card_type_arg` AS `value` "
+            . "FROM `card` "
+            . "WHERE `card_type` = 'tomato' AND `card_location` IN ('tomato_deck', 'tomato_discard') "
+            . 'ORDER BY `card_type_arg` ASC'
+        ));
+
+        return array_map(static fn(array $row): int => (int) $row['value'], $rows);
+    }
+
+    private function tableExists(string $tableName): bool
+    {
+        return $this->getObjectFromDb("SHOW TABLES LIKE '" . addslashes($tableName) . "'") !== null;
+    }
+
+    private function columnExists(string $tableName, string $columnName): bool
+    {
+        return $this->getObjectFromDb(
+            "SHOW COLUMNS FROM `" . addslashes($tableName) . "` LIKE '" . addslashes($columnName) . "'"
+        ) !== null;
+    }
+
+    private function ensurePlayerColumn(string $columnName, string $alterSql): void
+    {
+        if (!$this->columnExists('player', $columnName)) {
+            static::DbQuery($alterSql);
+        }
     }
 }
