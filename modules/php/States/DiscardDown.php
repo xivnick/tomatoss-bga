@@ -67,6 +67,7 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
     {
         $hand = $this->game->getHandForPlayer($playerId);
         $needed = $this->game->getDiscardCountNeeded($playerId);
+        shuffle($hand);
         $cardIds = array_map(static fn(array $card): int => (int) $card['id'], array_slice($hand, 0, $needed));
 
         return $this->actDiscardCards((string) json_encode($cardIds), $playerId);
