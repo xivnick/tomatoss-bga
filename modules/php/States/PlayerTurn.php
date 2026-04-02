@@ -147,10 +147,15 @@ class PlayerTurn extends GameState
             return $this->actTossToTarget($normalToss['slot'], json_encode($normalToss['cardIds']), false, $playerId);
         }
 
+        $collectableSlots = [];
         foreach ($this->game->getBoardTomatoSlots() as $slot => $card) {
             if ($card !== null) {
-                return $this->actCollectTomato((int) $slot, $playerId);
+                $collectableSlots[] = (int) $slot;
             }
+        }
+        if ($collectableSlots !== []) {
+            shuffle($collectableSlots);
+            return $this->actCollectTomato($collectableSlots[0], $playerId);
         }
 
         throw new UserException(clienttranslate('No valid zombie action is available'));
