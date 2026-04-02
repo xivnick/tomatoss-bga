@@ -30,11 +30,18 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
             $this->bga->playerStats->inc('pattern111', 1, $activePlayerId);
         }
 
+        $message = '';
+        if ($result['pattern'] === '3' && $result['bonusCard'] !== null) {
+            $message = clienttranslate('${player_name} resolves 3 in one slot and draws ${bonus_value}');
+        } elseif ($result['pattern'] === '21' && $result['bonusCard'] !== null) {
+            $message = clienttranslate('${player_name} empties the basket and draws ${bonus_value}');
+        } elseif ($result['pattern'] === '21' && $result['basketFull']) {
+            $message = clienttranslate('${player_name} fills the basket');
+        }
+
         $this->bga->notify->all(
             'resolveBonus',
-            $result['bonusCard'] !== null
-                ? clienttranslate('${player_name} resolves bonus pattern ${pattern} and draws ${bonus_value}')
-                : clienttranslate('${player_name} resolves bonus pattern ${pattern}'),
+            $message,
             [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
