@@ -127,13 +127,13 @@
     pointer-events: none;
 }
 
-#tomato-slot-0 { left: calc(485px * var(--stage-scale)); top: calc(1996px * var(--stage-scale)); }
-#tomato-slot-1 { left: calc(1226px * var(--stage-scale)); top: calc(1996px * var(--stage-scale)); }
-#tomato-slot-2 { left: calc(1967px * var(--stage-scale)); top: calc(1996px * var(--stage-scale)); }
+#tomato-slot-0 { left: calc(485px * var(--stage-scale)); top: calc(2026px * var(--stage-scale)); }
+#tomato-slot-1 { left: calc(1226px * var(--stage-scale)); top: calc(2026px * var(--stage-scale)); }
+#tomato-slot-2 { left: calc(1967px * var(--stage-scale)); top: calc(2026px * var(--stage-scale)); }
 
 #tomato-deck-slot {
     left: calc(2708px * var(--stage-scale));
-    top: calc(1996px * var(--stage-scale));
+    top: calc(2026px * var(--stage-scale));
 }
 
 .recent-throw {
@@ -232,7 +232,7 @@
     background-image: url('img/festival_board.png');
     background-size: 100% 100%;
     border: 2px solid #50332b;
-    border-radius: 12px;
+    border-radius: 18px;
     overflow: visible;
     position: relative;
     width: 100%;
@@ -322,7 +322,6 @@
 }
 
 .reserve-token {
-    border: 2px solid rgba(110, 44, 20, 0.35);
     border-radius: 999px;
     height: calc(300px * var(--stage-scale));
     position: absolute;
@@ -330,7 +329,6 @@
 }
 
 .moving-token {
-    border: 2px solid rgba(110, 44, 20, 0.35);
     border-radius: 999px;
     height: 100%;
     width: 100%;

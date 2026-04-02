@@ -714,7 +714,7 @@ class FestivalStageView {
             }
             node.className = `placed-token ${kind}`;
             node.style.left = `${slot.left}%`;
-            node.style.top = `calc(${slot.top}% - ${stackIndex * 18}px)`;
+            node.style.top = `calc(${slot.top}% - ${stackIndex * 6}px)`;
         });
 
         [...tokenLayer.children].forEach(child => {
