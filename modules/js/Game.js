@@ -38,6 +38,8 @@ const FLIP_MS = 520;
 const REFILL_PAUSE_MS = 180;
 const THROW_RESULT_PAUSE_MS = 120;
 const TURN_CLEANUP_MS = 320;
+const TOKEN_DESIGN_SIZE = 300;
+const TOKEN_STACK_RISE_PX = 6;
 const TOKEN_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
 const FLIP_IN_EASING = 'cubic-bezier(0.55, 0.08, 0.68, 0.53)';
@@ -486,10 +488,10 @@ class MotionLayer {
             return null;
         }
 
-        const width = 300 * this.sprites.getBoardScale();
-        const height = 300 * this.sprites.getBoardScale();
+        const width = TOKEN_DESIGN_SIZE * this.sprites.getBoardScale();
+        const height = TOKEN_DESIGN_SIZE * this.sprites.getBoardScale();
         const left = boardRect.left + (slot.left / 100) * boardRect.width - (width / 2);
-        const top = boardRect.top + (slot.top / 100) * boardRect.height - (height / 2) - (stackIndex * 18);
+        const top = boardRect.top + (slot.top / 100) * boardRect.height - (height / 2) - (stackIndex * TOKEN_STACK_RISE_PX);
         return { left, top, width, height };
     }
 
@@ -714,7 +716,7 @@ class FestivalStageView {
             }
             node.className = `placed-token ${kind}`;
             node.style.left = `${slot.left}%`;
-            node.style.top = `calc(${slot.top}% - ${stackIndex * 6}px)`;
+            node.style.top = `calc(${slot.top}% - ${stackIndex * TOKEN_STACK_RISE_PX}px)`;
         });
 
         [...tokenLayer.children].forEach(child => {
