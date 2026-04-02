@@ -46,10 +46,10 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
         $result = $this->game->discardCardsByIds($activePlayerId, $cardIds);
         $discardValues = array_map(static fn(array $card): int => (int) $card['value'], $result['discarded']);
 
-        $this->bga->notify->all('discardCard', clienttranslate('${player_name} discards ${count} card(s)'), [
+        $this->bga->notify->all('discardCard', clienttranslate('${player_name} discards ${cards_text}'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
-            'count' => count($discardValues),
+            'cards_text' => implode(', ', array_map(static fn(int $value): string => (string) $value, $discardValues)),
             'cardValues' => $discardValues,
             'publicDiscardCount' => $result['publicDiscardCount'],
             'latestDiscardTomato' => $result['latestDiscardTomato'],

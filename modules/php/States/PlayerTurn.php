@@ -42,9 +42,10 @@ class PlayerTurn extends GameState
         $this->game->recordTurnAction($activePlayerId, $slot, 'collect');
         $this->bga->playerStats->inc('tomatoCollected', 1, $activePlayerId);
 
-        $this->bga->notify->all('turnAction', clienttranslate('${player_name} picks up the tomato card from slot ${slot_no}'), [
+        $this->bga->notify->all('turnAction', clienttranslate('${player_name} picks up ${card_value} from tomato slot ${slot_no}'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
+            'card_value' => $result['collected']['value'],
             'slot_no' => $slot + 1,
             'space' => $slot,
             'targetIndex' => null,
@@ -101,18 +102,21 @@ class PlayerTurn extends GameState
             $result['success']
                 ? (
                     $quickToss
-                        ? clienttranslate('${player_name} lands a quick toss on target ${slot_no}')
-                        : clienttranslate('${player_name} lands a toss on target ${slot_no}')
+                        ? clienttranslate('${player_name} lands a quick toss on target ${slot_no} with ${cards_text} + ${revealed_value} for ${score} point(s)')
+                        : clienttranslate('${player_name} lands a toss on target ${slot_no} with ${cards_text} for ${score} point(s)')
                 )
                 : (
                     $quickToss
-                        ? clienttranslate('${player_name} misses a quick toss on target ${slot_no}')
-                        : clienttranslate('${player_name} misses target ${slot_no}')
+                        ? clienttranslate('${player_name} misses target ${slot_no} with ${cards_text} + ${revealed_value}')
+                        : clienttranslate('${player_name} misses target ${slot_no} with ${cards_text}')
                 ),
             [
                 'player_id' => $activePlayerId,
                 'player_name' => $this->game->getPlayerNameById($activePlayerId),
                 'slot_no' => $slot - 2,
+                'cards_text' => $this->formatCardValues($cardValues),
+                'revealed_value' => $result['revealed']['value'] ?? '-',
+                'score' => $result['scoreGained'],
                 'space' => $slot,
                 'targetIndex' => $slot - 3,
                 'cards' => $cardValues,
@@ -198,5 +202,10 @@ class PlayerTurn extends GameState
         }
 
         return null;
+    }
+
+    private function formatCardValues(array $values): string
+    {
+        return implode(' + ', array_map(static fn(int $value): string => (string) $value, $values));
     }
 }

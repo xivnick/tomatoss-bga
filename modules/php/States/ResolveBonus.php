@@ -33,12 +33,13 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
         $this->bga->notify->all(
             'resolveBonus',
             $result['bonusCard'] !== null
-                ? clienttranslate('${player_name} resolves the turn bonus and draws a bonus card')
-                : clienttranslate('${player_name} resolves the turn bonus'),
+                ? clienttranslate('${player_name} resolves bonus pattern ${pattern} and draws ${bonus_value}')
+                : clienttranslate('${player_name} resolves bonus pattern ${pattern}'),
             [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'pattern' => $result['pattern'],
+            'bonus_value' => $result['bonusCard']['value'] ?? '-',
             'basketFull' => $result['basketFull'],
             'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
