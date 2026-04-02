@@ -42,6 +42,10 @@ const TOKEN_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
 const FLIP_IN_EASING = 'cubic-bezier(0.55, 0.08, 0.68, 0.53)';
 const FLIP_OUT_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+const PREF_ANIMATION_SPEED = 100;
+const ANIMATION_FULL = 1;
+const ANIMATION_REDUCED = 2;
+const ANIMATION_NONE = 3;
 
 class SpriteStyles {
     getLayoutElement() {
@@ -313,6 +317,11 @@ class MotionLayer {
             return Promise.resolve();
         }
 
+        if (delay <= 0) {
+            node.className = `moving-token ${nextFace}`;
+            return Promise.resolve();
+        }
+
         return new Promise(resolve => {
             setTimeout(() => {
                 node.className = `moving-token ${nextFace}`;
@@ -333,13 +342,13 @@ class MotionLayer {
             : this.createTomatoBackNode(discardRect);
         const wrapper = this.createWrapper(startNode, discardRect, 'motion-card-wrapper');
         const movePromise = this.animateRect(wrapper, discardRect, deckRect, {
-            duration: CARD_MOVE_MS,
+            duration: this.game.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
         const flipPromise = this.animateFlip(
             startNode,
             () => this.createTomatoBackNode(deckRect),
-            FLIP_MS
+            this.game.getAnimationDuration(FLIP_MS)
         );
         await Promise.all([movePromise, flipPromise]);
     }
@@ -389,6 +398,11 @@ class MotionLayer {
             return;
         }
 
+        if (duration <= 0) {
+            wrapper.remove();
+            return;
+        }
+
         const dx = toRect.left - fromRect.left;
         const dy = toRect.top - fromRect.top;
         const sx = toRect.width / fromRect.width;
@@ -412,6 +426,15 @@ class MotionLayer {
 
     animateFlip(node, makeFrontNode, duration = FLIP_MS) {
         if (!node) {
+            return Promise.resolve();
+        }
+
+        if (duration <= 0) {
+            const frontNode = makeFrontNode();
+            frontNode.style.width = '100%';
+            frontNode.style.height = '100%';
+            frontNode.style.display = 'block';
+            node.replaceWith(frontNode);
             return Promise.resolve();
         }
 
@@ -1368,9 +1391,48 @@ export class Game {
         this.bga.statusBar.setTitle(text);
     }
 
+    getAnimationPreferenceValue() {
+        const value = this.bga.gameui?.getGameUserPreference?.(PREF_ANIMATION_SPEED)
+            ?? this.bga.getGameUserPreference?.(PREF_ANIMATION_SPEED)
+            ?? ANIMATION_FULL;
+        const parsed = Number(value);
+        if ([ANIMATION_FULL, ANIMATION_REDUCED, ANIMATION_NONE].includes(parsed)) {
+            return parsed;
+        }
+        return ANIMATION_FULL;
+    }
+
+    getAnimationSpeedFactor() {
+        if (this.bga.gameui?.bgaAnimationsActive && !this.bga.gameui.bgaAnimationsActive()) {
+            return 0;
+        }
+
+        switch (this.getAnimationPreferenceValue()) {
+            case ANIMATION_NONE:
+                return 0;
+            case ANIMATION_REDUCED:
+                return 0.6;
+            case ANIMATION_FULL:
+            default:
+                return 1;
+        }
+    }
+
+    getAnimationDuration(baseMs) {
+        const factor = this.getAnimationSpeedFactor();
+        if (factor <= 0) {
+            return 0;
+        }
+        return Math.max(1, Math.round(baseMs * factor));
+    }
+
     wait(ms) {
+        const duration = this.getAnimationDuration(ms);
+        if (duration <= 0) {
+            return Promise.resolve();
+        }
         return new Promise(resolve => {
-            setTimeout(resolve, ms);
+            setTimeout(resolve, duration);
         });
     }
 
@@ -1396,7 +1458,9 @@ export class Game {
     }
 
     shouldAnimateNotifications() {
-        return !document.hidden && document.hasFocus();
+        return !document.hidden
+            && document.hasFocus()
+            && this.getAnimationSpeedFactor() > 0;
     }
 
     isActionAnimationRunning() {
@@ -1435,14 +1499,18 @@ export class Game {
         const tokenNode = this.motionLayer.createReserveTokenNode();
         const wrapper = this.motionLayer.createWrapper(tokenNode, fromRect, 'motion-token');
         const movePromise = this.motionLayer.animateRect(wrapper, fromRect, toRect, {
-            duration: TOKEN_MOVE_MS,
+            duration: this.getAnimationDuration(TOKEN_MOVE_MS),
             easing: TOKEN_EASING,
         });
         if (Number(space) < 3) {
             return movePromise;
         }
 
-        const facePromise = this.motionLayer.animateTokenFaceChange(tokenNode, 'splat');
+        const facePromise = this.motionLayer.animateTokenFaceChange(
+            tokenNode,
+            'splat',
+            this.getAnimationDuration(TOKEN_MOVE_MS / 2)
+        );
         return Promise.all([movePromise, facePromise]);
     }
 
@@ -1463,7 +1531,7 @@ export class Game {
         const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
         this.hideElementDuringAnimation(sourceElement);
         return this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
     }
@@ -1481,7 +1549,7 @@ export class Game {
 
         this.rememberMovingTomatoKey(collectedCard.id);
         await this.motionLayer.moveNodeToHost(sourceNode, destinationHost, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
     }
@@ -1507,13 +1575,13 @@ export class Game {
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
         const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
         const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
             () => this.motionLayer.createTomatoFaceNode(args.refill.value, sourceRect),
-            FLIP_MS
+            this.getAnimationDuration(FLIP_MS)
         );
 
         return recyclePromise.then(() => Promise.all([movePromise, flipPromise]));
@@ -1534,7 +1602,7 @@ export class Game {
             }
 
             const movePromise = this.motionLayer.moveNodeToHost(sourceNode, destinationHost, {
-                duration: CARD_MOVE_MS,
+                duration: this.getAnimationDuration(CARD_MOVE_MS),
                 easing: CARD_EASING,
             });
 
@@ -1548,7 +1616,7 @@ export class Game {
                 () => this.motionLayer.createTomatoFaceNode(value, {
                     width: sourceNode.getBoundingClientRect().width || (155 * this.sprites.getCardScale('tomato')),
                 }),
-                FLIP_MS
+                this.getAnimationDuration(FLIP_MS)
             );
             animations.push(Promise.all([movePromise, flipPromise]));
         });
@@ -1580,13 +1648,13 @@ export class Game {
 
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
         const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
             () => this.motionLayer.createTomatoFaceNode(args.revealed.value, sourceRect),
-            FLIP_MS
+            this.getAnimationDuration(FLIP_MS)
         );
 
         return Promise.all([movePromise, flipPromise]);
@@ -1625,7 +1693,7 @@ export class Game {
 
                 this.rememberMovingTomatoKey(cardId);
                 await this.motionLayer.moveNodeToHost(sourceNode, discardHost, {
-                    duration: CARD_MOVE_MS,
+                    duration: this.getAnimationDuration(CARD_MOVE_MS),
                     easing: CARD_EASING,
                 });
             }
@@ -1641,7 +1709,7 @@ export class Game {
             const node = this.motionLayer.createTomatoBackNode(sourceRect);
             const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
             return this.motionLayer.animateRect(wrapper, sourceRect, discardRect, {
-                duration: CARD_MOVE_MS,
+                duration: this.getAnimationDuration(CARD_MOVE_MS),
                 easing: CARD_EASING,
             });
         });
@@ -1667,7 +1735,7 @@ export class Game {
             }
 
             return this.motionLayer.moveNodeToHost(sourceNode, discardHost, {
-                duration: CARD_MOVE_MS,
+                duration: this.getAnimationDuration(CARD_MOVE_MS),
                 easing: CARD_EASING,
             });
         }));
@@ -1688,7 +1756,7 @@ export class Game {
 
         this.rememberMovingMissionKey(args.targetId);
         await this.motionLayer.moveNodeToHost(sourceElement, destinationHost, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
     }
@@ -1708,13 +1776,13 @@ export class Game {
         const missionNode = this.registry.getMissionNode(args.replacementTarget, this.sprites.getCardScale('mission'));
         this.rememberMovingMissionKey(args.replacementTarget.id);
         const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
             () => missionNode,
-            FLIP_MS
+            this.getAnimationDuration(FLIP_MS)
         );
 
         await Promise.all([movePromise, flipPromise]);
@@ -1740,13 +1808,13 @@ export class Game {
         const tomatoNode = this.registry.getTomatoNode(args.bonusCard, this.sprites.getCardScale('tomato'));
         this.rememberMovingTomatoKey(args.bonusCard.id);
         const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
-            duration: CARD_MOVE_MS,
+            duration: this.getAnimationDuration(CARD_MOVE_MS),
             easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
             () => tomatoNode,
-            FLIP_MS
+            this.getAnimationDuration(FLIP_MS)
         );
 
         await Promise.all([movePromise, flipPromise]);
@@ -1775,7 +1843,7 @@ export class Game {
             const wrapper = this.motionLayer.createWrapper(clone, fromRect, 'motion-token');
             token.style.visibility = 'hidden';
             return this.motionLayer.animateRect(wrapper, fromRect, toRect, {
-                duration: TURN_CLEANUP_MS,
+                duration: this.getAnimationDuration(TURN_CLEANUP_MS),
                 easing: TOKEN_EASING,
             }).finally(() => {
                 token.style.visibility = '';
@@ -2236,13 +2304,13 @@ export class Game {
                     } finally {
                         this.endActionAnimation();
                     }
-                }, THROW_RESOLVE_DELAY_MS);
+                }, this.getAnimationDuration(THROW_RESOLVE_DELAY_MS));
                 return;
             }
             this.recentThrow = null;
             this.stageView.renderRecentThrow();
             this.endActionAnimation();
-        }, THROW_CUTSCENE_MS);
+        }, this.getAnimationDuration(THROW_CUTSCENE_MS));
     }
 
     prepareRecentThrow(args) {

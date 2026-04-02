@@ -1,1 +1,18 @@
-{}
+{
+  "100": {
+    "name": "Animation speed",
+    "needReload": false,
+    "values": {
+      "1": {
+        "name": "Full"
+      },
+      "2": {
+        "name": "Reduced"
+      },
+      "3": {
+        "name": "None"
+      }
+    },
+    "default": 1
+  }
+}
