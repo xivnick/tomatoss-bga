@@ -2157,25 +2157,25 @@ export class Game {
             case 12:
                 return 8 <= sum && sum <= 9 && !sorted.includes(3);
             case 13:
-            case 14:
-                return count === 1 && [2, 4, 6].includes(sorted[0]);
-            case 15:
-            case 16:
-                return 6 <= sum && sum <= 8;
-            case 17:
-                return 6 <= sum && sum <= 8 && !sorted.includes(3);
-            case 18:
-                return count === 2 && sum === 10;
-            case 19:
                 return count === 1 && [6, 7].includes(sorted[0]);
-            case 20:
-            case 21:
+            case 14:
+            case 15:
                 return count === 2 && Math.abs(sorted[0] - sorted[1]) === 1;
-            case 22:
-            case 23:
+            case 16:
+            case 17:
                 return 11 <= sum && sum <= 13;
-            case 24:
+            case 18:
                 return 11 <= sum && sum <= 13 && !sorted.includes(3);
+            case 19:
+            case 20:
+                return count === 1 && [2, 4, 6].includes(sorted[0]);
+            case 21:
+            case 22:
+                return 6 <= sum && sum <= 8;
+            case 23:
+                return 6 <= sum && sum <= 8 && !sorted.includes(3);
+            case 24:
+                return count === 2 && sum === 10;
             case 25:
                 return count === 1 && [4, 5].includes(sorted[0]);
             case 26:
