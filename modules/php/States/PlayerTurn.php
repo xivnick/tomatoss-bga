@@ -142,6 +142,56 @@ class PlayerTurn extends GameState
 
     public function zombie(int $playerId)
     {
-        return $this->actCollectTomato(0, $playerId);
+        $normalToss = $this->findZombieNormalToss($playerId);
+        if ($normalToss !== null) {
+            return $this->actTossToTarget($normalToss['slot'], json_encode($normalToss['cardIds']), false, $playerId);
+        }
+
+        foreach ($this->game->getBoardTomatoSlots() as $slot => $card) {
+            if ($card !== null) {
+                return $this->actCollectTomato((int) $slot, $playerId);
+            }
+        }
+
+        throw new UserException(clienttranslate('No valid zombie action is available'));
+    }
+
+    private function findZombieNormalToss(int $playerId): ?array
+    {
+        $hand = $this->game->getHandForPlayer($playerId);
+        if ($hand === []) {
+            return null;
+        }
+
+        $boardTargets = $this->game->getBoardTargetSlots();
+        $handCount = count($hand);
+        $maxMask = 1 << $handCount;
+
+        foreach ($boardTargets as $targetSlot => $targetCard) {
+            if ($targetCard === null) {
+                continue;
+            }
+
+            for ($mask = 1; $mask < $maxMask; $mask++) {
+                $cardIds = [];
+                for ($index = 0; $index < $handCount; $index++) {
+                    if ($mask & (1 << $index)) {
+                        $cardIds[] = (int) $hand[$index]['id'];
+                    }
+                }
+
+                try {
+                    $this->game->assertCanTossToTarget($playerId, $targetSlot + 3, $cardIds, false);
+                    return [
+                        'slot' => $targetSlot + 3,
+                        'cardIds' => $cardIds,
+                    ];
+                } catch (UserException) {
+                    // Try the next combination.
+                }
+            }
+        }
+
+        return null;
     }
 }
