@@ -32,9 +32,9 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
 
         $message = '';
         if ($result['pattern'] === '3' && $result['bonusCard'] !== null) {
-            $message = clienttranslate('${player_name} resolves 3 in one slot and draws ${bonus_value}');
+            $message = clienttranslate('${player_name} resolves 3 in one slot and draws a bonus card');
         } elseif ($result['pattern'] === '21' && $result['bonusCard'] !== null) {
-            $message = clienttranslate('${player_name} empties the basket and draws ${bonus_value}');
+            $message = clienttranslate('${player_name} empties the basket and draws a bonus card');
         } elseif ($result['pattern'] === '21' && $result['basketFull']) {
             $message = clienttranslate('${player_name} fills the basket');
         }
@@ -46,7 +46,6 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'pattern' => $result['pattern'],
-            'bonus_value' => $result['bonusCard']['value'] ?? '-',
             'basketFull' => $result['basketFull'],
             'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
