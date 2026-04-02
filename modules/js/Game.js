@@ -1896,7 +1896,7 @@ export class Game {
 
     canInteract(action) {
         if (!this.isCurrentPlayerActive) {
-            this.bga.dialogs.showMessage(_('This is not your turn'), 'error');
+            this.bga.dialogs.showMoveUnauthorized();
             return false;
         }
         return this.bga.actions.checkAction(action, false);
