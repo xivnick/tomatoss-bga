@@ -23,7 +23,7 @@ class EndScore extends \Bga\GameFramework\States\GameState
     {
         $result = $this->game->finalizeScores();
 
-        $this->bga->notify->all('gameEndSummary', clienttranslate('Game end'), [
+        $this->bga->notify->all('gameEndSummary', clienttranslate('The festival ends'), [
             'winnerIds' => $result['winnerIds'],
         ]);
 

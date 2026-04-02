@@ -42,7 +42,7 @@ class PlayerTurn extends GameState
         $this->game->recordTurnAction($activePlayerId, $slot, 'collect');
         $this->bga->playerStats->inc('tomatoCollected', 1, $activePlayerId);
 
-        $this->bga->notify->all('turnAction', clienttranslate('${player_name} collects from tomato slot ${slot_no}'), [
+        $this->bga->notify->all('turnAction', clienttranslate('${player_name} picks up the tomato card from slot ${slot_no}'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
             'slot_no' => $slot + 1,
@@ -101,13 +101,13 @@ class PlayerTurn extends GameState
             $result['success']
                 ? (
                     $quickToss
-                        ? clienttranslate('${player_name} succeeds with a quick toss on target slot ${slot_no}')
-                        : clienttranslate('${player_name} succeeds on target slot ${slot_no}')
+                        ? clienttranslate('${player_name} lands a quick toss on target ${slot_no}')
+                        : clienttranslate('${player_name} lands a toss on target ${slot_no}')
                 )
                 : (
                     $quickToss
-                        ? clienttranslate('${player_name} fails a quick toss on target slot ${slot_no}')
-                        : clienttranslate('${player_name} fails on target slot ${slot_no}')
+                        ? clienttranslate('${player_name} misses a quick toss on target ${slot_no}')
+                        : clienttranslate('${player_name} misses target ${slot_no}')
                 ),
             [
                 'player_id' => $activePlayerId,
