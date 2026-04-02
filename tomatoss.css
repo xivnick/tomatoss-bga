@@ -232,7 +232,7 @@
     background-image: url('img/festival_board.png');
     background-size: 100% 100%;
     border: 2px solid #50332b;
-    border-radius: 18px;
+    border-radius: 12px;
     overflow: visible;
     position: relative;
     width: 100%;
@@ -461,6 +461,7 @@
 .tomatoss-player-board {
     background-image: url('img/player_board.png');
     background-size: 100% 100%;
+    border-radius: 18px;
     box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.4);
     flex: 0 0 auto;
     height: var(--player-board-size);
