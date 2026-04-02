@@ -1,7 +1,7 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * tomatoss implementation : © <Your name here> <Your email address here>
+ * tomatoss implementation : © xivnick
  * -----
  */
 

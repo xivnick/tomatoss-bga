@@ -2,7 +2,7 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * tomatoss implementation : © <Your name here> <Your email address here>
+ * tomatoss implementation : © xivnick
  * -----
  */
 declare(strict_types=1);
@@ -94,6 +94,7 @@ class Game extends \Bga\GameFramework\Table
         unset($from_version);
 
         if (!$this->tableExists('card')) {
+            // NOI18N
             static::DbQuery(
                 "CREATE TABLE IF NOT EXISTS `card` ("
                 . "`card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -112,6 +113,7 @@ class Game extends \Bga\GameFramework\Table
         $this->ensurePlayerColumn('player_captured_count', "ALTER TABLE `player` ADD `player_captured_count` SMALLINT UNSIGNED NOT NULL DEFAULT 0");
 
         if (!$this->tableExists('turn_action')) {
+            // NOI18N
             static::DbQuery(
                 "CREATE TABLE IF NOT EXISTS `turn_action` ("
                 . "`turn_action_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -147,6 +149,7 @@ class Game extends \Bga\GameFramework\Table
     {
         return [
             'viewerPlayerId' => $currentPlayerId,
+            // NOI18N
             'players' => $this->getCollectionFromDb(
                 'SELECT '
                 . '`player_id` AS `id`, '
@@ -180,6 +183,7 @@ class Game extends \Bga\GameFramework\Table
         $startOrder = 0;
 
         foreach ($players as $playerId => $player) {
+            // NOI18N
             $queryValues[] = vsprintf("(%s, '%s', '%s', %s)", [
                 $playerId,
                 array_shift($default_colors),
@@ -356,6 +360,7 @@ class Game extends \Bga\GameFramework\Table
         $actionIndex = $this->getActionIndex() + 1;
         $actionKindSql = addslashes($actionKind);
 
+        // NOI18N
         static::DbQuery(
             "INSERT INTO `turn_action` "
             . "(`turn_no`, `player_id`, `action_index`, `space`, `action_kind`, `cards_json`, `quick_toss`, `target_id`, `revealed_card`, `score_gained`) VALUES "
@@ -480,6 +485,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function getCurrentTurnActionLog(): array
     {
+        // NOI18N
         return array_values($this->getCollectionFromDb(
             'SELECT '
             . '`turn_action_id` AS `id`, '
@@ -500,6 +506,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function getHandCountsByPlayer(): array
     {
+        // NOI18N
         $rows = array_values($this->getCollectionFromDb(
             "SELECT `card_location_arg` AS `playerId`, COUNT(*) AS `handCount` "
             . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' "
@@ -561,6 +568,7 @@ class Game extends \Bga\GameFramework\Table
     {
         $this->assertCanDiscard($playerId, $cardIds);
         $uniqueCardIds = array_values(array_unique(array_map('intval', $cardIds)));
+        // NOI18N
         $cards = array_values($this->getCollectionFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
             . "FROM `card` "
@@ -594,6 +602,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function discardCardByValue(int $playerId, int $cardValue): array
     {
+        // NOI18N
         $card = $this->getObjectFromDb(
             "SELECT `card_id` AS `id` "
             . "FROM `card` "
@@ -782,6 +791,7 @@ class Game extends \Bga\GameFramework\Table
     {
         $values = [];
         foreach (array_values($typeArgs) as $index => $typeArg) {
+            // NOI18N
             $values[] = sprintf(
                 "(NULL, '%s', %d, '%s', %d)",
                 addslashes($cardType),
@@ -826,6 +836,7 @@ class Game extends \Bga\GameFramework\Table
             $this->recycleTomatoDiscardIntoDeckIfNeeded();
         }
 
+        // NOI18N
         $card = $this->getObjectFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `typeArg` "
             . "FROM `card` "
@@ -1051,6 +1062,7 @@ class Game extends \Bga\GameFramework\Table
 
     private function columnExists(string $tableName, string $columnName): bool
     {
+        // NOI18N
         return $this->getObjectFromDb(
             "SHOW COLUMNS FROM `" . addslashes($tableName) . "` LIKE '" . addslashes($columnName) . "'"
         ) !== null;
