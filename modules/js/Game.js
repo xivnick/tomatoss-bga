@@ -1865,7 +1865,7 @@ export class Game {
     renderOverallPlayerBoards() {
         Object.values(this.gamedatas.players ?? {}).forEach(player => {
             const playerId = Number(player.id);
-            const panel = document.getElementById(`overall_player_board_${playerId}`);
+            const panel = this.bga.playerPanels.getElement(playerId);
             if (!panel) {
                 return;
             }

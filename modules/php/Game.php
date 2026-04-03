@@ -153,7 +153,6 @@ class Game extends \Bga\GameFramework\Table
             'players' => $this->getCollectionFromDb(
                 'SELECT ' // NOI18N
                 . '`player_id` AS `id`, ' // NOI18N
-                . '`player_score` AS `score`, ' // NOI18N
                 . '`player_basket_full` AS `basketFull`, ' // NOI18N
                 . '`player_captured_count` AS `capturedCount` ' // NOI18N
                 . 'FROM `player`' // NOI18N
@@ -619,9 +618,15 @@ class Game extends \Bga\GameFramework\Table
 
     public function finalizeScores(): array
     {
-        $players = array_values($this->getCollectionFromDb(
-            'SELECT `player_id` AS `id`, `player_score` AS `score` FROM `player`'
-        ));
+        $scoreByPlayer = $this->bga->playerScore->getAll();
+        $players = array_map(
+            static fn (int $playerId, int $score): array => [
+                'id' => $playerId,
+                'score' => $score,
+            ],
+            array_keys($scoreByPlayer),
+            array_values($scoreByPlayer)
+        );
 
         $bestScore = null;
         $bestHandSum = null;
