@@ -16,14 +16,14 @@
     "default": 1
   },
   "101": {
-    "name": "Auto Toss on repeated click",
+    "name": "When both tosses are possible",
     "needReload": false,
     "values": {
       "1": {
-        "name": "On"
+        "name": "Use Toss"
       },
       "2": {
-        "name": "Off"
+        "name": "Choose manually"
       }
     },
     "default": 1
