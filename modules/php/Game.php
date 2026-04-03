@@ -209,6 +209,14 @@ class Game extends \Bga\GameFramework\Table
         $this->setGameStateInitialValue(self::G_END_AFTER_TURN, 0);
         $this->setGameStateInitialValue(self::G_START_PLAYER_ID, $firstPlayerId);
 
+        $this->bga->tableStats->init([
+            'totalNormalTosses',
+            'totalQuickTosses',
+            'totalFailedTosses',
+            'totalBonusCardsDrawn',
+            'timesTomatoDiscardRecycled',
+        ], 0);
+
         $this->bga->playerStats->init([
             'tomatoCollected',
             'normalTosses',
@@ -217,6 +225,13 @@ class Game extends \Bga\GameFramework\Table
             'pattern111',
             'pattern21',
             'pattern3',
+            'pointsFromNormalToss',
+            'pointsFromQuickToss',
+            'failedNormalTosses',
+            'failedQuickTosses',
+            'bonusCardsDrawn',
+            'targetsCaptured',
+            'tomatoesDiscarded',
         ], 0);
 
         $this->seedTomatoDeck();
@@ -882,6 +897,7 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $this->tomatoDiscardRecycledOnLastDraw = true;
+        $this->bga->tableStats->inc('timesTomatoDiscardRecycled', 1);
 
         shuffle($discardCards);
         foreach ($discardCards as $index => $card) {

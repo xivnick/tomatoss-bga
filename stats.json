@@ -1,39 +1,100 @@
 {
-    "table": [],
+    "table": {
+        "totalNormalTosses": {
+            "id": 10,
+            "name": "Total normal tosses",
+            "type": "int"
+        },
+        "totalQuickTosses": {
+            "id": 11,
+            "name": "Total quick tosses",
+            "type": "int"
+        },
+        "totalFailedTosses": {
+            "id": 12,
+            "name": "Total failed tosses",
+            "type": "int"
+        },
+        "totalBonusCardsDrawn": {
+            "id": 13,
+            "name": "Total bonus cards drawn",
+            "type": "int"
+        },
+        "timesTomatoDiscardRecycled": {
+            "id": 14,
+            "name": "Times the tomato discard was recycled",
+            "type": "int"
+        }
+    },
     "player": {
         "tomatoCollected": {
-            "id": 10,
+            "id": 20,
             "name": "Tomato cards collected",
             "type": "int"
         },
         "normalTosses": {
-            "id": 11,
+            "id": 21,
             "name": "Normal tosses",
             "type": "int"
         },
         "quickTossAttempts": {
-            "id": 12,
+            "id": 22,
             "name": "Quick toss attempts",
             "type": "int"
         },
         "quickTossSuccesses": {
-            "id": 13,
+            "id": 23,
             "name": "Successful quick tosses",
             "type": "int"
         },
         "pattern111": {
-            "id": 14,
+            "id": 24,
             "name": "Turns with 1-1-1 placement pattern",
             "type": "int"
         },
         "pattern21": {
-            "id": 15,
+            "id": 25,
             "name": "Turns with 2-1 placement pattern",
             "type": "int"
         },
         "pattern3": {
-            "id": 16,
+            "id": 26,
             "name": "Turns with 3 placement pattern",
+            "type": "int"
+        },
+        "pointsFromNormalToss": {
+            "id": 27,
+            "name": "Points scored from normal tosses",
+            "type": "int"
+        },
+        "pointsFromQuickToss": {
+            "id": 28,
+            "name": "Points scored from quick tosses",
+            "type": "int"
+        },
+        "failedNormalTosses": {
+            "id": 29,
+            "name": "Failed normal tosses",
+            "type": "int"
+        },
+        "failedQuickTosses": {
+            "id": 30,
+            "name": "Failed quick tosses",
+            "type": "int"
+        },
+        "bonusCardsDrawn": {
+            "id": 31,
+            "name": "Bonus cards drawn",
+            "type": "int"
+        },
+        "targetsCaptured": {
+            "id": 32,
+            "name": "Target cards captured",
+            "type": "int"
+        },
+        "tomatoesDiscarded": {
+            "id": 33,
+            "name": "Tomato cards discarded",
             "type": "int"
         }
     }

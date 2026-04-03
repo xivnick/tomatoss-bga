@@ -90,11 +90,25 @@ class PlayerTurn extends GameState
 
         if ($quickToss) {
             $this->bga->playerStats->inc('quickTossAttempts', 1, $activePlayerId);
+            $this->bga->tableStats->inc('totalQuickTosses', 1);
             if ($result['success']) {
                 $this->bga->playerStats->inc('quickTossSuccesses', 1, $activePlayerId);
+                $this->bga->playerStats->inc('pointsFromQuickToss', $result['scoreGained'], $activePlayerId);
+                $this->bga->playerStats->inc('targetsCaptured', 1, $activePlayerId);
+            } else {
+                $this->bga->playerStats->inc('failedQuickTosses', 1, $activePlayerId);
+                $this->bga->tableStats->inc('totalFailedTosses', 1);
             }
         } else {
             $this->bga->playerStats->inc('normalTosses', 1, $activePlayerId);
+            $this->bga->tableStats->inc('totalNormalTosses', 1);
+            if ($result['success']) {
+                $this->bga->playerStats->inc('pointsFromNormalToss', $result['scoreGained'], $activePlayerId);
+                $this->bga->playerStats->inc('targetsCaptured', 1, $activePlayerId);
+            } else {
+                $this->bga->playerStats->inc('failedNormalTosses', 1, $activePlayerId);
+                $this->bga->tableStats->inc('totalFailedTosses', 1);
+            }
         }
 
         $this->bga->notify->all(

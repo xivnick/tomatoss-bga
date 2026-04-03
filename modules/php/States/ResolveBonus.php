@@ -30,6 +30,11 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
             $this->bga->playerStats->inc('pattern111', 1, $activePlayerId);
         }
 
+        if ($result['bonusCard'] !== null) {
+            $this->bga->playerStats->inc('bonusCardsDrawn', 1, $activePlayerId);
+            $this->bga->tableStats->inc('totalBonusCardsDrawn', 1);
+        }
+
         $message = '';
         if ($result['pattern'] === '3' && $result['bonusCard'] !== null) {
             $message = clienttranslate('${player_name} resolves 3 in one slot and draws a bonus card');
