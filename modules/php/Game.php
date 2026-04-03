@@ -96,14 +96,14 @@ class Game extends \Bga\GameFramework\Table
         if (!$this->tableExists('card')) {
             // NOI18N
             static::DbQuery(
-                "CREATE TABLE IF NOT EXISTS `card` ("
-                . "`card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
-                . "`card_type` VARCHAR(16) NOT NULL,"
+                "CREATE TABLE IF NOT EXISTS `card` (" // NOI18N
+                . "`card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT," // NOI18N
+                . "`card_type` VARCHAR(16) NOT NULL," // NOI18N
                 . "`card_type_arg` INT NOT NULL,"
-                . "`card_location` VARCHAR(32) NOT NULL,"
+                . "`card_location` VARCHAR(32) NOT NULL," // NOI18N
                 . "`card_location_arg` INT NOT NULL DEFAULT 0,"
-                . "PRIMARY KEY (`card_id`),"
-                . "KEY `card_location` (`card_location`, `card_location_arg`)"
+                . "PRIMARY KEY (`card_id`)," // NOI18N
+                . "KEY `card_location` (`card_location`, `card_location_arg`)" // NOI18N
                 . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
             );
         }
@@ -115,20 +115,20 @@ class Game extends \Bga\GameFramework\Table
         if (!$this->tableExists('turn_action')) {
             // NOI18N
             static::DbQuery(
-                "CREATE TABLE IF NOT EXISTS `turn_action` ("
+                "CREATE TABLE IF NOT EXISTS `turn_action` (" // NOI18N
                 . "`turn_action_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
                 . "`turn_no` INT UNSIGNED NOT NULL,"
                 . "`player_id` INT UNSIGNED NOT NULL,"
                 . "`action_index` TINYINT UNSIGNED NOT NULL,"
                 . "`space` TINYINT UNSIGNED NOT NULL,"
-                . "`action_kind` VARCHAR(16) NOT NULL,"
-                . "`cards_json` VARCHAR(64) NOT NULL DEFAULT '[]',"
+                . "`action_kind` VARCHAR(16) NOT NULL," // NOI18N
+                . "`cards_json` VARCHAR(64) NOT NULL DEFAULT '[]'," // NOI18N
                 . "`quick_toss` TINYINT(1) NOT NULL DEFAULT 0,"
                 . "`target_id` TINYINT UNSIGNED DEFAULT NULL,"
                 . "`revealed_card` TINYINT UNSIGNED DEFAULT NULL,"
                 . "`score_gained` SMALLINT NOT NULL DEFAULT 0,"
-                . "PRIMARY KEY (`turn_action_id`),"
-                . "KEY `turn_no_player` (`turn_no`, `player_id`)"
+                . "PRIMARY KEY (`turn_action_id`)," // NOI18N
+                . "KEY `turn_no_player` (`turn_no`, `player_id`)" // NOI18N
                 . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
             );
             return;
@@ -151,12 +151,12 @@ class Game extends \Bga\GameFramework\Table
             'viewerPlayerId' => $currentPlayerId,
             // NOI18N
             'players' => $this->getCollectionFromDb(
-                'SELECT '
-                . '`player_id` AS `id`, '
-                . '`player_score` AS `score`, '
-                . '`player_basket_full` AS `basketFull`, '
-                . '`player_captured_count` AS `capturedCount` '
-                . 'FROM `player`'
+                'SELECT ' // NOI18N
+                . '`player_id` AS `id`, ' // NOI18N
+                . '`player_score` AS `score`, ' // NOI18N
+                . '`player_basket_full` AS `basketFull`, ' // NOI18N
+                . '`player_captured_count` AS `capturedCount` ' // NOI18N
+                . 'FROM `player`' // NOI18N
             ),
             'turnNo' => $this->getTurnNo(),
             'placementsRemaining' => $this->getPlacementsRemaining(),
@@ -184,7 +184,7 @@ class Game extends \Bga\GameFramework\Table
 
         foreach ($players as $playerId => $player) {
             // NOI18N
-            $queryValues[] = vsprintf("(%s, '%s', '%s', %s)", [
+            $queryValues[] = vsprintf("(%s, '%s', '%s', %s)", [ // NOI18N
                 $playerId,
                 array_shift($default_colors),
                 addslashes($player['player_name']),
@@ -363,7 +363,7 @@ class Game extends \Bga\GameFramework\Table
         // NOI18N
         static::DbQuery(
             "INSERT INTO `turn_action` "
-            . "(`turn_no`, `player_id`, `action_index`, `space`, `action_kind`, `cards_json`, `quick_toss`, `target_id`, `revealed_card`, `score_gained`) VALUES "
+            . "(`turn_no`, `player_id`, `action_index`, `space`, `action_kind`, `cards_json`, `quick_toss`, `target_id`, `revealed_card`, `score_gained`) VALUES " // NOI18N
             . "($turnNo, $playerId, $actionIndex, $space, '$actionKindSql', '$cardsJson', " . ($quickToss ? 1 : 0) . ', '
             . ($targetId === null ? 'NULL' : (string) $targetId) . ', '
             . ($revealedCard === null ? 'NULL' : (string) $revealedCard) . ", $scoreGained)"
@@ -487,18 +487,18 @@ class Game extends \Bga\GameFramework\Table
     {
         // NOI18N
         return array_values($this->getCollectionFromDb(
-            'SELECT '
-            . '`turn_action_id` AS `id`, '
-            . '`player_id` AS `playerId`, '
-            . '`action_index` AS `actionIndex`, '
-            . '`space`, '
-            . '`action_kind` AS `actionKind`, '
-            . '`cards_json` AS `cardsJson`, '
-            . '`quick_toss` AS `quickToss`, '
-            . '`target_id` AS `targetId`, '
-            . '`revealed_card` AS `revealedCard`, '
-            . '`score_gained` AS `scoreGained` '
-            . 'FROM `turn_action` '
+            'SELECT ' // NOI18N
+            . '`turn_action_id` AS `id`, ' // NOI18N
+            . '`player_id` AS `playerId`, ' // NOI18N
+            . '`action_index` AS `actionIndex`, ' // NOI18N
+            . '`space`, ' // NOI18N
+            . '`action_kind` AS `actionKind`, ' // NOI18N
+            . '`cards_json` AS `cardsJson`, ' // NOI18N
+            . '`quick_toss` AS `quickToss`, ' // NOI18N
+            . '`target_id` AS `targetId`, ' // NOI18N
+            . '`revealed_card` AS `revealedCard`, ' // NOI18N
+            . '`score_gained` AS `scoreGained` ' // NOI18N
+            . 'FROM `turn_action` ' // NOI18N
             . 'WHERE `turn_no` = ' . $this->getTurnNo() . ' '
             . 'ORDER BY `action_index` ASC'
         ));
@@ -508,9 +508,9 @@ class Game extends \Bga\GameFramework\Table
     {
         // NOI18N
         $rows = array_values($this->getCollectionFromDb(
-            "SELECT `card_location_arg` AS `playerId`, COUNT(*) AS `handCount` "
-            . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' "
-            . 'GROUP BY `card_location_arg`'
+            "SELECT `card_location_arg` AS `playerId`, COUNT(*) AS `handCount` " // NOI18N
+            . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' " // NOI18N
+            . 'GROUP BY `card_location_arg`' // NOI18N
         ));
 
         $result = [];
@@ -570,8 +570,8 @@ class Game extends \Bga\GameFramework\Table
         $uniqueCardIds = array_values(array_unique(array_map('intval', $cardIds)));
         // NOI18N
         $cards = array_values($this->getCollectionFromDb(
-            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
-            . "FROM `card` "
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` " // NOI18N
+            . "FROM `card` " // NOI18N
             . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
             . 'AND `card_id` IN (' . implode(',', $uniqueCardIds) . ') '
             . 'ORDER BY `card_id` ASC'
@@ -604,8 +604,8 @@ class Game extends \Bga\GameFramework\Table
     {
         // NOI18N
         $card = $this->getObjectFromDb(
-            "SELECT `card_id` AS `id` "
-            . "FROM `card` "
+            "SELECT `card_id` AS `id` " // NOI18N
+            . "FROM `card` " // NOI18N
             . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
             . "AND `card_type_arg` = $cardValue "
             . 'ORDER BY `card_id` ASC LIMIT 1'
@@ -793,7 +793,7 @@ class Game extends \Bga\GameFramework\Table
         foreach (array_values($typeArgs) as $index => $typeArg) {
             // NOI18N
             $values[] = sprintf(
-                "(NULL, '%s', %d, '%s', %d)",
+                "(NULL, '%s', %d, '%s', %d)", // NOI18N
                 addslashes($cardType),
                 $typeArg,
                 addslashes($location),
@@ -838,8 +838,8 @@ class Game extends \Bga\GameFramework\Table
 
         // NOI18N
         $card = $this->getObjectFromDb(
-            "SELECT `card_id` AS `id`, `card_type_arg` AS `typeArg` "
-            . "FROM `card` "
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `typeArg` " // NOI18N
+            . "FROM `card` " // NOI18N
             . "WHERE `card_type` = '" . addslashes($cardType) . "' "
             . "AND `card_location` = '" . addslashes($fromLocation) . "' "
             . 'ORDER BY `card_location_arg` ASC LIMIT 1'
@@ -1064,7 +1064,7 @@ class Game extends \Bga\GameFramework\Table
     {
         // NOI18N
         return $this->getObjectFromDb(
-            "SHOW COLUMNS FROM `" . addslashes($tableName) . "` LIKE '" . addslashes($columnName) . "'"
+            "SHOW COLUMNS FROM `" . addslashes($tableName) . "` LIKE '" . addslashes($columnName) . "'" // NOI18N
         ) !== null;
     }
 

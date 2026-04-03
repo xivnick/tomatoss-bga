@@ -1,0 +1,5 @@
+Reusable runtime code is organized directly under:
+- `modules/js`
+- `modules/php`
+
+This placeholder file keeps the expected project structure intact for Studio checks.
