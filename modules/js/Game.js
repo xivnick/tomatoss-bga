@@ -1406,7 +1406,7 @@ export class Game {
         return ANIMATION_FULL;
     }
 
-    isRepeatedClickConfirmEnabled() {
+    isAutoTossOnRepeatedClickEnabled() {
         const value = this.bga.gameui?.getGameUserPreference?.(PREF_REPEATED_CLICK_CONFIRM)
             ?? this.bga.getGameUserPreference?.(PREF_REPEATED_CLICK_CONFIRM)
             ?? REPEATED_CLICK_CONFIRM_ON;
@@ -1958,9 +1958,6 @@ export class Game {
         }
 
         if (this.pendingSpace === space) {
-            if (!this.isRepeatedClickConfirmEnabled()) {
-                return;
-            }
             if (space < 3) {
                 this.confirmCollect();
                 return;
@@ -2013,7 +2010,11 @@ export class Game {
             return true;
         }
 
-        this.confirmToss(false);
+        if (this.isAutoTossOnRepeatedClickEnabled()) {
+            this.confirmToss(false);
+        } else {
+            this.bga.dialogs.showMessage(_('Both Toss and Quick toss are possible. Use the action buttons.'), 'error');
+        }
         return true;
     }
 

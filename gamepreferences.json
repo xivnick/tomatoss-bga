@@ -16,7 +16,7 @@
     "default": 1
   },
   "101": {
-    "name": "Repeated click auto-confirm",
+    "name": "Auto Toss on repeated click",
     "needReload": false,
     "values": {
       "1": {
