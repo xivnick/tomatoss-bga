@@ -14,5 +14,18 @@
       }
     },
     "default": 1
+  },
+  "101": {
+    "name": "Repeated click auto-confirm",
+    "needReload": false,
+    "values": {
+      "1": {
+        "name": "On"
+      },
+      "2": {
+        "name": "Off"
+      }
+    },
+    "default": 1
   }
 }

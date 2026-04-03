@@ -45,9 +45,11 @@ const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
 const FLIP_IN_EASING = 'cubic-bezier(0.55, 0.08, 0.68, 0.53)';
 const FLIP_OUT_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const PREF_ANIMATION_SPEED = 100;
+const PREF_REPEATED_CLICK_CONFIRM = 101;
 const ANIMATION_FULL = 1;
 const ANIMATION_REDUCED = 2;
 const ANIMATION_NONE = 3;
+const REPEATED_CLICK_CONFIRM_ON = 1;
 
 class SpriteStyles {
     getLayoutElement() {
@@ -1404,6 +1406,13 @@ export class Game {
         return ANIMATION_FULL;
     }
 
+    isRepeatedClickConfirmEnabled() {
+        const value = this.bga.gameui?.getGameUserPreference?.(PREF_REPEATED_CLICK_CONFIRM)
+            ?? this.bga.getGameUserPreference?.(PREF_REPEATED_CLICK_CONFIRM)
+            ?? REPEATED_CLICK_CONFIRM_ON;
+        return Number(value) === REPEATED_CLICK_CONFIRM_ON;
+    }
+
     getAnimationSpeedFactor() {
         if (this.bga.gameui?.bgaAnimationsActive && !this.bga.gameui.bgaAnimationsActive()) {
             return 0;
@@ -1949,6 +1958,9 @@ export class Game {
         }
 
         if (this.pendingSpace === space) {
+            if (!this.isRepeatedClickConfirmEnabled()) {
+                return;
+            }
             if (space < 3) {
                 this.confirmCollect();
                 return;
@@ -2001,7 +2013,7 @@ export class Game {
             return true;
         }
 
-        this.bga.dialogs.showMessage(_('Both Toss and Quick toss are possible. Use the action buttons.'), 'error');
+        this.confirmToss(false);
         return true;
     }
 
