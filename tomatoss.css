@@ -644,24 +644,25 @@
 }
 
 .discard-popup__cards {
+    align-content: flex-start;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
     max-height: min(58vh, 540px);
     overflow: auto;
-    padding: 2px 2px 6px;
+    padding: 4px 4px 8px;
     scrollbar-gutter: stable;
 }
 
 .discard-popup__card {
     flex: 0 0 auto;
-    height: calc(var(--card-h) * 0.48);
+    height: calc(var(--card-h) * 0.62);
     position: relative;
-    width: calc(var(--tomato-card-w) * 0.48);
+    width: calc(var(--tomato-card-w) * 0.62);
 }
 
 .discard-popup__card .card-node {
-    transform: scale(0.48);
+    transform: scale(0.62);
     transform-origin: top left;
 }
 

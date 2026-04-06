@@ -1966,7 +1966,7 @@ export class Game {
             return;
         }
 
-        const scale = this.sprites.getCardScale('tomato') * 0.48;
+        const scale = this.sprites.getCardScale('tomato') * 0.62;
         cardsRoot.replaceChildren();
         cards.forEach((card, index) => {
             const cardHost = document.createElement('div');
