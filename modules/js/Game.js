@@ -1235,7 +1235,7 @@ export class Game {
                             <div class="discard-popup__header">
                                 <div>
                                     <div class="discard-popup__title">${_('Discard pile')}</div>
-                                    <div class="discard-popup__subtitle">${_('Top card shown first')}</div>
+                                    <div class="discard-popup__subtitle">${_('Grouped by value')}</div>
                                 </div>
                                 <div id="discard-popup-count" class="discard-popup__count"></div>
                             </div>
@@ -1967,11 +1967,29 @@ export class Game {
 
         const scale = this.sprites.getCardScale('tomato');
         cardsRoot.replaceChildren();
+        const grouped = new Map();
         cards.forEach(card => {
-            const host = document.createElement('div');
-            host.className = 'discard-popup__card';
-            this.registry.mount(host, this.registry.getTemporaryTomatoNode(`discard-popup-${card.id}`, card.value, scale));
-            cardsRoot.appendChild(host);
+            const value = Number(card.value);
+            grouped.set(value, (grouped.get(value) ?? 0) + 1);
+        });
+
+        [...grouped.entries()].sort((a, b) => a[0] - b[0]).forEach(([value, amount]) => {
+            const entry = document.createElement('div');
+            entry.className = 'discard-popup__group';
+
+            const cardHost = document.createElement('div');
+            cardHost.className = 'discard-popup__card';
+            this.registry.mount(cardHost, this.registry.getTemporaryTomatoNode(`discard-popup-value-${value}`, value, scale));
+
+            const meta = document.createElement('div');
+            meta.className = 'discard-popup__group-meta';
+            meta.innerHTML = `
+                <div class="discard-popup__group-value">${_('Tomato')} ${value}</div>
+                <div class="discard-popup__group-count">×${amount}</div>
+            `;
+
+            entry.append(cardHost, meta);
+            cardsRoot.appendChild(entry);
         });
     }
 
