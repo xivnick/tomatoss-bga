@@ -1974,18 +1974,30 @@ export class Game {
             const entry = document.createElement('div');
             entry.className = 'discard-popup__group';
 
-            const cardHost = document.createElement('div');
-            cardHost.className = 'discard-popup__card';
-            this.registry.mount(cardHost, this.registry.getTemporaryTomatoNode(`discard-popup-value-${value}`, value, scale));
-
             const meta = document.createElement('div');
             meta.className = 'discard-popup__group-meta';
             meta.innerHTML = `
-                <div class="discard-popup__group-value">${_('Tomato')} ${value}</div>
+                <div class="discard-popup__group-value">${value}</div>
                 <div class="discard-popup__group-count">×${amount}</div>
             `;
 
-            entry.append(cardHost, meta);
+            const stack = document.createElement('div');
+            stack.className = 'discard-popup__stack';
+
+            for (let index = 0; index < amount; index += 1) {
+                const cardHost = document.createElement('div');
+                cardHost.className = 'discard-popup__card';
+                cardHost.style.left = `${index * 4}px`;
+                cardHost.style.top = `${Math.min(index, 6) * 2}px`;
+                cardHost.style.zIndex = String(index + 1);
+                this.registry.mount(
+                    cardHost,
+                    this.registry.getTemporaryTomatoNode(`discard-popup-value-${value}-${index}`, value, scale)
+                );
+                stack.appendChild(cardHost);
+            }
+
+            entry.append(stack, meta);
             cardsRoot.appendChild(entry);
         });
     }

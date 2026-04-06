@@ -640,8 +640,8 @@
 .discard-popup__cards {
     background: transparent;
     display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px 10px;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
     max-height: min(56vh, 500px);
     overflow: auto;
     padding: 0;
@@ -650,16 +650,23 @@
 
 .discard-popup__group {
     align-items: center;
-    border-radius: 6px;
-    display: flex;
-    gap: 10px;
-    min-height: 72px;
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    min-height: 88px;
     padding: 0;
 }
 
+.discard-popup__stack {
+    height: calc(var(--card-h) * 0.42 + 12px);
+    position: relative;
+    width: calc(var(--tomato-card-w) * 0.42 + 48px);
+}
+
 .discard-popup__card {
-    flex: 0 0 auto;
     height: calc(var(--card-h) * 0.42);
+    position: absolute;
+    top: 0;
     width: calc(var(--tomato-card-w) * 0.42);
 }
 
@@ -669,20 +676,23 @@
 }
 
 .discard-popup__group-meta {
-    display: grid;
+    align-items: baseline;
+    display: inline-flex;
     gap: 4px;
 }
 
 .discard-popup__group-value {
     color: #222;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
+    line-height: 1;
 }
 
 .discard-popup__group-count {
     color: #666;
-    font-size: 17px;
+    font-size: 13px;
     font-weight: 700;
+    line-height: 1;
 }
 
 @media (max-width: 900px) {
