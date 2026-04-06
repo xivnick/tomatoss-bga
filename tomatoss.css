@@ -381,7 +381,7 @@
 }
 
 .tomatoss-overall-hand__count {
-    color: #fff;
+    color: #111;
     font-size: 16px;
     font-weight: 700;
     line-height: 1;
@@ -407,7 +407,7 @@
 .tomatoss-overall-basket__icon.is-full { background-position: 100% 0; }
 
 .tomatoss-overall-basket__label {
-    color: #fff;
+    color: #111;
     font-size: 13px;
     font-weight: 700;
     line-height: 1;
