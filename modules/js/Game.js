@@ -850,8 +850,13 @@ class PlayerZonesView {
     }
 
     getOrderedPlayers() {
-        const order = this.game.gamedatas.turnOrderPlayerIds ?? [];
-        const orderIndex = new Map(order.map((playerId, index) => [Number(playerId), index]));
+        const localPlayerId = Number(this.game.getLocalPlayerId());
+        const baseOrder = (this.game.gamedatas.turnOrderPlayerIds ?? []).map(playerId => Number(playerId));
+        const localIndex = baseOrder.indexOf(localPlayerId);
+        const order = localIndex >= 0
+            ? [...baseOrder.slice(localIndex), ...baseOrder.slice(0, localIndex)]
+            : baseOrder;
+        const orderIndex = new Map(order.map((playerId, index) => [playerId, index]));
         return Object.values(this.game.gamedatas.players ?? {}).sort((a, b) => {
             const aIndex = orderIndex.get(Number(a.id)) ?? Number.MAX_SAFE_INTEGER;
             const bIndex = orderIndex.get(Number(b.id)) ?? Number.MAX_SAFE_INTEGER;
