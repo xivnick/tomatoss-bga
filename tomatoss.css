@@ -208,7 +208,8 @@
 #mission-slot-0 .slot-card-host,
 #mission-slot-1 .slot-card-host,
 #mission-slot-2 .slot-card-host {
-    height: calc(var(--card-h) - 8px);
+    border-radius: var(--card-radius);
+    height: calc(var(--card-h) - 3px);
     overflow: hidden;
     width: var(--mission-card-w);
 }
