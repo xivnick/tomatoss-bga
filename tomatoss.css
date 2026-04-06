@@ -600,10 +600,10 @@
     border-radius: 10px;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
     max-height: min(72vh, 720px);
-    max-width: min(90vw, 760px);
+    max-width: min(92vw, 980px);
     padding: 16px 18px 18px;
     position: relative;
-    width: min(90vw, 760px);
+    width: min(92vw, 980px);
     z-index: 1;
 }
 
@@ -647,22 +647,22 @@
     align-content: flex-start;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 2px;
     max-height: min(58vh, 540px);
     overflow: auto;
-    padding: 4px 4px 8px;
+    padding: 2px 0 6px;
     scrollbar-gutter: stable;
 }
 
 .discard-popup__card {
     flex: 0 0 auto;
-    height: calc(var(--card-h) * 0.62);
+    height: calc(var(--card-h) * 0.82);
     position: relative;
-    width: calc(var(--tomato-card-w) * 0.62);
+    width: calc(var(--tomato-card-w) * 0.82);
 }
 
 .discard-popup__card .card-node {
-    transform: scale(0.62);
+    transform: scale(0.82);
     transform-origin: top left;
 }
 
