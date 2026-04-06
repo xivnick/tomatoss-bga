@@ -1228,17 +1228,6 @@ export class Game {
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
                 <div id="tomatoss-layout">
                     <div id="animation-layer"></div>
-                    <div id="discard-popup" class="discard-popup is-hidden" aria-hidden="true">
-                        <div class="discard-popup__backdrop" data-role="close-discard-popup"></div>
-                        <div class="discard-popup__panel">
-                            <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
-                            <div class="discard-popup__header">
-                                <div class="discard-popup__title">${_('Discard pile')}</div>
-                                <div id="discard-popup-count" class="discard-popup__count"></div>
-                            </div>
-                            <div id="discard-popup-cards" class="discard-popup__cards"></div>
-                        </div>
-                    </div>
                     <div id="full-table">
                     <div id="centered-table">
                         <div id="tables-and-center">
@@ -1262,6 +1251,14 @@ export class Game {
                                         </div>
                                         <div id="discard-slot" class="stage-slot side-slot">
                                             <div class="slot-card-host" data-empty="true"></div>
+                                        </div>
+                                        <div id="discard-popup" class="discard-popup is-hidden" aria-hidden="true">
+                                            <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
+                                            <div class="discard-popup__header">
+                                                <div class="discard-popup__title">${_('Discard pile')}</div>
+                                                <div id="discard-popup-count" class="discard-popup__count"></div>
+                                            </div>
+                                            <div id="discard-popup-cards" class="discard-popup__cards"></div>
                                         </div>
                                         <div id="token-reserve" class="stage-slot"></div>
                                         ${[0, 1, 2].map(index => `
@@ -1337,7 +1334,11 @@ export class Game {
             }
 
             if (target.closest('#discard-slot')) {
-                this.openDiscardPopup();
+                if (this.isDiscardPopupOpen) {
+                    this.closeDiscardPopup();
+                } else {
+                    this.openDiscardPopup();
+                }
                 return;
             }
 
