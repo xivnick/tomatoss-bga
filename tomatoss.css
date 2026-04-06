@@ -644,60 +644,25 @@
 }
 
 .discard-popup__cards {
-    display: grid;
-    gap: 18px 14px;
-    grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     max-height: min(58vh, 540px);
     overflow: auto;
     padding: 2px 2px 6px;
     scrollbar-gutter: stable;
 }
 
-.discard-popup__group {
-    align-items: center;
-    display: grid;
-    gap: 8px;
-    justify-items: center;
-    min-height: 104px;
-    padding: 0;
-}
-
-.discard-popup__stack {
-    height: calc(var(--card-h) * 0.42 + 18px);
-    position: relative;
-    width: calc(var(--tomato-card-w) * 0.42 + 56px);
-}
-
 .discard-popup__card {
-    height: calc(var(--card-h) * 0.42);
-    position: absolute;
-    top: 0;
-    width: calc(var(--tomato-card-w) * 0.42);
+    flex: 0 0 auto;
+    height: calc(var(--card-h) * 0.48);
+    position: relative;
+    width: calc(var(--tomato-card-w) * 0.48);
 }
 
 .discard-popup__card .card-node {
-    transform: scale(0.42);
+    transform: scale(0.48);
     transform-origin: top left;
-}
-
-.discard-popup__group-meta {
-    align-items: baseline;
-    display: inline-flex;
-    gap: 4px;
-}
-
-.discard-popup__group-value {
-    color: #222;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.discard-popup__group-count {
-    color: #666;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1;
 }
 
 @media (max-width: 900px) {

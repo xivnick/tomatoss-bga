@@ -1966,43 +1966,16 @@ export class Game {
             return;
         }
 
-        const scale = this.sprites.getCardScale('tomato');
+        const scale = this.sprites.getCardScale('tomato') * 0.48;
         cardsRoot.replaceChildren();
-        const grouped = new Map();
-        cards.forEach(card => {
-            const value = Number(card.value);
-            grouped.set(value, (grouped.get(value) ?? 0) + 1);
-        });
-
-        [...grouped.entries()].sort((a, b) => a[0] - b[0]).forEach(([value, amount]) => {
-            const entry = document.createElement('div');
-            entry.className = 'discard-popup__group';
-
-            const meta = document.createElement('div');
-            meta.className = 'discard-popup__group-meta';
-            meta.innerHTML = `
-                <div class="discard-popup__group-value">${value}</div>
-                <div class="discard-popup__group-count">×${amount}</div>
-            `;
-
-            const stack = document.createElement('div');
-            stack.className = 'discard-popup__stack';
-
-            for (let index = 0; index < amount; index += 1) {
-                const cardHost = document.createElement('div');
-                cardHost.className = 'discard-popup__card';
-                cardHost.style.left = `${index * 4}px`;
-                cardHost.style.top = `${Math.min(index, 6) * 2}px`;
-                cardHost.style.zIndex = String(index + 1);
-                this.registry.mount(
-                    cardHost,
-                    this.registry.getTemporaryTomatoNode(`discard-popup-value-${value}-${index}`, value, scale)
-                );
-                stack.appendChild(cardHost);
-            }
-
-            entry.append(stack, meta);
-            cardsRoot.appendChild(entry);
+        cards.forEach((card, index) => {
+            const cardHost = document.createElement('div');
+            cardHost.className = 'discard-popup__card';
+            this.registry.mount(
+                cardHost,
+                this.registry.getTemporaryTomatoNode(`discard-popup-card-${index}`, Number(card.value), scale)
+            );
+            cardsRoot.appendChild(cardHost);
         });
     }
 
