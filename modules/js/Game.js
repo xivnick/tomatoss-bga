@@ -1252,14 +1252,6 @@ export class Game {
                                         <div id="discard-slot" class="stage-slot side-slot">
                                             <div class="slot-card-host" data-empty="true"></div>
                                         </div>
-                                        <div id="discard-popup" class="discard-popup is-hidden" aria-hidden="true">
-                                            <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
-                                            <div class="discard-popup__header">
-                                                <div class="discard-popup__title">${_('Discard pile')}</div>
-                                                <div id="discard-popup-count" class="discard-popup__count"></div>
-                                            </div>
-                                            <div id="discard-popup-cards" class="discard-popup__cards"></div>
-                                        </div>
                                         <div id="token-reserve" class="stage-slot"></div>
                                         ${[0, 1, 2].map(index => `
                                             <div id="tomato-slot-${index}" class="stage-slot tomato-slot">
@@ -1274,6 +1266,17 @@ export class Game {
                             </div>
                             <div id="player-zones"></div>
                         </div>
+                    </div>
+                </div>
+                <div id="discard-popup" class="discard-popup is-hidden" aria-hidden="true">
+                    <div class="discard-popup__backdrop" data-role="close-discard-popup"></div>
+                    <div class="discard-popup__panel">
+                        <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
+                        <div class="discard-popup__header">
+                            <div class="discard-popup__title">${_('Discard pile')}</div>
+                            <div id="discard-popup-count" class="discard-popup__count"></div>
+                        </div>
+                        <div id="discard-popup-cards" class="discard-popup__cards"></div>
                     </div>
                 </div>
             </div>
