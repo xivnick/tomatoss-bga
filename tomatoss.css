@@ -593,75 +593,58 @@
 
 .discard-popup__panel {
     background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
-    max-width: min(92vw, 760px);
-    padding: 14px 14px 16px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    max-width: min(92vw, 720px);
+    padding: 12px;
     position: relative;
     z-index: 1;
 }
 
 .discard-popup__header {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
-    gap: 12px;
-    justify-content: space-between;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 8px;
     padding-right: 36px;
 }
 
 .discard-popup__title {
     color: #222;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1.1;
 }
 
-.discard-popup__subtitle {
+.discard-popup__count {
     color: #666;
     font-size: 12px;
     font-weight: 600;
-    margin-top: 4px;
-}
-
-.discard-popup__count {
-    background: #f5f5f5;
-    border-radius: 999px;
-    color: #333;
-    font-size: 12px;
-    font-weight: 700;
     line-height: 1;
-    padding: 7px 11px;
 }
 
 .discard-popup__close {
-    background: #f5f5f5;
+    background: transparent;
     border: 0;
-    border-radius: 999px;
     color: #333;
     cursor: pointer;
-    font-size: 22px;
-    height: 32px;
+    font-size: 24px;
+    height: 28px;
     line-height: 1;
     position: absolute;
     right: 12px;
     top: 12px;
-    width: 32px;
-}
-
-.discard-popup__close:hover {
-    background: #ebebeb;
+    width: 28px;
 }
 
 .discard-popup__cards {
-    background: #fafafa;
-    border-radius: 8px;
+    background: transparent;
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    max-height: min(56vh, 520px);
+    max-height: min(56vh, 500px);
     overflow: auto;
-    padding: 10px;
+    padding: 0;
     scrollbar-gutter: stable;
 }
 
