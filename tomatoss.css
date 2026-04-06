@@ -208,10 +208,13 @@
 #mission-slot-0 .slot-card-host,
 #mission-slot-1 .slot-card-host,
 #mission-slot-2 .slot-card-host {
-    border-radius: var(--card-radius);
-    height: calc(var(--card-h) - 3px);
-    overflow: hidden;
     width: var(--mission-card-w);
+}
+
+#mission-slot-0 .slot-card-host > .board-mission-card,
+#mission-slot-1 .slot-card-host > .board-mission-card,
+#mission-slot-2 .slot-card-host > .board-mission-card {
+    clip-path: inset(0 0 2px 0 round var(--card-radius));
 }
 
 .player-hand-back-host {
