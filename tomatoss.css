@@ -592,47 +592,87 @@
 }
 
 .discard-popup__panel {
-    background: rgba(255, 248, 239, 0.97);
-    border-radius: 16px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
-    max-width: min(90vw, 920px);
-    padding: 18px 18px 20px;
+    background:
+        linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(247, 236, 221, 0.96));
+    border: 1px solid rgba(128, 84, 44, 0.22);
+    border-radius: 20px;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+    max-width: min(92vw, 960px);
+    padding: 20px 20px 22px;
     position: relative;
     z-index: 1;
 }
 
+.discard-popup__header {
+    align-items: flex-start;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-right: 36px;
+}
+
 .discard-popup__title {
     color: var(--ink);
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
-    margin-bottom: 14px;
+    line-height: 1.1;
+}
+
+.discard-popup__subtitle {
+    color: rgba(90, 42, 13, 0.72);
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.discard-popup__count {
+    background: rgba(122, 63, 22, 0.1);
+    border: 1px solid rgba(122, 63, 22, 0.18);
+    border-radius: 999px;
+    color: #6e3310;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 8px 12px;
 }
 
 .discard-popup__close {
-    background: transparent;
-    border: 0;
-    color: var(--ink);
+    background: rgba(122, 63, 22, 0.08);
+    border: 1px solid rgba(122, 63, 22, 0.16);
+    border-radius: 999px;
+    color: #6e3310;
     cursor: pointer;
-    font-size: 28px;
+    font-size: 24px;
+    height: 34px;
     line-height: 1;
     position: absolute;
     right: 12px;
-    top: 10px;
+    top: 12px;
+    width: 34px;
+}
+
+.discard-popup__close:hover {
+    background: rgba(122, 63, 22, 0.14);
 }
 
 .discard-popup__cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: flex-start;
-    max-height: min(70vh, 680px);
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(128, 84, 44, 0.12);
+    border-radius: 16px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tomato-card-w), 1fr));
+    max-height: min(68vh, 680px);
     overflow: auto;
-    padding-right: 4px;
+    padding: 14px;
+    scrollbar-gutter: stable;
 }
 
 .discard-popup__card {
     flex: 0 0 auto;
     height: var(--card-h);
+    justify-self: start;
     width: var(--tomato-card-w);
 }
 

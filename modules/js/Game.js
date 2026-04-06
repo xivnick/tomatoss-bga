@@ -1232,7 +1232,13 @@ export class Game {
                         <div class="discard-popup__backdrop" data-role="close-discard-popup"></div>
                         <div class="discard-popup__panel">
                             <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
-                            <div class="discard-popup__title">${_('Discard pile')}</div>
+                            <div class="discard-popup__header">
+                                <div>
+                                    <div class="discard-popup__title">${_('Discard pile')}</div>
+                                    <div class="discard-popup__subtitle">${_('Top card shown first')}</div>
+                                </div>
+                                <div id="discard-popup-count" class="discard-popup__count"></div>
+                            </div>
                             <div id="discard-popup-cards" class="discard-popup__cards"></div>
                         </div>
                     </div>
@@ -1943,13 +1949,15 @@ export class Game {
     renderDiscardPopup() {
         const popup = document.getElementById('discard-popup');
         const cardsRoot = document.getElementById('discard-popup-cards');
-        if (!popup || !cardsRoot) {
+        const countChip = document.getElementById('discard-popup-count');
+        if (!popup || !cardsRoot || !countChip) {
             return;
         }
 
         const cards = this.gamedatas.discardTomatoes ?? [];
         popup.classList.toggle('is-hidden', !this.isDiscardPopupOpen);
         popup.setAttribute('aria-hidden', this.isDiscardPopupOpen ? 'false' : 'true');
+        countChip.textContent = `${cards.length} ${cards.length === 1 ? _('card') : _('cards')}`;
 
         if (!this.isDiscardPopupOpen) {
             cardsRoot.replaceChildren();
