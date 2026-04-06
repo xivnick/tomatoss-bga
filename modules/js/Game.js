@@ -2457,6 +2457,7 @@ export class Game {
     afterPublicChange() {
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
+        this.renderOverallPlayerBoards();
         this.updateActionButtons();
     }
 
@@ -2476,6 +2477,7 @@ export class Game {
         }
         this.updateHandCount(args.player_id, args.handCount);
         this.playerZonesView.renderPlayer(args.player_id);
+        this.renderOverallPlayerBoards();
         this.updateActionButtons();
     }
 

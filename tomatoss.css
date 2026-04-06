@@ -586,18 +586,18 @@
 }
 
 .discard-popup__backdrop {
-    background: rgba(18, 10, 6, 0.58);
+    background: rgba(0, 0, 0, 0.28);
     inset: 0;
     position: absolute;
 }
 
 .discard-popup__panel {
-    background: rgba(255, 255, 255, 0.98);
-    border: 1px solid rgba(0, 0, 0, 0.14);
-    border-radius: 12px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
-    max-width: min(92vw, 820px);
-    padding: 16px 16px 18px;
+    background: #fff;
+    border: 1px solid #d6d6d6;
+    border-radius: 8px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    max-width: min(92vw, 760px);
+    padding: 14px 14px 16px;
     position: relative;
     z-index: 1;
 }
@@ -605,15 +605,15 @@
 .discard-popup__header {
     align-items: flex-start;
     display: flex;
-    gap: 18px;
+    gap: 12px;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     padding-right: 36px;
 }
 
 .discard-popup__title {
     color: #222;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     line-height: 1.1;
 }
@@ -626,7 +626,7 @@
 }
 
 .discard-popup__count {
-    background: #f3f3f3;
+    background: #f5f5f5;
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 999px;
     color: #333;
@@ -658,13 +658,13 @@
 .discard-popup__cards {
     background: #fafafa;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 10px;
+    border-radius: 8px;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    max-height: min(60vh, 560px);
+    max-height: min(56vh, 520px);
     overflow: auto;
-    padding: 12px;
+    padding: 10px;
     scrollbar-gutter: stable;
 }
 
@@ -672,11 +672,11 @@
     align-items: center;
     background: white;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 10px;
+    border-radius: 6px;
     display: flex;
     gap: 10px;
-    min-height: 86px;
-    padding: 8px 10px;
+    min-height: 80px;
+    padding: 8px;
 }
 
 .discard-popup__card {
@@ -697,13 +697,13 @@
 
 .discard-popup__group-value {
     color: #222;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
 }
 
 .discard-popup__group-count {
     color: #666;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
 }
 
