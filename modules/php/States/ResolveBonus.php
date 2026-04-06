@@ -56,6 +56,7 @@ class ResolveBonus extends \Bga\GameFramework\States\GameState
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
             'publicDiscardCount' => $this->game->getPublicDiscardCount(),
             'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
+            'discardTomatoes' => $this->game->getTomatoDiscardCards(),
         ]);
         if ($result['bonusCard'] !== null) {
             $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [

@@ -120,6 +120,7 @@
 #discard-slot {
     left: calc(3034px * var(--stage-scale));
     top: calc(1066px * var(--stage-scale));
+    cursor: pointer;
 }
 
 #token-reserve {
@@ -207,6 +208,8 @@
 #mission-slot-0 .slot-card-host,
 #mission-slot-1 .slot-card-host,
 #mission-slot-2 .slot-card-host {
+    height: calc(var(--card-h) - 8px);
+    overflow: hidden;
     width: var(--mission-card-w);
 }
 
@@ -361,6 +364,7 @@
 .tomatoss-overall-hand {
     align-items: center;
     display: inline-flex;
+    flex-wrap: wrap;
     gap: 6px;
     margin-top: 6px;
 }
@@ -378,6 +382,32 @@
 .tomatoss-overall-hand__count {
     color: #fff;
     font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tomatoss-overall-basket {
+    align-items: center;
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 4px;
+}
+
+.tomatoss-overall-basket__icon {
+    background-image: url('img/basket_tokens.png');
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+    height: 16px;
+    width: 20px;
+}
+
+.tomatoss-overall-basket__icon.is-empty { background-position: 0 0; }
+.tomatoss-overall-basket__icon.is-full { background-position: 100% 0; }
+
+.tomatoss-overall-basket__label {
+    color: #fff;
+    font-size: 13px;
     font-weight: 700;
     line-height: 1;
 }
@@ -480,6 +510,7 @@
     background-image: url('img/basket_tokens.png');
     background-repeat: no-repeat;
     background-size: 200% 100%;
+    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.45));
     height: calc(239 / 880 * var(--player-board-size));
     width: calc(300 / 880 * var(--player-board-size));
 }
@@ -538,6 +569,70 @@
 
 .captured-mission {
     position: relative;
+}
+
+.discard-popup {
+    align-items: center;
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 40;
+}
+
+.discard-popup.is-hidden {
+    display: none;
+}
+
+.discard-popup__backdrop {
+    background: rgba(18, 10, 6, 0.58);
+    inset: 0;
+    position: absolute;
+}
+
+.discard-popup__panel {
+    background: rgba(255, 248, 239, 0.97);
+    border-radius: 16px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+    max-width: min(90vw, 920px);
+    padding: 18px 18px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.discard-popup__title {
+    color: var(--ink);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.discard-popup__close {
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 28px;
+    line-height: 1;
+    position: absolute;
+    right: 12px;
+    top: 10px;
+}
+
+.discard-popup__cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+    max-height: min(70vh, 680px);
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.discard-popup__card {
+    flex: 0 0 auto;
+    height: var(--card-h);
+    width: var(--tomato-card-w);
 }
 
 @media (max-width: 900px) {

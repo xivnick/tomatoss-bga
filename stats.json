@@ -47,34 +47,34 @@
             "name": "Successful quick tosses",
             "type": "int"
         },
-        "pattern111": {
+        "quickTossSuccessRate": {
             "id": 24,
+            "name": "Quick toss success rate (%)",
+            "type": "float"
+        },
+        "pattern111": {
+            "id": 25,
             "name": "Turns with 1-1-1 placement pattern",
             "type": "int"
         },
         "pattern21": {
-            "id": 25,
+            "id": 26,
             "name": "Turns with 2-1 placement pattern",
             "type": "int"
         },
         "pattern3": {
-            "id": 26,
+            "id": 27,
             "name": "Turns with 3 placement pattern",
             "type": "int"
         },
         "pointsFromNormalToss": {
-            "id": 27,
+            "id": 28,
             "name": "Points scored from normal tosses",
             "type": "int"
         },
         "pointsFromQuickToss": {
-            "id": 28,
-            "name": "Points scored from quick tosses",
-            "type": "int"
-        },
-        "failedNormalTosses": {
             "id": 29,
-            "name": "Failed normal tosses",
+            "name": "Points scored from quick tosses",
             "type": "int"
         },
         "failedQuickTosses": {

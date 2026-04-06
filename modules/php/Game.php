@@ -163,12 +163,14 @@ class Game extends \Bga\GameFramework\Table
             'boardTargets' => $this->getBoardTargetSlots(),
             'publicDiscardCount' => $this->getPublicDiscardCount(),
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),
+            'discardTomatoes' => $this->getTomatoDiscardCards(),
             'targetDeckCount' => $this->getTargetDeckCount(),
             'tomatoDeckCount' => $this->getTomatoDeckCount(),
             'playerHand' => $this->getHandForPlayer($currentPlayerId),
             'handCountsByPlayer' => $this->getHandCountsByPlayer(),
             'currentTurnActions' => $this->getCurrentTurnActionLog(),
             'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
+            'turnOrderPlayerIds' => $this->getCurrentTurnOrderPlayerIds(),
         ];
     }
 
@@ -222,12 +224,12 @@ class Game extends \Bga\GameFramework\Table
             'normalTosses',
             'quickTossAttempts',
             'quickTossSuccesses',
+            'quickTossSuccessRate',
             'pattern111',
             'pattern21',
             'pattern3',
             'pointsFromNormalToss',
             'pointsFromQuickToss',
-            'failedNormalTosses',
             'failedQuickTosses',
             'bonusCardsDrawn',
             'targetsCaptured',
@@ -473,6 +475,20 @@ class Game extends \Bga\GameFramework\Table
         ];
     }
 
+    public function getTomatoDiscardCards(): array
+    {
+        $rows = array_values($this->getCollectionFromDb(
+            "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
+            . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'tomato_discard' "
+            . 'ORDER BY `card_location_arg` DESC'
+        ));
+
+        return array_map(static fn(array $row): array => [
+            'id' => (int) $row['id'],
+            'value' => (int) $row['value'],
+        ], $rows);
+    }
+
     public function getTargetDeckCount(): int
     {
         return $this->getCardCount('target', 'target_deck');
@@ -611,6 +627,7 @@ class Game extends \Bga\GameFramework\Table
             'remainingHand' => $this->getHandForPlayer($playerId),
             'publicDiscardCount' => $this->getPublicDiscardCount(),
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),
+            'discardTomatoes' => $this->getTomatoDiscardCards(),
         ];
     }
 
@@ -741,6 +758,7 @@ class Game extends \Bga\GameFramework\Table
             'remainingHand' => $this->getHandForPlayer($playerId),
             'publicDiscardCount' => $this->getPublicDiscardCount(),
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),
+            'discardTomatoes' => $this->getTomatoDiscardCards(),
             'targetDeckCount' => $this->getTargetDeckCount(),
             'tomatoDeckCount' => $this->getTomatoDeckCount(),
             'capturedTargetsByPlayer' => $this->getCapturedTargetsByPlayer(),
@@ -777,6 +795,7 @@ class Game extends \Bga\GameFramework\Table
             'publicDiscardCount' => $this->getPublicDiscardCount(),
             'recycledTomatoDiscard' => $refill['recycledTomatoDiscard'] ?? false,
             'latestDiscardTomato' => $this->getLatestDiscardTomato(),
+            'discardTomatoes' => $this->getTomatoDiscardCards(),
         ];
     }
 
@@ -1018,6 +1037,19 @@ class Game extends \Bga\GameFramework\Table
             array_slice($playerIds, $firstIndex),
             array_slice($playerIds, 0, $firstIndex)
         );
+    }
+
+    private function getCurrentTurnOrderPlayerIds(): array
+    {
+        $rows = array_values($this->getCollectionFromDb(
+            "SELECT `player_id` AS `id` FROM `player` ORDER BY `player_start_order` ASC"
+        ));
+        $players = [];
+        foreach ($rows as $row) {
+            $players[(int) $row['id']] = true;
+        }
+
+        return $this->getPlayerIdsInTurnOrder($players, (int) $this->getGameStateValue(self::G_START_PLAYER_ID));
     }
 
     private function getPlayerHandSum(int $playerId): int

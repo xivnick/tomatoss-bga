@@ -850,12 +850,13 @@ class PlayerZonesView {
     }
 
     getOrderedPlayers() {
-        const localPlayerId = this.game.getLocalPlayerId();
+        const order = this.game.gamedatas.turnOrderPlayerIds ?? [];
+        const orderIndex = new Map(order.map((playerId, index) => [Number(playerId), index]));
         return Object.values(this.game.gamedatas.players ?? {}).sort((a, b) => {
-            const aSelf = Number(a.id) === localPlayerId ? 1 : 0;
-            const bSelf = Number(b.id) === localPlayerId ? 1 : 0;
-            if (aSelf !== bSelf) {
-                return bSelf - aSelf;
+            const aIndex = orderIndex.get(Number(a.id)) ?? Number.MAX_SAFE_INTEGER;
+            const bIndex = orderIndex.get(Number(b.id)) ?? Number.MAX_SAFE_INTEGER;
+            if (aIndex !== bIndex) {
+                return aIndex - bIndex;
             }
             return Number(a.id) - Number(b.id);
         });
@@ -1185,6 +1186,7 @@ export class Game {
         this.actionAnimationDepth = 0;
         this.movingTomatoKeys = new Set();
         this.movingMissionKeys = new Set();
+        this.isDiscardPopupOpen = false;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1219,9 +1221,17 @@ export class Game {
 
         document.getElementById('tomatoss-layout')?.remove();
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
-            <div id="tomatoss-layout">
-                <div id="animation-layer"></div>
-                <div id="full-table">
+                <div id="tomatoss-layout">
+                    <div id="animation-layer"></div>
+                    <div id="discard-popup" class="discard-popup is-hidden" aria-hidden="true">
+                        <div class="discard-popup__backdrop" data-role="close-discard-popup"></div>
+                        <div class="discard-popup__panel">
+                            <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
+                            <div class="discard-popup__title">${_('Discard pile')}</div>
+                            <div id="discard-popup-cards" class="discard-popup__cards"></div>
+                        </div>
+                    </div>
+                    <div id="full-table">
                     <div id="centered-table">
                         <div id="tables-and-center">
                             <div id="table-center">
@@ -1318,6 +1328,16 @@ export class Game {
                 return;
             }
 
+            if (target.closest('#discard-slot')) {
+                this.openDiscardPopup();
+                return;
+            }
+
+            if (target.closest('[data-role="close-discard-popup"]')) {
+                this.closeDiscardPopup();
+                return;
+            }
+
             const boardTokenSlot = target.closest('.board-token-slot');
             if (boardTokenSlot) {
                 this.onBoardSpaceClick(Number(boardTokenSlot.dataset.space));
@@ -1337,12 +1357,14 @@ export class Game {
             targetDeckCount: source.targetDeckCount ?? this.gamedatas.targetDeckCount ?? 0,
             publicDiscardCount: source.publicDiscardCount ?? this.gamedatas.publicDiscardCount ?? 0,
             latestDiscardTomato: source.latestDiscardTomato ?? this.gamedatas.latestDiscardTomato ?? null,
+            discardTomatoes: source.discardTomatoes ?? this.gamedatas.discardTomatoes ?? [],
             playerHand: source.playerHand ?? this.gamedatas.playerHand ?? [],
             handCountsByPlayer: source.handCountsByPlayer ?? this.gamedatas.handCountsByPlayer ?? {},
             currentTurnActions: source.currentTurnActions ?? this.gamedatas.currentTurnActions ?? [],
             placementsRemaining: source.placementsRemaining ?? this.gamedatas.placementsRemaining ?? 3,
             capturedTargetsByPlayer: source.capturedTargetsByPlayer ?? this.gamedatas.capturedTargetsByPlayer ?? {},
             discardCountNeeded: source.discardCountNeeded ?? this.gamedatas.discardCountNeeded ?? 0,
+            turnOrderPlayerIds: source.turnOrderPlayerIds ?? this.gamedatas.turnOrderPlayerIds ?? [],
         };
 
         if (this.pendingThrowResolution) {
@@ -1360,6 +1382,7 @@ export class Game {
             targetDeckCount: this.gamedatas.targetDeckCount ?? 0,
             publicDiscardCount: this.gamedatas.publicDiscardCount ?? 0,
             latestDiscardTomato: this.gamedatas.latestDiscardTomato ?? null,
+            discardTomatoes: this.gamedatas.discardTomatoes ?? [],
             capturedTargetsByPlayer: this.gamedatas.capturedTargetsByPlayer ?? {},
         };
     }
@@ -1377,6 +1400,7 @@ export class Game {
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
         this.renderOverallPlayerBoards();
+        this.renderDiscardPopup();
         this.cleanupMissionNodes();
         this.updateActionButtons();
         this.flushDeferredTurnCleanup();
@@ -1874,15 +1898,67 @@ export class Game {
             if (!counter) {
                 counter = document.createElement('div');
                 counter.className = 'tomatoss-overall-hand';
+                panel.appendChild(counter);
+            }
+            if (!counter.querySelector('.tomatoss-overall-basket')) {
                 counter.innerHTML = `
                     <div class="tomatoss-overall-hand__icon"></div>
                     <span class="tomatoss-overall-hand__count"></span>
+                    <div class="tomatoss-overall-basket">
+                        <div class="tomatoss-overall-basket__icon"></div>
+                        <span class="tomatoss-overall-basket__label"></span>
+                    </div>
                 `;
-                panel.appendChild(counter);
             }
 
             const count = Number(this.gamedatas.handCountsByPlayer?.[playerId] ?? 0);
-            counter.querySelector('.tomatoss-overall-hand__count').textContent = String(count);
+            counter.querySelector('.tomatoss-overall-hand__count').textContent = `${count}/8`;
+            const basketLabel = counter.querySelector('.tomatoss-overall-basket__label');
+            const basketIcon = counter.querySelector('.tomatoss-overall-basket__icon');
+            const basketFull = Boolean(this.gamedatas.players?.[playerId]?.basketFull);
+            basketLabel.textContent = basketFull ? _('Full') : _('Empty');
+            basketIcon.className = `tomatoss-overall-basket__icon ${basketFull ? 'is-full' : 'is-empty'}`;
+        });
+    }
+
+    openDiscardPopup() {
+        if ((this.gamedatas.discardTomatoes?.length ?? 0) === 0) {
+            this.bga.dialogs.showMessage(_('Discard pile is empty'), 'error');
+            return;
+        }
+        this.isDiscardPopupOpen = true;
+        this.renderDiscardPopup();
+    }
+
+    closeDiscardPopup() {
+        this.isDiscardPopupOpen = false;
+        this.renderDiscardPopup();
+    }
+
+    renderDiscardPopup() {
+        const popup = document.getElementById('discard-popup');
+        const cardsRoot = document.getElementById('discard-popup-cards');
+        if (!popup || !cardsRoot) {
+            return;
+        }
+
+        const cards = this.gamedatas.discardTomatoes ?? [];
+        popup.classList.toggle('is-hidden', !this.isDiscardPopupOpen);
+        popup.setAttribute('aria-hidden', this.isDiscardPopupOpen ? 'false' : 'true');
+
+        if (!this.isDiscardPopupOpen) {
+            cardsRoot.replaceChildren();
+            this.registry.clearTemporary('discard-popup-');
+            return;
+        }
+
+        const scale = this.sprites.getCardScale('tomato');
+        cardsRoot.replaceChildren();
+        cards.forEach(card => {
+            const host = document.createElement('div');
+            host.className = 'discard-popup__card';
+            this.registry.mount(host, this.registry.getTemporaryTomatoNode(`discard-popup-${card.id}`, card.value, scale));
+            cardsRoot.appendChild(host);
         });
     }
 
@@ -2238,6 +2314,9 @@ export class Game {
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
         }
+        if (Object.prototype.hasOwnProperty.call(args, 'discardTomatoes')) {
+            this.gamedatas.discardTomatoes = args.discardTomatoes;
+        }
         this.updateHandCount(args.player_id, args.handCount ?? ((this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0) + 1));
     }
 
@@ -2257,6 +2336,9 @@ export class Game {
         }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
+        if (Object.prototype.hasOwnProperty.call(args, 'discardTomatoes')) {
+            this.gamedatas.discardTomatoes = args.discardTomatoes;
         }
         this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
     }
@@ -2284,9 +2366,11 @@ export class Game {
         }
 
         this.gamedatas.latestDiscardTomato = null;
+        this.gamedatas.discardTomatoes = [];
         this.gamedatas.publicDiscardCount = 0;
         this.gamedatas.tomatoDeckCount = Number(this.gamedatas.tomatoDeckCount ?? 0) + recycledCount;
         this.stageView.renderTomatoRow();
+        this.renderDiscardPopup();
         return recycledDiscardTop;
     }
 
@@ -2355,6 +2439,9 @@ export class Game {
         }
         if (Object.prototype.hasOwnProperty.call(args, 'latestDiscardTomato')) {
             this.gamedatas.latestDiscardTomato = args.latestDiscardTomato;
+        }
+        if (Object.prototype.hasOwnProperty.call(args, 'discardTomatoes')) {
+            this.gamedatas.discardTomatoes = args.discardTomatoes;
         }
         this.updateHandCount(args.player_id, args.handCount);
         this.playerZonesView.renderPlayer(args.player_id);
@@ -2500,6 +2587,9 @@ export class Game {
             if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
                 this.gamedatas.publicDiscardCount = args.publicDiscardCount;
             }
+            if (Object.prototype.hasOwnProperty.call(args, 'discardTomatoes')) {
+                this.gamedatas.discardTomatoes = args.discardTomatoes;
+            }
             this.updateHandCount(args.player_id, args.handCount);
             this.clearSelection();
             this.afterPublicChange();
@@ -2514,6 +2604,9 @@ export class Game {
         }
         if (Object.prototype.hasOwnProperty.call(args, 'publicDiscardCount')) {
             this.gamedatas.publicDiscardCount = args.publicDiscardCount;
+        }
+        if (Object.prototype.hasOwnProperty.call(args, 'discardTomatoes')) {
+            this.gamedatas.discardTomatoes = args.discardTomatoes;
         }
         this.updateHandCount(args.player_id, args.handCount);
         this.clearSelection();

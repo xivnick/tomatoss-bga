@@ -29,6 +29,7 @@ class PlayerTurn extends GameState
             'tomatoDeckCount' => $this->game->getTomatoDeckCount(),
             'targetDeckCount' => $this->game->getTargetDeckCount(),
             'latestDiscardTomato' => $this->game->getLatestDiscardTomato(),
+            'discardTomatoes' => $this->game->getTomatoDiscardCards(),
             'handCountsByPlayer' => $this->game->getHandCountsByPlayer(),
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
             'capturedTargetsByPlayer' => $this->game->getCapturedTargetsByPlayer(),
@@ -54,6 +55,7 @@ class PlayerTurn extends GameState
             'publicDiscardCount' => $result['publicDiscardCount'],
             'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
             'latestDiscardTomato' => $result['latestDiscardTomato'],
+            'discardTomatoes' => $result['discardTomatoes'],
             'handCount' => count($this->game->getHandForPlayer($activePlayerId)),
         ]);
         $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
@@ -99,6 +101,7 @@ class PlayerTurn extends GameState
                 $this->bga->playerStats->inc('failedQuickTosses', 1, $activePlayerId);
                 $this->bga->tableStats->inc('totalFailedTosses', 1);
             }
+            $this->updateQuickTossSuccessRate($activePlayerId);
         } else {
             $this->bga->playerStats->inc('normalTosses', 1, $activePlayerId);
             $this->bga->tableStats->inc('totalNormalTosses', 1);
@@ -106,7 +109,6 @@ class PlayerTurn extends GameState
                 $this->bga->playerStats->inc('pointsFromNormalToss', $result['scoreGained'], $activePlayerId);
                 $this->bga->playerStats->inc('targetsCaptured', 1, $activePlayerId);
             } else {
-                $this->bga->playerStats->inc('failedNormalTosses', 1, $activePlayerId);
                 $this->bga->tableStats->inc('totalFailedTosses', 1);
             }
         }
@@ -142,6 +144,7 @@ class PlayerTurn extends GameState
                 'replacementTarget' => $result['replacementTarget'],
                 'publicDiscardCount' => $result['publicDiscardCount'],
                 'latestDiscardTomato' => $result['latestDiscardTomato'],
+                'discardTomatoes' => $result['discardTomatoes'],
                 'targetDeckCount' => $result['targetDeckCount'],
                 'tomatoDeckCount' => $result['tomatoDeckCount'],
                 'recycledTomatoDiscard' => $result['recycledTomatoDiscard'],
@@ -221,5 +224,13 @@ class PlayerTurn extends GameState
     private function formatCardValues(array $values): string
     {
         return implode(' + ', array_map(static fn(int $value): string => (string) $value, $values));
+    }
+
+    private function updateQuickTossSuccessRate(int $playerId): void
+    {
+        $attempts = (int) $this->bga->playerStats->get('quickTossAttempts', $playerId);
+        $successes = (int) $this->bga->playerStats->get('quickTossSuccesses', $playerId);
+        $rate = $attempts > 0 ? round($successes / $attempts * 100, 1) : 0.0;
+        $this->bga->playerStats->set('quickTossSuccessRate', $rate, $playerId);
     }
 }
