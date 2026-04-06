@@ -667,12 +667,11 @@
 
 .discard-popup__group {
     align-items: center;
-    background: white;
     border-radius: 6px;
     display: flex;
     gap: 10px;
-    min-height: 80px;
-    padding: 8px;
+    min-height: 72px;
+    padding: 0;
 }
 
 .discard-popup__card {
