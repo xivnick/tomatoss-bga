@@ -178,6 +178,13 @@ class CardRegistry {
         });
     }
 
+    getTemporaryMissionNode(key, targetId, scale, classes = []) {
+        return this.getNode(key, {
+            style: this.sprites.missionCardStyle(Number(targetId), scale),
+            classes: ['card-node', 'board-mission-card', ...classes],
+        });
+    }
+
     mount(parent, node, { empty = false } = {}) {
         if (!parent) {
             return;
@@ -1192,6 +1199,7 @@ export class Game {
         this.movingTomatoKeys = new Set();
         this.movingMissionKeys = new Set();
         this.isDiscardPopupOpen = false;
+        this.openMissionPopupIndex = null;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1241,6 +1249,12 @@ export class Game {
                                                 <button class="stage-slot-button mission-slot-button" data-space="${index + 3}">
                                                     <div class="slot-card-host" data-empty="true"></div>
                                                 </button>
+                                                <button
+                                                    class="mission-zoom-button"
+                                                    data-role="open-mission-popup"
+                                                    data-target-index="${index}"
+                                                    aria-label="${_('View target card')}"
+                                                >+</button>
                                             </div>
                                         `).join('')}
                                         <div id="festival-board-wrap">
@@ -1277,6 +1291,16 @@ export class Game {
                             <div id="discard-popup-count" class="discard-popup__count"></div>
                         </div>
                         <div id="discard-popup-cards" class="discard-popup__cards"></div>
+                    </div>
+                </div>
+                <div id="mission-popup" class="mission-popup is-hidden" aria-hidden="true">
+                    <div class="mission-popup__backdrop" data-role="close-mission-popup"></div>
+                    <div class="mission-popup__panel">
+                        <button class="mission-popup__close" data-role="close-mission-popup" aria-label="${_('Close target card')}">×</button>
+                        <div class="mission-popup__header">
+                            <div class="mission-popup__title">${_('Target card')}</div>
+                        </div>
+                        <div id="mission-popup-card" class="mission-popup__card"></div>
                     </div>
                 </div>
             </div>
@@ -1324,6 +1348,12 @@ export class Game {
 
         root.addEventListener('click', event => {
             const target = event.target;
+            const missionZoomButton = target.closest('.mission-zoom-button');
+            if (missionZoomButton) {
+                this.openMissionPopup(Number(missionZoomButton.dataset.targetIndex));
+                return;
+            }
+
             const handButton = target.closest('.hand-card-button');
             if (handButton) {
                 this.onHandCardClick(handButton);
@@ -1347,6 +1377,11 @@ export class Game {
 
             if (target.closest('[data-role="close-discard-popup"]')) {
                 this.closeDiscardPopup();
+                return;
+            }
+
+            if (target.closest('[data-role="close-mission-popup"]')) {
+                this.closeMissionPopup();
                 return;
             }
 
@@ -1413,6 +1448,7 @@ export class Game {
         this.playerZonesView.renderAll();
         this.renderOverallPlayerBoards();
         this.renderDiscardPopup();
+        this.renderMissionPopup();
         this.cleanupMissionNodes();
         this.updateActionButtons();
         this.flushDeferredTurnCleanup();
@@ -1933,6 +1969,19 @@ export class Game {
         });
     }
 
+    openMissionPopup(index) {
+        if (!this.gamedatas.boardTargets?.[index]) {
+            return;
+        }
+        this.openMissionPopupIndex = index;
+        this.renderMissionPopup();
+    }
+
+    closeMissionPopup() {
+        this.openMissionPopupIndex = null;
+        this.renderMissionPopup();
+    }
+
     openDiscardPopup() {
         if ((this.gamedatas.discardTomatoes?.length ?? 0) === 0) {
             this.bga.dialogs.showMessage(_('Discard pile is empty'), 'error');
@@ -1940,6 +1989,35 @@ export class Game {
         }
         this.isDiscardPopupOpen = true;
         this.renderDiscardPopup();
+    }
+
+    renderMissionPopup() {
+        const popup = document.getElementById('mission-popup');
+        const cardRoot = document.getElementById('mission-popup-card');
+        if (!popup || !cardRoot) {
+            return;
+        }
+
+        const index = this.openMissionPopupIndex;
+        const card = Number.isInteger(index) ? this.gamedatas.boardTargets?.[index] : null;
+        const isOpen = Boolean(card);
+        popup.classList.toggle('is-hidden', !isOpen);
+        popup.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+
+        if (!isOpen) {
+            cardRoot.replaceChildren();
+            this.registry.clearTemporary('mission-popup-');
+            return;
+        }
+
+        const scale = this.sprites.getCardScale('mission') * 1.4;
+        const host = document.createElement('div');
+        host.className = 'mission-popup__card-host';
+        this.registry.mount(
+            host,
+            this.registry.getTemporaryMissionNode(`mission-popup-${card.id}`, card.id, scale)
+        );
+        cardRoot.replaceChildren(host);
     }
 
     closeDiscardPopup() {
@@ -2444,6 +2522,7 @@ export class Game {
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
         this.renderOverallPlayerBoards();
+        this.renderMissionPopup();
         this.updateActionButtons();
     }
 
