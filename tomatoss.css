@@ -608,74 +608,6 @@
     position: relative;
 }
 
-.discard-popup {
-    align-items: center;
-    display: flex;
-    inset: 0;
-    justify-content: center;
-    padding: 24px;
-    position: fixed;
-    z-index: 40;
-}
-
-.discard-popup.is-hidden {
-    display: none;
-}
-
-.discard-popup__backdrop {
-    background: rgba(0, 0, 0, 0.22);
-    inset: 0;
-    position: absolute;
-}
-
-.discard-popup__panel {
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 10px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-    max-height: min(72vh, 720px);
-    max-width: min(92vw, 980px);
-    padding: 16px 18px 18px;
-    position: relative;
-    width: min(92vw, 980px);
-    z-index: 1;
-}
-
-.discard-popup__header {
-    align-items: baseline;
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-    padding-right: 36px;
-}
-
-.discard-popup__title {
-    color: #1d1d1d;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.discard-popup__count {
-    color: #666;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-}
-
-.discard-popup__close {
-    background: transparent;
-    border: 0;
-    color: #444;
-    cursor: pointer;
-    font-size: 24px;
-    height: 28px;
-    line-height: 1;
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    width: 28px;
-}
-
 .discard-popup__cards {
     align-content: flex-start;
     display: flex;
@@ -697,63 +629,6 @@
 .discard-popup__card .card-node {
     transform: scale(0.82);
     transform-origin: top left;
-}
-
-.mission-popup {
-    align-items: center;
-    display: flex;
-    inset: 0;
-    justify-content: center;
-    padding: 24px;
-    position: fixed;
-    z-index: 42;
-}
-
-.mission-popup.is-hidden {
-    display: none;
-}
-
-.mission-popup__backdrop {
-    background: rgba(0, 0, 0, 0.28);
-    inset: 0;
-    position: absolute;
-}
-
-.mission-popup__panel {
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 10px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-    max-width: min(92vw, 480px);
-    padding: 16px 18px 18px;
-    position: relative;
-    width: min(92vw, 480px);
-    z-index: 1;
-}
-
-.mission-popup__header {
-    margin-bottom: 10px;
-    padding-right: 36px;
-}
-
-.mission-popup__title {
-    color: #1d1d1d;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.mission-popup__close {
-    background: transparent;
-    border: 0;
-    color: #444;
-    cursor: pointer;
-    font-size: 24px;
-    height: 28px;
-    line-height: 1;
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    width: 28px;
 }
 
 .mission-popup__card {

@@ -1210,6 +1210,8 @@ export class Game {
         this.movingMissionKeys = new Set();
         this.isDiscardPopupOpen = false;
         this.openMissionPopupIndex = null;
+        this.discardDialog = null;
+        this.missionDialog = null;
         this.zoomManager = null;
         this.zoomManagerPromise = null;
         this.resizeRaf = null;
@@ -1244,6 +1246,7 @@ export class Game {
             this.bga.gameui.interface_min_width = 600;
         }
 
+        this.destroyDialogs();
         document.getElementById('tomatoss-layout')?.remove();
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
                 <div id="tomatoss-layout">
@@ -1292,27 +1295,6 @@ export class Game {
                             </div>
                             <div id="player-zones"></div>
                         </div>
-                    </div>
-                </div>
-                <div id="discard-popup" class="discard-popup is-hidden" aria-hidden="true">
-                    <div class="discard-popup__backdrop" data-role="close-discard-popup"></div>
-                    <div class="discard-popup__panel">
-                        <button class="discard-popup__close" data-role="close-discard-popup" aria-label="${_('Close discard pile')}">×</button>
-                        <div class="discard-popup__header">
-                            <div class="discard-popup__title">${_('Discard pile')}</div>
-                            <div id="discard-popup-count" class="discard-popup__count"></div>
-                        </div>
-                        <div id="discard-popup-cards" class="discard-popup__cards"></div>
-                    </div>
-                </div>
-                <div id="mission-popup" class="mission-popup is-hidden" aria-hidden="true">
-                    <div class="mission-popup__backdrop" data-role="close-mission-popup"></div>
-                    <div class="mission-popup__panel">
-                        <button class="mission-popup__close" data-role="close-mission-popup" aria-label="${_('Close target card')}">×</button>
-                        <div class="mission-popup__header">
-                            <div class="mission-popup__title">${_('Target card')}</div>
-                        </div>
-                        <div id="mission-popup-card" class="mission-popup__card"></div>
                     </div>
                 </div>
             </div>
@@ -1385,16 +1367,6 @@ export class Game {
                 } else {
                     this.openDiscardPopup();
                 }
-                return;
-            }
-
-            if (target.closest('[data-role="close-discard-popup"]')) {
-                this.closeDiscardPopup();
-                return;
-            }
-
-            if (target.closest('[data-role="close-mission-popup"]')) {
-                this.closeMissionPopup();
                 return;
             }
 
@@ -1524,7 +1496,7 @@ export class Game {
     }
 
     buildMissionTooltipHtml(targetId) {
-        const scale = 300 / 157.5;
+        const scale = 360 / 157.5;
         return `
             <div class="tomatoss-card-tooltip">
                 <div class="tomatoss-card-tooltip__title">${_('Target card')}</div>
@@ -1534,7 +1506,7 @@ export class Game {
     }
 
     buildTomatoTooltipHtml(value) {
-        const scale = 270 / 155;
+        const scale = 320 / 155;
         return `
             <div class="tomatoss-card-tooltip">
                 <div class="tomatoss-card-tooltip__title">${_('Tomato card')} ${Number(value)}</div>
@@ -2079,6 +2051,8 @@ export class Game {
 
     closeMissionPopup() {
         this.openMissionPopupIndex = null;
+        this.registry.clearTemporary('mission-popup-');
+        this.missionDialog?.hide();
         this.renderMissionPopup();
     }
 
@@ -2091,22 +2065,54 @@ export class Game {
         this.renderDiscardPopup();
     }
 
+    destroyDialogs() {
+        this.discardDialog?.destroy();
+        this.missionDialog?.destroy();
+        this.discardDialog = null;
+        this.missionDialog = null;
+    }
+
+    ensureDiscardDialog() {
+        if (this.discardDialog) {
+            return this.discardDialog;
+        }
+        const dialog = new ebg.popindialog();
+        dialog.create('tomatossDiscardDialog');
+        dialog.setTitle(_('Discard pile'));
+        dialog.setMaxWidth(980);
+        dialog.replaceCloseCallback(() => this.closeDiscardPopup());
+        this.discardDialog = dialog;
+        return dialog;
+    }
+
+    ensureMissionDialog() {
+        if (this.missionDialog) {
+            return this.missionDialog;
+        }
+        const dialog = new ebg.popindialog();
+        dialog.create('tomatossMissionDialog');
+        dialog.setTitle(_('Target card'));
+        dialog.setMaxWidth(560);
+        dialog.replaceCloseCallback(() => this.closeMissionPopup());
+        this.missionDialog = dialog;
+        return dialog;
+    }
+
     renderMissionPopup() {
-        const popup = document.getElementById('mission-popup');
-        const cardRoot = document.getElementById('mission-popup-card');
-        if (!popup || !cardRoot) {
+        const index = this.openMissionPopupIndex;
+        const card = Number.isInteger(index) ? this.gamedatas.boardTargets?.[index] : null;
+        if (!card) {
+            this.registry.clearTemporary('mission-popup-');
+            this.missionDialog?.hide();
             return;
         }
 
-        const index = this.openMissionPopupIndex;
-        const card = Number.isInteger(index) ? this.gamedatas.boardTargets?.[index] : null;
-        const isOpen = Boolean(card);
-        popup.classList.toggle('is-hidden', !isOpen);
-        popup.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        const dialog = this.ensureMissionDialog();
+        dialog.setContent('<div id="mission-popup-card" class="mission-popup__card"></div>');
+        dialog.show();
 
-        if (!isOpen) {
-            cardRoot.replaceChildren();
-            this.registry.clearTemporary('mission-popup-');
+        const cardRoot = document.getElementById('mission-popup-card');
+        if (!cardRoot) {
             return;
         }
 
@@ -2125,25 +2131,29 @@ export class Game {
 
     closeDiscardPopup() {
         this.isDiscardPopupOpen = false;
+        this.registry.clearTemporary('discard-popup-');
+        this.discardDialog?.hide();
         this.renderDiscardPopup();
     }
 
     renderDiscardPopup() {
-        const popup = document.getElementById('discard-popup');
-        const cardsRoot = document.getElementById('discard-popup-cards');
-        const countChip = document.getElementById('discard-popup-count');
-        if (!popup || !cardsRoot || !countChip) {
+        const cards = this.gamedatas.discardTomatoes ?? [];
+        if (!this.isDiscardPopupOpen) {
+            return;
+        }
+        if (cards.length === 0) {
+            this.registry.clearTemporary('discard-popup-');
+            this.discardDialog?.hide();
             return;
         }
 
-        const cards = this.gamedatas.discardTomatoes ?? [];
-        popup.classList.toggle('is-hidden', !this.isDiscardPopupOpen);
-        popup.setAttribute('aria-hidden', this.isDiscardPopupOpen ? 'false' : 'true');
-        countChip.textContent = `${cards.length} ${cards.length === 1 ? _('card') : _('cards')}`;
+        const dialog = this.ensureDiscardDialog();
+        dialog.setTitle(`${_('Discard pile')} (${cards.length})`);
+        dialog.setContent('<div id="discard-popup-cards" class="discard-popup__cards"></div>');
+        dialog.show();
 
-        if (!this.isDiscardPopupOpen) {
-            cardsRoot.replaceChildren();
-            this.registry.clearTemporary('discard-popup-');
+        const cardsRoot = document.getElementById('discard-popup-cards');
+        if (!cardsRoot) {
             return;
         }
 
