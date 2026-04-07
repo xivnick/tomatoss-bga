@@ -223,8 +223,8 @@
 
 .mission-zoom-button {
     align-items: center;
-    background: transparent;
-    border: 0;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 999px;
     color: rgba(24, 24, 24, 0.82);
     cursor: pointer;
@@ -237,8 +237,8 @@
     line-height: 1;
     padding: 0;
     position: absolute;
-    right: calc(var(--mission-card-w) * 0.01);
-    top: calc(var(--card-h) * 0.87);
+    right: 0;
+    top: calc(var(--card-h) - (var(--mission-card-w) * 0.11));
     width: calc(var(--mission-card-w) * 0.11);
     z-index: 2;
 }
