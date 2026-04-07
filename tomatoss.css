@@ -229,16 +229,16 @@
     color: #222;
     cursor: pointer;
     display: inline-flex;
-    font-size: calc(16px * var(--stage-scale));
+    font-size: clamp(18px, calc(16px * var(--stage-scale)), 22px);
     font-weight: 600;
-    height: calc(28px * var(--stage-scale));
+    height: clamp(34px, calc(28px * var(--stage-scale)), 40px);
     justify-content: center;
     line-height: 1;
     padding: 0;
     position: absolute;
-    right: calc(-10px * var(--stage-scale));
-    top: calc(-10px * var(--stage-scale));
-    width: calc(28px * var(--stage-scale));
+    right: clamp(-8px, calc(-10px * var(--stage-scale)), -4px);
+    top: clamp(-8px, calc(-10px * var(--stage-scale)), -4px);
+    width: clamp(34px, calc(28px * var(--stage-scale)), 40px);
     z-index: 2;
 }
 
@@ -715,8 +715,10 @@
     background: rgba(255, 255, 255, 0.98);
     border-radius: 10px;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    max-width: min(92vw, 480px);
     padding: 16px 18px 18px;
     position: relative;
+    width: min(92vw, 480px);
     z-index: 1;
 }
 
@@ -753,9 +755,7 @@
 
 .mission-popup__card-host {
     flex: 0 0 auto;
-    height: calc(var(--card-h) * 1.4);
     position: relative;
-    width: calc(var(--mission-card-w) * 1.4);
 }
 
 @media (max-width: 900px) {

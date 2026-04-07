@@ -2010,9 +2010,12 @@ export class Game {
             return;
         }
 
-        const scale = this.sprites.getCardScale('mission') * 1.4;
+        const popupCardWidth = Math.min(window.innerWidth * 0.82, 430);
+        const scale = popupCardWidth / 157.5;
         const host = document.createElement('div');
         host.className = 'mission-popup__card-host';
+        host.style.width = `${157.5 * scale}px`;
+        host.style.height = `${220 * scale}px`;
         this.registry.mount(
             host,
             this.registry.getTemporaryMissionNode(`mission-popup-${card.id}`, card.id, scale)
