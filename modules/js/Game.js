@@ -1500,6 +1500,9 @@ export class Game {
                     localStorageZoomKey: LOCAL_STORAGE_ZOOM_KEY,
                     onDimensionsChange: () => this.renderState(this.gamedatas),
                 });
+                if (typeof this.zoomManager.setZoom === 'function' && !localStorage.getItem(LOCAL_STORAGE_ZOOM_KEY)) {
+                    this.zoomManager.setZoom(0.82);
+                }
             })
             .catch(() => {})
             .finally(() => {

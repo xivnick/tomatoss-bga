@@ -250,6 +250,17 @@
     }
 }
 
+@media (hover: none) {
+    .mission-zoom-button {
+        font-size: 15px;
+        font-weight: 700;
+        height: 38px;
+        right: -2px;
+        top: calc((var(--card-h) - 2px) - 38px + 2px);
+        width: 38px;
+    }
+}
+
 .player-hand-back-host {
     flex: 0 0 auto;
     height: var(--card-h);
