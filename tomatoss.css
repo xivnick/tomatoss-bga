@@ -193,6 +193,7 @@
 }
 
 .stage-slot-button.is-pending .slot-card-host > .card-node,
+.stage-slot-button.is-pending .slot-card-host > .board-mission-card,
 .hand-card-button.is-selected .hand-card-host > .card-node,
 .board-token-slot.is-pending {
     box-shadow: 0 0 0 3px rgba(217, 72, 59, 0.45);
