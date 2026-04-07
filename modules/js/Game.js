@@ -1211,6 +1211,7 @@ export class Game {
         this.isDiscardPopupOpen = false;
         this.openMissionPopupIndex = null;
         this.zoomManager = null;
+        this.zoomManagerPromise = null;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1479,21 +1480,31 @@ export class Game {
         this.bga.statusBar.setTitle(text);
     }
 
-    setupZoomManager() {
-        const ZoomManager = window.BgaZoom?.Manager;
+    async setupZoomManager() {
         const fullTable = document.getElementById('full-table');
-        if (!ZoomManager || !fullTable || this.zoomManager) {
+        if (!fullTable || this.zoomManager || this.zoomManagerPromise) {
             return;
         }
 
-        this.zoomManager = new ZoomManager({
-            element: fullTable,
-            zoomControls: {
-                color: 'white',
-            },
-            localStorageZoomKey: LOCAL_STORAGE_ZOOM_KEY,
-            onDimensionsChange: () => this.renderState(this.gamedatas),
-        });
+        this.zoomManagerPromise = importEsmLib('bga-zoom', '1.x')
+            .then(BgaZoom => {
+                const ZoomManager = BgaZoom?.Manager;
+                if (!ZoomManager || this.zoomManager) {
+                    return;
+                }
+                this.zoomManager = new ZoomManager({
+                    element: fullTable,
+                    zoomControls: {
+                        color: 'white',
+                    },
+                    localStorageZoomKey: LOCAL_STORAGE_ZOOM_KEY,
+                    onDimensionsChange: () => this.renderState(this.gamedatas),
+                });
+            })
+            .catch(() => {})
+            .finally(() => {
+                this.zoomManagerPromise = null;
+            });
     }
 
     supportsHoverTooltips() {
