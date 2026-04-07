@@ -223,10 +223,10 @@
 
 .mission-zoom-button {
     align-items: center;
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(0, 0, 0, 0.2);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.92);
     border-radius: 999px;
-    color: rgba(24, 24, 24, 0.82);
+    color: rgba(255, 255, 255, 0.96);
     cursor: pointer;
     display: inline-flex;
     font-family: Georgia, "Times New Roman", serif;
@@ -238,7 +238,7 @@
     padding: 0;
     position: absolute;
     right: 0;
-    top: calc(var(--card-h) - (var(--mission-card-w) * 0.11));
+    top: calc((var(--card-h) - 2px) - (var(--mission-card-w) * 0.11));
     width: calc(var(--mission-card-w) * 0.11);
     z-index: 2;
 }
