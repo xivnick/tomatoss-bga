@@ -2051,7 +2051,6 @@ export class Game {
 
     closeMissionPopup() {
         this.openMissionPopupIndex = null;
-        this.registry.clearTemporary('mission-popup-');
         this.missionDialog?.hide();
         this.renderMissionPopup();
     }
@@ -2102,36 +2101,31 @@ export class Game {
         const index = this.openMissionPopupIndex;
         const card = Number.isInteger(index) ? this.gamedatas.boardTargets?.[index] : null;
         if (!card) {
-            this.registry.clearTemporary('mission-popup-');
             this.missionDialog?.hide();
             return;
         }
 
         const dialog = this.ensureMissionDialog();
-        dialog.setContent('<div id="mission-popup-card" class="mission-popup__card"></div>');
-        dialog.show();
-
-        const cardRoot = document.getElementById('mission-popup-card');
-        if (!cardRoot) {
-            return;
-        }
-
         const popupCardWidth = Math.min(window.innerWidth * 0.82, 430);
         const scale = popupCardWidth / 157.5;
-        const host = document.createElement('div');
-        host.className = 'mission-popup__card-host';
-        host.style.width = `${157.5 * scale}px`;
-        host.style.height = `${220 * scale}px`;
-        this.registry.mount(
-            host,
-            this.registry.getTemporaryMissionNode(`mission-popup-${card.id}`, card.targetId, scale)
-        );
-        cardRoot.replaceChildren(host);
+        dialog.setContent(`
+            <div class="mission-popup__card">
+                <div
+                    class="mission-popup__card-host"
+                    style="width:${157.5 * scale}px;height:${220 * scale}px;"
+                >
+                    <div
+                        class="card-node board-mission-card"
+                        style="${this.sprites.missionCardStyle(Number(card.targetId), scale)}"
+                    ></div>
+                </div>
+            </div>
+        `);
+        dialog.show();
     }
 
     closeDiscardPopup() {
         this.isDiscardPopupOpen = false;
-        this.registry.clearTemporary('discard-popup-');
         this.discardDialog?.hide();
         this.renderDiscardPopup();
     }
@@ -2142,32 +2136,26 @@ export class Game {
             return;
         }
         if (cards.length === 0) {
-            this.registry.clearTemporary('discard-popup-');
             this.discardDialog?.hide();
             return;
         }
 
         const dialog = this.ensureDiscardDialog();
         dialog.setTitle(`${_('Discard pile')} (${cards.length})`);
-        dialog.setContent('<div id="discard-popup-cards" class="discard-popup__cards"></div>');
-        dialog.show();
-
-        const cardsRoot = document.getElementById('discard-popup-cards');
-        if (!cardsRoot) {
-            return;
-        }
-
         const scale = this.sprites.getCardScale('tomato') * 0.82;
-        cardsRoot.replaceChildren();
-        cards.forEach((card, index) => {
-            const cardHost = document.createElement('div');
-            cardHost.className = 'discard-popup__card';
-            this.registry.mount(
-                cardHost,
-                this.registry.getTemporaryTomatoNode(`discard-popup-card-${index}`, Number(card.value), scale)
-            );
-            cardsRoot.appendChild(cardHost);
-        });
+        dialog.setContent(`
+            <div class="discard-popup__cards">
+                ${cards.map(card => `
+                    <div class="discard-popup__card" style="width:${155 * scale}px;height:${220 * scale}px;">
+                        <div
+                            class="card-node board-tomato-card"
+                            style="${this.sprites.tomatoCardStyle(Number(card.value), scale)}"
+                        ></div>
+                    </div>
+                `).join('')}
+            </div>
+        `);
+        dialog.show();
     }
 
     getLocalPlayerId() {

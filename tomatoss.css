@@ -199,6 +199,11 @@
     box-shadow: 0 0 0 3px rgba(217, 72, 59, 0.45);
 }
 
+.mission-slot-button.is-pending .slot-card-host {
+    border-radius: var(--card-radius);
+    box-shadow: 0 0 0 3px rgba(217, 72, 59, 0.45);
+}
+
 .slot-card-host,
 .hand-card-host {
     height: var(--card-h);
@@ -622,14 +627,11 @@
 
 .discard-popup__card {
     flex: 0 0 auto;
-    height: calc(var(--card-h) * 0.82);
     position: relative;
-    width: calc(var(--tomato-card-w) * 0.82);
 }
 
 .discard-popup__card .card-node {
-    transform: scale(0.82);
-    transform-origin: top left;
+    position: relative;
 }
 
 .mission-popup__card {
