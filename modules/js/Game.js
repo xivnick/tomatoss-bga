@@ -1254,7 +1254,7 @@ export class Game {
                                                     data-role="open-mission-popup"
                                                     data-target-index="${index}"
                                                     aria-label="${_('View target card')}"
-                                                >+</button>
+                                                >?</button>
                                             </div>
                                         `).join('')}
                                         <div id="festival-board-wrap">
@@ -2018,7 +2018,7 @@ export class Game {
         host.style.height = `${220 * scale}px`;
         this.registry.mount(
             host,
-            this.registry.getTemporaryMissionNode(`mission-popup-${card.id}`, card.id, scale)
+            this.registry.getTemporaryMissionNode(`mission-popup-${card.id}`, card.targetId, scale)
         );
         cardRoot.replaceChildren(host);
     }

@@ -229,16 +229,17 @@
     color: #222;
     cursor: pointer;
     display: inline-flex;
-    font-size: clamp(18px, calc(16px * var(--stage-scale)), 22px);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: calc(var(--mission-card-w) * 0.14);
     font-weight: 600;
-    height: clamp(34px, calc(28px * var(--stage-scale)), 40px);
+    height: calc(var(--mission-card-w) * 0.2);
     justify-content: center;
     line-height: 1;
     padding: 0;
     position: absolute;
-    right: clamp(-8px, calc(-10px * var(--stage-scale)), -4px);
-    top: clamp(-8px, calc(-10px * var(--stage-scale)), -4px);
-    width: clamp(34px, calc(28px * var(--stage-scale)), 40px);
+    right: calc(var(--mission-card-w) * 0.04);
+    top: calc(var(--card-h) * 0.76);
+    width: calc(var(--mission-card-w) * 0.2);
     z-index: 2;
 }
 
