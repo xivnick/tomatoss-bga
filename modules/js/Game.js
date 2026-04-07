@@ -50,6 +50,7 @@ const ANIMATION_FULL = 1;
 const ANIMATION_REDUCED = 2;
 const ANIMATION_NONE = 3;
 const REPEATED_CLICK_CONFIRM_ON = 1;
+const LOCAL_STORAGE_ZOOM_KEY = 'Tomatoss-zoom';
 
 class SpriteStyles {
     getLayoutElement() {
@@ -151,17 +152,21 @@ class CardRegistry {
     }
 
     getMissionNode(card, scale, classes = []) {
-        return this.getNode(`mission-${card.id}`, {
+        const node = this.getNode(`mission-${card.id}`, {
             style: this.sprites.missionCardStyle(Number(card.targetId), scale),
             classes: ['card-node', 'board-mission-card', ...classes],
         });
+        this.game.bindMissionTooltip(node, Number(card.targetId));
+        return node;
     }
 
     getTomatoNode(card, scale, classes = []) {
-        return this.getNode(`tomato-${card.id}`, {
+        const node = this.getNode(`tomato-${card.id}`, {
             style: this.sprites.tomatoCardStyle(Number(card.value), scale),
             classes: ['card-node', 'board-tomato-card', ...classes],
         });
+        this.game.bindTomatoTooltip(node, Number(card.value));
+        return node;
     }
 
     getBackNode(key, kind, scale, classes = []) {
@@ -172,17 +177,21 @@ class CardRegistry {
     }
 
     getTemporaryTomatoNode(key, value, scale, classes = []) {
-        return this.getNode(key, {
+        const node = this.getNode(key, {
             style: this.sprites.tomatoCardStyle(Number(value), scale),
             classes: ['card-node', 'recent-throw__tomato', ...classes],
         });
+        this.game.bindTomatoTooltip(node, Number(value));
+        return node;
     }
 
     getTemporaryMissionNode(key, targetId, scale, classes = []) {
-        return this.getNode(key, {
+        const node = this.getNode(key, {
             style: this.sprites.missionCardStyle(Number(targetId), scale),
             classes: ['card-node', 'board-mission-card', ...classes],
         });
+        this.game.bindMissionTooltip(node, Number(targetId));
+        return node;
     }
 
     mount(parent, node, { empty = false } = {}) {
@@ -235,6 +244,7 @@ class CardRegistry {
         node.className = classes.join(' ');
         node.style.cssText = style;
         node.dataset.registryKey = key;
+        node.id = `tomatoss-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
         return node;
     }
 }
@@ -1200,6 +1210,7 @@ export class Game {
         this.movingMissionKeys = new Set();
         this.isDiscardPopupOpen = false;
         this.openMissionPopupIndex = null;
+        this.zoomManager = null;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1310,6 +1321,7 @@ export class Game {
         this.bindRootEvents();
         window.addEventListener('resize', this.onWindowResize);
         this.renderState(gamedatas);
+        this.setupZoomManager();
         this.setupNotifications();
     }
 
@@ -1465,6 +1477,83 @@ export class Game {
 
     setStatePrompt(text) {
         this.bga.statusBar.setTitle(text);
+    }
+
+    setupZoomManager() {
+        const ZoomManager = window.BgaZoom?.Manager;
+        const fullTable = document.getElementById('full-table');
+        if (!ZoomManager || !fullTable || this.zoomManager) {
+            return;
+        }
+
+        this.zoomManager = new ZoomManager({
+            element: fullTable,
+            zoomControls: {
+                color: 'white',
+            },
+            localStorageZoomKey: LOCAL_STORAGE_ZOOM_KEY,
+            onDimensionsChange: () => this.renderState(this.gamedatas),
+        });
+    }
+
+    supportsHoverTooltips() {
+        return Boolean(window.matchMedia?.('(hover: hover)').matches);
+    }
+
+    getTooltipDelay() {
+        return document.body.classList.contains('touch-device') ? 800 : 250;
+    }
+
+    getTooltipApi() {
+        const gameui = this.bga.gameui;
+        return {
+            addHtml: gameui?.addTooltipHtml?.bind(gameui) ?? this.bga.addTooltipHtml?.bind(this.bga),
+            remove: gameui?.removeTooltip?.bind(gameui) ?? this.bga.removeTooltip?.bind(this.bga),
+        };
+    }
+
+    buildMissionTooltipHtml(targetId) {
+        const scale = 300 / 157.5;
+        return `
+            <div class="tomatoss-card-tooltip">
+                <div class="tomatoss-card-tooltip__title">${_('Target card')}</div>
+                <div class="tomatoss-card-tooltip__card" style="${this.sprites.missionCardStyle(Number(targetId), scale)}"></div>
+            </div>
+        `;
+    }
+
+    buildTomatoTooltipHtml(value) {
+        const scale = 270 / 155;
+        return `
+            <div class="tomatoss-card-tooltip">
+                <div class="tomatoss-card-tooltip__title">${_('Tomato card')} ${Number(value)}</div>
+                <div class="tomatoss-card-tooltip__card" style="${this.sprites.tomatoCardStyle(Number(value), scale)}"></div>
+            </div>
+        `;
+    }
+
+    bindMissionTooltip(node, targetId) {
+        if (!node || !this.supportsHoverTooltips()) {
+            return;
+        }
+        const api = this.getTooltipApi();
+        if (!api.addHtml || !node.id) {
+            return;
+        }
+        api.remove?.(node.id);
+        api.addHtml(node.id, this.buildMissionTooltipHtml(targetId), this.getTooltipDelay());
+    }
+
+    bindTomatoTooltip(node, value) {
+        if (!node || !this.supportsHoverTooltips()) {
+            return;
+        }
+        const api = this.getTooltipApi();
+        if (!api.addHtml || !node.id) {
+            return;
+        }
+        api.remove?.(node.id);
+        api.addHtml(node.id, this.buildTomatoTooltipHtml(value), this.getTooltipDelay());
     }
 
     getAnimationPreferenceValue() {

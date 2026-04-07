@@ -243,6 +243,13 @@
     z-index: 2;
 }
 
+@media (hover: hover) {
+    .mission-zoom-button {
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
 .player-hand-back-host {
     flex: 0 0 auto;
     height: var(--card-h);
@@ -757,6 +764,26 @@
 .mission-popup__card-host {
     flex: 0 0 auto;
     position: relative;
+}
+
+.tomatoss-card-tooltip {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    padding: 2px;
+}
+
+.tomatoss-card-tooltip__title {
+    color: #1d1d1d;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.tomatoss-card-tooltip__card {
+    border-radius: 12px;
+    box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.35);
 }
 
 @media (max-width: 900px) {
