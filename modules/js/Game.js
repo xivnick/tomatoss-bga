@@ -40,7 +40,6 @@ const THROW_RESULT_PAUSE_MS = 120;
 const TURN_CLEANUP_MS = 320;
 const TOKEN_DESIGN_SIZE = 300;
 const TOKEN_STACK_RISE_PX = 6;
-const BOARD_FRAME_PX = 2;
 const TOKEN_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 const CARD_EASING = 'cubic-bezier(0.18, 0.84, 0.32, 1)';
 const FLIP_IN_EASING = 'cubic-bezier(0.55, 0.08, 0.68, 0.53)';
@@ -494,7 +493,7 @@ class MotionLayer {
     getPlacedTokenRect(space, stackIndex) {
         const board = document.getElementById('festival-board');
         const boardRect = this.getRect(board);
-        if (!boardRect || !board) {
+        if (!boardRect) {
             return null;
         }
 
@@ -503,14 +502,10 @@ class MotionLayer {
             return null;
         }
 
-        const contentLeft = boardRect.left + BOARD_FRAME_PX;
-        const contentTop = boardRect.top + BOARD_FRAME_PX;
-        const contentWidth = board.clientWidth;
-        const contentHeight = board.clientHeight;
         const width = TOKEN_DESIGN_SIZE * this.sprites.getBoardScale();
         const height = TOKEN_DESIGN_SIZE * this.sprites.getBoardScale();
-        const left = contentLeft + (slot.left / 100) * contentWidth - (width / 2);
-        const top = contentTop + (slot.top / 100) * contentHeight - (height / 2) - (stackIndex * TOKEN_STACK_RISE_PX);
+        const left = boardRect.left + (slot.left / 100) * boardRect.width - (width / 2);
+        const top = boardRect.top + (slot.top / 100) * boardRect.height - (height / 2) - (stackIndex * TOKEN_STACK_RISE_PX);
         return { left, top, width, height };
     }
 
