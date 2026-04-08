@@ -286,7 +286,7 @@
 
 #festival-slot-layer,
 #festival-token-layer {
-    inset: 0;
+    inset: 2px;
     position: absolute;
 }
 
