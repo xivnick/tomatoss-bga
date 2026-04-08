@@ -1491,7 +1491,8 @@ export class Game {
     }
 
     buildMissionTooltipHtml(targetId) {
-        const scale = 360 / 157.5;
+        const tooltipCardWidth = Math.max(220, Math.min(360, window.innerWidth - 96));
+        const scale = tooltipCardWidth / 157.5;
         return `
             <div class="tomatoss-card-tooltip">
                 <div class="tomatoss-card-tooltip__title">${_('Target card')}</div>
