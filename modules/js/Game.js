@@ -1491,7 +1491,7 @@ export class Game {
     }
 
     buildMissionTooltipHtml(targetId) {
-        const tooltipCardWidth = Math.max(220, Math.min(360, window.innerWidth - 96));
+        const tooltipCardWidth = Math.max(180, Math.min(300, window.innerWidth - 96));
         const scale = tooltipCardWidth / 157.5;
         const meta = this.getMissionTooltipMeta(Number(targetId));
         return `
@@ -1503,6 +1503,30 @@ export class Game {
                     <div class="tomatoss-card-tooltip__score">
                         ${_('Normal')} ${meta.base} · ${_('Quick')} ${meta.quick}
                     </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    buildMissionInspectionHtml(targetId, popupCardWidth) {
+        const scale = popupCardWidth / 157.5;
+        const meta = this.getMissionTooltipMeta(Number(targetId));
+        return `
+            <div class="mission-popup__content">
+                <div class="mission-popup__card">
+                    <div
+                        class="mission-popup__card-host"
+                        style="width:${157.5 * scale}px;height:${220 * scale}px;"
+                    >
+                        <div
+                            class="card-node board-mission-card"
+                            style="${this.sprites.missionCardStyle(Number(targetId), scale)}"
+                        ></div>
+                    </div>
+                </div>
+                ${meta ? `
+                    <div class="mission-popup__body">${meta.requirement}</div>
+                    <div class="mission-popup__score">${_('Normal')} ${meta.base} · ${_('Quick')} ${meta.quick}</div>
                 ` : ''}
             </div>
         `;
@@ -2123,21 +2147,8 @@ export class Game {
         }
 
         const dialog = this.ensureMissionDialog();
-        const popupCardWidth = Math.min(window.innerWidth * 0.82, 430);
-        const scale = popupCardWidth / 157.5;
-        dialog.setContent(`
-            <div class="mission-popup__card">
-                <div
-                    class="mission-popup__card-host"
-                    style="width:${157.5 * scale}px;height:${220 * scale}px;"
-                >
-                    <div
-                        class="card-node board-mission-card"
-                        style="${this.sprites.missionCardStyle(Number(card.targetId), scale)}"
-                    ></div>
-                </div>
-            </div>
-        `);
+        const popupCardWidth = Math.max(220, Math.min(window.innerWidth - 120, 315));
+        dialog.setContent(this.buildMissionInspectionHtml(Number(card.targetId), popupCardWidth));
         dialog.show();
     }
 
