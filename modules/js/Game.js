@@ -50,7 +50,6 @@ const ANIMATION_FULL = 1;
 const ANIMATION_REDUCED = 2;
 const ANIMATION_NONE = 3;
 const REPEATED_CLICK_CONFIRM_ON = 1;
-const LOCAL_STORAGE_ZOOM_KEY = 'Tomatoss-zoom';
 
 class SpriteStyles {
     getLayoutElement() {
@@ -1212,8 +1211,6 @@ export class Game {
         this.openMissionPopupIndex = null;
         this.discardDialog = null;
         this.missionDialog = null;
-        this.zoomManager = null;
-        this.zoomManagerPromise = null;
         this.resizeRaf = null;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1304,7 +1301,6 @@ export class Game {
         this.bindRootEvents();
         window.addEventListener('resize', this.onWindowResize);
         this.renderState(gamedatas);
-        this.setupZoomManager();
         this.setupNotifications();
     }
 
@@ -1450,33 +1446,6 @@ export class Game {
 
     setStatePrompt(text) {
         this.bga.statusBar.setTitle(text);
-    }
-
-    async setupZoomManager() {
-        const fullTable = document.getElementById('full-table');
-        if (!fullTable || this.zoomManager || this.zoomManagerPromise) {
-            return;
-        }
-
-        this.zoomManagerPromise = importEsmLib('bga-zoom', '1.x')
-            .then(BgaZoom => {
-                const ZoomManager = BgaZoom?.Manager;
-                if (!ZoomManager || this.zoomManager) {
-                    return;
-                }
-                this.zoomManager = new ZoomManager({
-                    element: fullTable,
-                    zoomControls: {
-                        color: 'white',
-                    },
-                    localStorageZoomKey: LOCAL_STORAGE_ZOOM_KEY,
-                    onDimensionsChange: () => this.renderState(this.gamedatas),
-                });
-            })
-            .catch(() => {})
-            .finally(() => {
-                this.zoomManagerPromise = null;
-            });
     }
 
     supportsHoverTooltips() {
