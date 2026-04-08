@@ -160,12 +160,10 @@ class CardRegistry {
     }
 
     getTomatoNode(card, scale, classes = []) {
-        const node = this.getNode(`tomato-${card.id}`, {
+        return this.getNode(`tomato-${card.id}`, {
             style: this.sprites.tomatoCardStyle(Number(card.value), scale),
             classes: ['card-node', 'board-tomato-card', ...classes],
         });
-        this.game.bindTomatoTooltip(node, Number(card.value));
-        return node;
     }
 
     getBackNode(key, kind, scale, classes = []) {
@@ -176,12 +174,10 @@ class CardRegistry {
     }
 
     getTemporaryTomatoNode(key, value, scale, classes = []) {
-        const node = this.getNode(key, {
+        return this.getNode(key, {
             style: this.sprites.tomatoCardStyle(Number(value), scale),
             classes: ['card-node', 'recent-throw__tomato', ...classes],
         });
-        this.game.bindTomatoTooltip(node, Number(value));
-        return node;
     }
 
     getTemporaryMissionNode(key, targetId, scale, classes = []) {
@@ -1504,16 +1500,6 @@ export class Game {
         `;
     }
 
-    buildTomatoTooltipHtml(value) {
-        const scale = 320 / 155;
-        return `
-            <div class="tomatoss-card-tooltip">
-                <div class="tomatoss-card-tooltip__title">${_('Tomato card')} ${Number(value)}</div>
-                <div class="tomatoss-card-tooltip__card" style="${this.sprites.tomatoCardStyle(Number(value), scale)}"></div>
-            </div>
-        `;
-    }
-
     bindMissionTooltip(node, targetId) {
         if (!node || !this.supportsHoverTooltips()) {
             return;
@@ -1524,18 +1510,6 @@ export class Game {
         }
         api.remove?.(node.id);
         api.addHtml(node.id, this.buildMissionTooltipHtml(targetId), this.getTooltipDelay());
-    }
-
-    bindTomatoTooltip(node, value) {
-        if (!node || !this.supportsHoverTooltips()) {
-            return;
-        }
-        const api = this.getTooltipApi();
-        if (!api.addHtml || !node.id) {
-            return;
-        }
-        api.remove?.(node.id);
-        api.addHtml(node.id, this.buildTomatoTooltipHtml(value), this.getTooltipDelay());
     }
 
     getAnimationPreferenceValue() {
