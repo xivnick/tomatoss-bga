@@ -1212,6 +1212,7 @@ export class Game {
         this.discardDialog = null;
         this.missionDialog = null;
         this.resizeRaf = null;
+        this.documentClickBound = false;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
                 cancelAnimationFrame(this.resizeRaf);
@@ -1299,6 +1300,7 @@ export class Game {
 
         this.playerZonesView.setup();
         this.bindRootEvents();
+        this.bindDocumentEvents();
         window.addEventListener('resize', this.onWindowResize);
         this.renderState(gamedatas);
         this.setupNotifications();
@@ -1373,6 +1375,34 @@ export class Game {
         });
 
         root.dataset.bound = 'true';
+    }
+
+    bindDocumentEvents() {
+        if (this.documentClickBound) {
+            return;
+        }
+
+        document.addEventListener('click', event => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            if (this.openMissionPopupIndex !== null) {
+                if (!target.closest('#tomatossMissionDialog') && !target.closest('.mission-zoom-button')) {
+                    this.closeMissionPopup();
+                    return;
+                }
+            }
+
+            if (this.isDiscardPopupOpen) {
+                if (!target.closest('#tomatossDiscardDialog') && !target.closest('#discard-slot')) {
+                    this.closeDiscardPopup();
+                }
+            }
+        });
+
+        this.documentClickBound = true;
     }
 
     buildRenderData(source) {
