@@ -2295,7 +2295,7 @@ export class Game {
             return true;
         }
         if (!normal && !quick) {
-            this.bga.dialogs.showMessage(_('These cards cannot make a Toss or Quick toss on this target'), 'error');
+            this.bga.dialogs.showMessage(_('Choose cards that satisfy this target, or cards that could work with a Quick toss reveal'), 'error');
             return true;
         }
 
@@ -2410,11 +2410,11 @@ export class Game {
 
         const { normal, quick } = this.getThrowOptions(Number(target.targetId));
         if (!quickToss && !normal) {
-            this.bga.dialogs.showMessage(_('These cards cannot make a Toss on this target'), 'error');
+            this.bga.dialogs.showMessage(_('Choose cards that satisfy this target for a Toss'), 'error');
             return;
         }
         if (quickToss && !quick) {
-            this.bga.dialogs.showMessage(_('These cards cannot make a Quick toss on this target'), 'error');
+            this.bga.dialogs.showMessage(_('Choose cards that could satisfy this target with a Quick toss reveal'), 'error');
             return;
         }
 
