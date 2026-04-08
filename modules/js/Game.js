@@ -1493,12 +1493,55 @@ export class Game {
     buildMissionTooltipHtml(targetId) {
         const tooltipCardWidth = Math.max(220, Math.min(360, window.innerWidth - 96));
         const scale = tooltipCardWidth / 157.5;
+        const meta = this.getMissionTooltipMeta(Number(targetId));
         return `
             <div class="tomatoss-card-tooltip">
                 <div class="tomatoss-card-tooltip__title">${_('Target card')}</div>
                 <div class="tomatoss-card-tooltip__card" style="${this.sprites.missionCardStyle(Number(targetId), scale)}"></div>
+                ${meta ? `
+                    <div class="tomatoss-card-tooltip__body">${meta.requirement}</div>
+                    <div class="tomatoss-card-tooltip__score">
+                        ${_('Normal')} ${meta.base} · ${_('Quick')} ${meta.quick}
+                    </div>
+                ` : ''}
             </div>
         `;
+    }
+
+    getMissionTooltipMeta(targetId) {
+        const shared = {
+            1: { requirement: _('Play exactly one 3.'), base: 2, quick: 3 },
+            2: { requirement: _('Play exactly one 3.'), base: 2, quick: 3 },
+            3: { requirement: _('Play exactly two matching cards.'), base: 3, quick: 6 },
+            4: { requirement: _('Play exactly two matching cards.'), base: 3, quick: 6 },
+            5: { requirement: _('Play exactly three cards: a pair and one higher card.'), base: 5, quick: 7 },
+            6: { requirement: _('Play exactly three matching cards.'), base: 5, quick: 10 },
+            7: { requirement: _('Play exactly one 5, 6, or 7.'), base: 2, quick: 3 },
+            8: { requirement: _('Play exactly one 5, 6, or 7.'), base: 2, quick: 3 },
+            9: { requirement: _('Play exactly one 1 or 2.'), base: 3, quick: 6 },
+            10: { requirement: _('Play cards totaling 8 or 9.'), base: 4, quick: 6 },
+            11: { requirement: _('Play cards totaling 8 or 9.'), base: 4, quick: 6 },
+            12: { requirement: _('Play cards totaling 8 or 9, with no 3s.'), base: 4, quick: 8 },
+            13: { requirement: _('Play exactly one 6 or 7.'), base: 3, quick: 5 },
+            14: { requirement: _('Play exactly two cards with a difference of 1.'), base: 4, quick: 5 },
+            15: { requirement: _('Play exactly two cards with a difference of 1.'), base: 4, quick: 5 },
+            16: { requirement: _('Play cards totaling 11 to 13.'), base: 4, quick: 6 },
+            17: { requirement: _('Play cards totaling 11 to 13.'), base: 4, quick: 6 },
+            18: { requirement: _('Play cards totaling 11 to 13, with no 3s.'), base: 4, quick: 7 },
+            19: { requirement: _('Play exactly one 2, 4, or 6.'), base: 2, quick: 4 },
+            20: { requirement: _('Play exactly one 2, 4, or 6.'), base: 2, quick: 4 },
+            21: { requirement: _('Play cards totaling 6 to 8.'), base: 3, quick: 4 },
+            22: { requirement: _('Play cards totaling 6 to 8.'), base: 3, quick: 4 },
+            23: { requirement: _('Play cards totaling 6 to 8, with no 3s.'), base: 3, quick: 6 },
+            24: { requirement: _('Play exactly two cards totaling 10.'), base: 4, quick: 8 },
+            25: { requirement: _('Play exactly one 4 or 5.'), base: 2, quick: 3 },
+            26: { requirement: _('Play exactly one 5.'), base: 2, quick: 5 },
+            27: { requirement: _('Play cards totaling 7 to 11.'), base: 3, quick: 3 },
+            28: { requirement: _('Play cards totaling 7 to 11, with no 3s.'), base: 3, quick: 5 },
+            29: { requirement: _('Play exactly two cards with a difference of 4 to 6.'), base: 4, quick: 5 },
+            30: { requirement: _('Play exactly two cards with a difference of 4 to 6.'), base: 4, quick: 5 },
+        };
+        return shared[targetId] ?? null;
     }
 
     bindMissionTooltip(node, targetId) {
