@@ -31,16 +31,12 @@
     z-index: 200;
 }
 
-.motion-wrapper {
+.motion-floating {
     pointer-events: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform-origin: top left;
     z-index: 200;
 }
 
-.motion-wrapper .motion-card {
+.motion-floating.motion-card {
     backface-visibility: hidden;
     transform-style: preserve-3d;
 }
@@ -394,8 +390,6 @@
 
 .moving-token {
     border-radius: 999px;
-    height: 100%;
-    width: 100%;
 }
 
 .reserve-token-1 {

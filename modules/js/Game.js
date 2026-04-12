@@ -270,73 +270,168 @@ class MotionLayer {
         return this.getRect(document.getElementById('festival-stage-canvas'));
     }
 
-    createWrapper(node, rect, className = '') {
+    getGameUiMethod(name) {
+        return this.game.bga.gameui?.[name]?.bind(this.game.bga.gameui)
+            ?? this.game.bga[name]?.bind(this.game.bga);
+    }
+
+    playDojoAnimation(animation, duration = 0) {
+        if (!animation) {
+            return Promise.resolve();
+        }
+
+        return new Promise(resolve => {
+            let settled = false;
+            let endHandle = null;
+            let stopHandle = null;
+            let timerId = null;
+            const finish = () => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                if (endHandle) {
+                    dojo.disconnect(endHandle);
+                }
+                if (stopHandle) {
+                    dojo.disconnect(stopHandle);
+                }
+                if (timerId !== null) {
+                    clearTimeout(timerId);
+                }
+                resolve();
+            };
+
+            if (typeof dojo !== 'undefined') {
+                endHandle = dojo.connect(animation, 'onEnd', finish);
+                stopHandle = dojo.connect(animation, 'onStop', finish);
+            }
+
+            timerId = setTimeout(finish, Math.max(100, duration + 150));
+            animation.play();
+        });
+    }
+
+    resetFloatingNode(node) {
+        if (!node) {
+            return;
+        }
+
+        node.classList.remove('motion-floating');
+        node.style.pointerEvents = '';
+        node.style.position = '';
+        node.style.left = '';
+        node.style.top = '';
+        node.style.zIndex = '';
+    }
+
+    prepareFloatingNode(node, sourceElement) {
         const layer = this.getLayer();
-        if (!layer || !rect) {
+        const placeOnObject = this.getGameUiMethod('placeOnObject');
+        if (!node || !layer || !sourceElement || !placeOnObject) {
             return null;
         }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = `motion-wrapper ${className}`.trim();
-        wrapper.style.left = `${rect.left}px`;
-        wrapper.style.top = `${rect.top}px`;
-        wrapper.style.width = `${rect.width}px`;
-        wrapper.style.height = `${rect.height}px`;
-        node.style.width = '100%';
-        node.style.height = '100%';
-        wrapper.appendChild(node);
-        layer.appendChild(wrapper);
-        return wrapper;
+        const sourceRect = this.getRect(sourceElement);
+        node.classList.add('motion-floating');
+        node.style.pointerEvents = 'none';
+        node.style.position = 'absolute';
+        node.style.zIndex = '200';
+        if (sourceRect) {
+            node.style.width = `${sourceRect.width}px`;
+            node.style.height = `${sourceRect.height}px`;
+        }
+        layer.appendChild(node);
+        placeOnObject(node, sourceElement);
+        return node;
+    }
+
+    async slideFloatingNodeToElement(node, destinationElement, {
+        duration = CARD_MOVE_MS,
+        destroy = false,
+    } = {}) {
+        const slideToObject = this.getGameUiMethod('slideToObject');
+        if (!node || !destinationElement || !slideToObject) {
+            node?.remove();
+            return;
+        }
+
+        await this.playDojoAnimation(
+            slideToObject(node, destinationElement, duration),
+            duration
+        );
+
+        if (destroy) {
+            node.remove();
+            return;
+        }
+
+        this.resetFloatingNode(node);
     }
 
     async moveNodeToHost(node, destinationHost, {
         duration = CARD_MOVE_MS,
-        easing = CARD_EASING,
-        className = 'motion-card-wrapper',
     } = {}) {
         if (!node || !destinationHost) {
             return;
         }
 
-        const fromRect = this.getRect(node);
-        const toRect = this.getRect(destinationHost);
-        if (!fromRect || !toRect) {
+        const attachToNewParent = this.getGameUiMethod('attachToNewParent');
+        const layer = this.getLayer();
+        if (!attachToNewParent || !layer) {
             return;
         }
 
-        const wrapper = this.createWrapper(node, fromRect, className);
-        await this.animateRect(wrapper, fromRect, toRect, { duration, easing });
-        const finalNode = wrapper?.firstElementChild ?? node;
+        const movingNode = attachToNewParent(node, layer);
+        movingNode.classList.add('motion-floating');
+        movingNode.style.pointerEvents = 'none';
+        movingNode.style.position = 'absolute';
+        movingNode.style.zIndex = '200';
+        await this.slideFloatingNodeToElement(movingNode, destinationHost, { duration });
         destinationHost.dataset.empty = 'false';
-        destinationHost.replaceChildren(finalNode);
+        destinationHost.replaceChildren(movingNode);
+        this.resetFloatingNode(movingNode);
     }
 
-    async moveNewNodeToHost(node, fromRect, destinationHost, {
+    async moveNewNodeToHost(node, sourceElement, destinationHost, {
         duration = CARD_MOVE_MS,
-        easing = CARD_EASING,
-        className = 'motion-card-wrapper',
     } = {}) {
-        if (!node || !fromRect || !destinationHost) {
+        if (!node || !sourceElement || !destinationHost) {
             return;
         }
 
-        const toRect = this.getRect(destinationHost);
-        if (!toRect) {
+        const movingNode = this.prepareFloatingNode(node, sourceElement);
+        if (!movingNode) {
             return;
         }
 
-        const wrapper = this.createWrapper(node, fromRect, className);
-        await this.animateRect(wrapper, fromRect, toRect, { duration, easing });
-        const finalNode = wrapper?.firstElementChild ?? node;
+        await this.slideFloatingNodeToElement(movingNode, destinationHost, { duration });
         destinationHost.dataset.empty = 'false';
-        destinationHost.replaceChildren(finalNode);
+        destinationHost.replaceChildren(movingNode);
+        this.resetFloatingNode(movingNode);
+    }
+
+    async moveNewNodeToElementAndDestroy(node, sourceElement, destinationElement, {
+        duration = CARD_MOVE_MS,
+    } = {}) {
+        if (!node || !sourceElement || !destinationElement) {
+            return;
+        }
+
+        const movingNode = this.prepareFloatingNode(node, sourceElement);
+        if (!movingNode) {
+            return;
+        }
+
+        await this.slideFloatingNodeToElement(movingNode, destinationElement, {
+            duration,
+            destroy: true,
+        });
     }
 
     createReserveTokenNode(face = 'whole') {
         const node = document.createElement('div');
         node.className = `moving-token ${face}`;
-        node.style.width = '100%';
-        node.style.height = '100%';
         return node;
     }
 
@@ -359,23 +454,22 @@ class MotionLayer {
     }
 
     async animateDiscardRecycleToDeck(latestDiscardTomato) {
-        const discardRect = this.getDiscardPileRect();
-        const deckRect = this.getTomatoDeckRect();
-        if (!discardRect || !deckRect) {
+        const discardElement = document.querySelector('#discard-slot .slot-card-host');
+        const deckElement = document.querySelector('#tomato-deck-slot .card-node');
+        const discardRect = this.getRect(discardElement);
+        if (!discardElement || !deckElement || !discardRect) {
             return;
         }
 
         const startNode = latestDiscardTomato
             ? this.createTomatoFaceNode(latestDiscardTomato.value, discardRect)
             : this.createTomatoBackNode(discardRect);
-        const wrapper = this.createWrapper(startNode, discardRect, 'motion-card-wrapper');
-        const movePromise = this.animateRect(wrapper, discardRect, deckRect, {
+        const movePromise = this.moveNewNodeToElementAndDestroy(startNode, discardElement, deckElement, {
             duration: this.game.getAnimationDuration(CARD_MOVE_MS),
-            easing: CARD_EASING,
         });
         const flipPromise = this.animateFlip(
             startNode,
-            () => this.createTomatoBackNode(deckRect),
+            () => this.createTomatoBackNode(discardRect),
             this.game.getAnimationDuration(FLIP_MS)
         );
         await Promise.all([movePromise, flipPromise]);
@@ -430,39 +524,31 @@ class MotionLayer {
         };
     }
 
-    async animateRect(wrapper, fromRect, toRect, {
-        duration = CARD_MOVE_MS,
-        easing = CARD_EASING,
-    } = {}) {
-        if (!wrapper || !fromRect || !toRect) {
-            wrapper?.remove();
+    copyVisualNodeState(targetNode, sourceNode) {
+        if (!targetNode || !sourceNode) {
             return;
         }
 
-        if (duration <= 0) {
-            wrapper.remove();
-            return;
-        }
+        const preserved = {
+            position: targetNode.style.position,
+            left: targetNode.style.left,
+            top: targetNode.style.top,
+            zIndex: targetNode.style.zIndex,
+            pointerEvents: targetNode.style.pointerEvents,
+            width: targetNode.style.width,
+            height: targetNode.style.height,
+        };
 
-        const dx = toRect.left - fromRect.left;
-        const dy = toRect.top - fromRect.top;
-        const sx = toRect.width / fromRect.width;
-        const sy = toRect.height / fromRect.height;
+        targetNode.className = sourceNode.className;
+        targetNode.style.cssText = sourceNode.style.cssText;
 
-        await wrapper.animate([
-            { transform: 'translate(0px, 0px) scale(1, 1)' },
-            {
-                transform: `translate(${dx * 0.55}px, ${dy * 0.55}px) scale(${1 + (sx - 1) * 0.45}, ${1 + (sy - 1) * 0.45})`,
-                offset: 0.6,
-            },
-            { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
-        ], {
-            duration,
-            easing,
-            fill: 'forwards',
-        }).finished;
-
-        wrapper.remove();
+        targetNode.style.position = preserved.position;
+        targetNode.style.left = preserved.left;
+        targetNode.style.top = preserved.top;
+        targetNode.style.zIndex = preserved.zIndex;
+        targetNode.style.pointerEvents = preserved.pointerEvents;
+        targetNode.style.width = preserved.width;
+        targetNode.style.height = preserved.height;
     }
 
     animateFlip(node, makeFrontNode, duration = FLIP_MS) {
@@ -470,19 +556,24 @@ class MotionLayer {
             return Promise.resolve();
         }
 
+        const sourceRect = this.getRect(node);
+
         if (duration <= 0) {
             const frontNode = makeFrontNode();
-            frontNode.style.width = '100%';
-            frontNode.style.height = '100%';
-            frontNode.style.display = 'block';
-            node.replaceWith(frontNode);
+            if (sourceRect) {
+                frontNode.style.width = `${sourceRect.width}px`;
+                frontNode.style.height = `${sourceRect.height}px`;
+            }
+            this.copyVisualNodeState(node, frontNode);
             return Promise.resolve();
         }
 
         const half = duration / 2;
         const frontNode = makeFrontNode();
-        frontNode.style.width = '100%';
-        frontNode.style.height = '100%';
+        if (sourceRect) {
+            frontNode.style.width = `${sourceRect.width}px`;
+            frontNode.style.height = `${sourceRect.height}px`;
+        }
 
         const first = node.animate([
             { transform: 'rotateY(0deg)' },
@@ -492,8 +583,8 @@ class MotionLayer {
             easing: FLIP_IN_EASING,
             fill: 'forwards',
         }).finished.then(() => {
-            node.replaceWith(frontNode);
-            return frontNode.animate([
+            this.copyVisualNodeState(node, frontNode);
+            return node.animate([
                 { transform: 'rotateY(-90deg)' },
                 { transform: 'rotateY(0deg)' },
             ], {
@@ -644,6 +735,12 @@ class FestivalStageView {
                 return;
             }
 
+            const key = `mission-${card.id}`;
+            if (this.game.movingMissionKeys.has(key)) {
+                this.registry.mount(host, null, { empty: true });
+                return;
+            }
+
             const node = this.registry.getMissionNode(card, scale);
             this.registry.mount(host, node);
         });
@@ -667,6 +764,10 @@ class FestivalStageView {
 
             const key = `tomato-${card.id}`;
             keepKeys.push(key);
+            if (this.game.movingTomatoKeys.has(key)) {
+                this.registry.mount(host, null, { empty: true });
+                return;
+            }
             const node = this.registry.getTomatoNode(card, scale);
             this.registry.mount(host, node);
         });
@@ -994,6 +1095,11 @@ class PlayerZonesView {
                 button.dataset.cardId = String(card.id);
                 button.dataset.value = String(card.value);
                 const host = button.querySelector('.hand-card-host');
+                if (this.game.movingTomatoKeys.has(key)) {
+                    host.dataset.empty = 'true';
+                    host.replaceChildren();
+                    return;
+                }
                 this.registry.mount(host, this.registry.getTomatoNode(card, scale));
             }
         );
@@ -1095,6 +1201,11 @@ class PlayerZonesView {
                 },
                 (wrapper, card, index) => {
                     wrapper.style.zIndex = String(100 - index);
+                    if (this.game.movingMissionKeys.has(`mission-${card.id}`)) {
+                        wrapper.dataset.empty = 'true';
+                        wrapper.replaceChildren();
+                        return;
+                    }
                     this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'normal']));
                 }
             );
@@ -1112,6 +1223,11 @@ class PlayerZonesView {
                 },
                 (wrapper, card, index) => {
                     wrapper.style.zIndex = String(100 - index);
+                    if (this.game.movingMissionKeys.has(`mission-${card.id}`)) {
+                        wrapper.dataset.empty = 'true';
+                        wrapper.replaceChildren();
+                        return;
+                    }
                     this.registry.mount(wrapper, this.registry.getMissionNode(card, scale, ['captured-mission', 'quick']));
                 }
             );
@@ -1655,6 +1771,13 @@ export class Game {
         return Math.max(1, Math.round(baseMs * factor));
     }
 
+    getResultPreviewDuration(baseMs) {
+        if (this.getAnimationPreferenceValue() === ANIMATION_NONE) {
+            return Math.max(350, Math.round(baseMs * 0.7));
+        }
+        return this.getAnimationDuration(baseMs);
+    }
+
     wait(ms) {
         const duration = this.getAnimationDuration(ms);
         if (duration <= 0) {
@@ -1692,6 +1815,10 @@ export class Game {
             && this.getAnimationSpeedFactor() > 0;
     }
 
+    shouldShowThrowResultPreview() {
+        return !document.hidden && document.hasFocus();
+    }
+
     isActionAnimationRunning() {
         return this.actionAnimationDepth > 0 || Boolean(this.pendingThrowResolution) || Boolean(this.recentThrow);
     }
@@ -1720,8 +1847,13 @@ export class Game {
 
     animateReserveTokenToSpace(space) {
         const reserveNode = [...document.querySelectorAll('#token-reserve .reserve-token')].pop();
-        const fromRect = this.motionLayer.getRect(reserveNode);
-        if (!fromRect) {
+        if (!reserveNode) {
+            return Promise.resolve();
+        }
+
+        const tokenNode = this.motionLayer.createReserveTokenNode();
+        const floatingToken = this.motionLayer.prepareFloatingNode(tokenNode, reserveNode);
+        if (!floatingToken) {
             return Promise.resolve();
         }
 
@@ -1730,18 +1862,16 @@ export class Game {
 
         const placedKey = `placed-${Math.max(0, (this.gamedatas.currentTurnActions ?? []).length - 1)}`;
         const destinationNode = document.querySelector(`#festival-token-layer [data-key="${placedKey}"]`);
-        const toRect = this.motionLayer.getRect(destinationNode);
-        if (!destinationNode || !toRect) {
+        if (!destinationNode) {
+            floatingToken.remove();
             return Promise.resolve();
         }
 
         destinationNode.style.visibility = 'hidden';
 
-        const tokenNode = this.motionLayer.createReserveTokenNode();
-        const wrapper = this.motionLayer.createWrapper(tokenNode, fromRect, 'motion-token');
-        const movePromise = this.motionLayer.animateRect(wrapper, fromRect, toRect, {
+        const movePromise = this.motionLayer.slideFloatingNodeToElement(floatingToken, destinationNode, {
             duration: this.getAnimationDuration(TOKEN_MOVE_MS),
-            easing: TOKEN_EASING,
+            destroy: true,
         }).finally(() => {
             destinationNode.style.visibility = '';
         });
@@ -1759,9 +1889,11 @@ export class Game {
 
     animateCollectMotion(args) {
         const sourceElement = document.querySelector(`#tomato-slot-${Number(args.space)} .card-node`);
+        const destinationElement = Number(args.player_id) === this.getLocalPlayerId()
+            ? document.querySelector(`#player-zone-top-${Number(args.player_id)} .self-hand-row`)
+            : document.querySelector(`#player-zone-top-${Number(args.player_id)} .player-hand-fan`);
         const sourceRect = this.motionLayer.getRect(sourceElement);
-        const destinationRect = this.motionLayer.getCollectDestinationRect(Number(args.player_id));
-        if (!sourceRect || !destinationRect) {
+        if (!sourceElement || !destinationElement || !sourceRect) {
             return Promise.resolve();
         }
 
@@ -1771,11 +1903,9 @@ export class Game {
         }
 
         const node = this.motionLayer.createTomatoFaceNode(card.value, sourceRect);
-        const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
         this.hideElementDuringAnimation(sourceElement);
-        return this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+        return this.motionLayer.moveNewNodeToElementAndDestroy(node, sourceElement, destinationElement, {
             duration: this.getAnimationDuration(CARD_MOVE_MS),
-            easing: CARD_EASING,
         });
     }
 
@@ -1809,17 +1939,17 @@ export class Game {
             ? this.motionLayer.animateDiscardRecycleToDeck(recycledDiscardTop)
             : Promise.resolve();
 
-        const sourceRect = this.motionLayer.getTomatoDeckRect();
+        const sourceElement = document.querySelector('#tomato-deck-slot .card-node');
+        const sourceRect = this.motionLayer.getRect(sourceElement);
         const destinationRect = this.motionLayer.getRect(document.querySelector(`#tomato-slot-${Number(args.space)} .slot-card-host`));
-        if (!sourceRect || !destinationRect) {
+        const destinationHost = document.querySelector(`#tomato-slot-${Number(args.space)} .slot-card-host`);
+        if (!sourceRect || !sourceElement || !destinationRect || !destinationHost) {
             return Promise.resolve();
         }
 
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
-        const wrapper = this.motionLayer.createWrapper(backNode, sourceRect, 'motion-card-wrapper');
-        const movePromise = this.motionLayer.animateRect(wrapper, sourceRect, destinationRect, {
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceElement, destinationHost, {
             duration: this.getAnimationDuration(CARD_MOVE_MS),
-            easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
@@ -1838,26 +1968,36 @@ export class Game {
         (args.cards ?? []).forEach((value, index) => {
             const sourceNode = isLocalPlayer
                 ? document.querySelector(`.hand-card-button[data-card-id="${selectedIds[index]}"] .card-node`)
-                : [...document.querySelectorAll(`#player-zone-top-${playerId} .player-hand-back-host .card-node`)].pop();
+                : null;
+            const sourceElement = isLocalPlayer
+                ? sourceNode
+                : (document.querySelector(`#player-zone-top-${playerId} .player-hand-fan`) ?? document.querySelector(`#player-zone-top-${playerId}`));
             const destinationHost = this.stageView.ensureRecentThrowHost(index, [index > 0 ? 'is-overlap' : '']);
-            if (!sourceNode || !destinationHost) {
+            if ((!sourceNode && isLocalPlayer) || !sourceElement || !destinationHost) {
                 return;
             }
 
-            const movePromise = this.motionLayer.moveNodeToHost(sourceNode, destinationHost, {
-                duration: this.getAnimationDuration(CARD_MOVE_MS),
-                easing: CARD_EASING,
-            });
-
             if (isLocalPlayer) {
+                const movePromise = this.motionLayer.moveNodeToHost(sourceNode, destinationHost, {
+                    duration: this.getAnimationDuration(CARD_MOVE_MS),
+                });
                 animations.push(movePromise);
                 return;
             }
 
+            const sourceRect = this.motionLayer.getOpponentHandRect(playerId);
+            if (!sourceRect) {
+                return;
+            }
+
+            const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
+            const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceElement, destinationHost, {
+                duration: this.getAnimationDuration(CARD_MOVE_MS),
+            });
             const flipPromise = this.motionLayer.animateFlip(
-                sourceNode,
+                backNode,
                 () => this.motionLayer.createTomatoFaceNode(value, {
-                    width: sourceNode.getBoundingClientRect().width || (155 * this.sprites.getCardScale('tomato')),
+                    width: sourceRect.width || (155 * this.sprites.getCardScale('tomato')),
                 }),
                 this.getAnimationDuration(FLIP_MS)
             );
@@ -1880,19 +2020,19 @@ export class Game {
             : Promise.resolve();
 
         return recyclePromise.then(() => {
-        const sourceRect = this.motionLayer.getRect(document.querySelector('#tomato-deck-slot .card-node'));
+        const sourceElement = document.querySelector('#tomato-deck-slot .card-node');
+        const sourceRect = this.motionLayer.getRect(sourceElement);
         const destinationHost = this.stageView.ensureRecentThrowHost((args.cards ?? []).length, [
             (args.cards?.length ?? 0) > 0 ? 'is-overlap' : '',
             'reveal',
         ].filter(Boolean));
-        if (!sourceRect || !destinationHost) {
+        if (!sourceRect || !sourceElement || !destinationHost) {
             return Promise.resolve();
         }
 
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
-        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceElement, destinationHost, {
             duration: this.getAnimationDuration(CARD_MOVE_MS),
-            easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
@@ -1935,23 +2075,25 @@ export class Game {
                 this.rememberMovingTomatoKey(cardId);
                 await this.motionLayer.moveNodeToHost(sourceNode, discardHost, {
                     duration: this.getAnimationDuration(CARD_MOVE_MS),
-                    easing: CARD_EASING,
                 });
             }
             return;
         }
 
         const animations = values.map(() => {
+            const sourceElement = document.querySelector(`#player-zone-top-${playerId} .player-hand-fan`) ?? document.querySelector(`#player-zone-top-${playerId}`);
             const sourceRect = this.motionLayer.getOpponentHandRect(playerId);
-            if (!sourceRect) {
+            if (!sourceRect || !sourceElement) {
                 return Promise.resolve();
             }
 
             const node = this.motionLayer.createTomatoBackNode(sourceRect);
-            const wrapper = this.motionLayer.createWrapper(node, sourceRect, 'motion-card-wrapper');
-            return this.motionLayer.animateRect(wrapper, sourceRect, discardRect, {
+            const discardHost = document.querySelector('#discard-slot .slot-card-host');
+            if (!discardHost) {
+                return Promise.resolve();
+            }
+            return this.motionLayer.moveNewNodeToElementAndDestroy(node, sourceElement, discardHost, {
                 duration: this.getAnimationDuration(CARD_MOVE_MS),
-                easing: CARD_EASING,
             });
         });
 
@@ -1977,7 +2119,6 @@ export class Game {
 
             return this.motionLayer.moveNodeToHost(sourceNode, discardHost, {
                 duration: this.getAnimationDuration(CARD_MOVE_MS),
-                easing: CARD_EASING,
             });
         }));
     }
@@ -2007,18 +2148,18 @@ export class Game {
             return;
         }
 
-        const sourceRect = this.motionLayer.getMissionDeckRect();
+        const sourceElement = document.querySelector('#mission-deck-slot .card-node');
+        const sourceRect = this.motionLayer.getRect(sourceElement);
         const destinationHost = document.querySelector(`#mission-slot-${Number(args.targetIndex ?? 0)} .slot-card-host`);
-        if (!sourceRect || !destinationHost) {
+        if (!sourceRect || !sourceElement || !destinationHost) {
             return;
         }
 
         const backNode = this.motionLayer.createMissionBackNode(sourceRect);
         const missionNode = this.registry.getMissionNode(args.replacementTarget, this.sprites.getCardScale('mission'));
         this.rememberMovingMissionKey(args.replacementTarget.id);
-        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceElement, destinationHost, {
             duration: this.getAnimationDuration(CARD_MOVE_MS),
-            easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
@@ -2039,18 +2180,18 @@ export class Game {
             await this.motionLayer.animateDiscardRecycleToDeck(recycledDiscardTop);
         }
 
-        const sourceRect = this.motionLayer.getTomatoDeckRect();
+        const sourceElement = document.querySelector('#tomato-deck-slot .card-node');
+        const sourceRect = this.motionLayer.getRect(sourceElement);
         const destinationHost = this.playerZonesView.ensureSelfHandPlaceholder(args.bonusCard);
-        if (!sourceRect || !destinationHost) {
+        if (!sourceRect || !sourceElement || !destinationHost) {
             return;
         }
 
         const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
         const tomatoNode = this.registry.getTomatoNode(args.bonusCard, this.sprites.getCardScale('tomato'));
         this.rememberMovingTomatoKey(args.bonusCard.id);
-        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceRect, destinationHost, {
+        const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceElement, destinationHost, {
             duration: this.getAnimationDuration(CARD_MOVE_MS),
-            easing: CARD_EASING,
         });
         const flipPromise = this.motionLayer.animateFlip(
             backNode,
@@ -2071,25 +2212,37 @@ export class Game {
             return;
         }
 
+        const reserve = document.getElementById('token-reserve');
+        if (!reserve) {
+            return;
+        }
+
+        const targets = Array.from({ length: Math.min(tokens.length, 3) }, (_, index) => {
+            const target = document.createElement('div');
+            target.className = `reserve-token reserve-token-${index + 1}`;
+            target.style.visibility = 'hidden';
+            reserve.appendChild(target);
+            return target;
+        });
+
         await Promise.all(tokens.map((token, index) => {
-            const fromRect = this.motionLayer.getRect(token);
-            const toRect = this.motionLayer.getReserveTokenDesignRect(Math.min(index, 2));
-            if (!fromRect || !toRect) {
+            const destinationTarget = targets[Math.min(index, targets.length - 1)];
+            if (!destinationTarget) {
                 return Promise.resolve();
             }
 
             const clone = this.motionLayer.createReserveTokenNode(
                 token.classList.contains('splat') ? 'splat' : 'whole'
             );
-            const wrapper = this.motionLayer.createWrapper(clone, fromRect, 'motion-token');
             token.style.visibility = 'hidden';
-            return this.motionLayer.animateRect(wrapper, fromRect, toRect, {
+            return this.motionLayer.moveNewNodeToElementAndDestroy(clone, token, destinationTarget, {
                 duration: this.getAnimationDuration(TURN_CLEANUP_MS),
-                easing: TOKEN_EASING,
             }).finally(() => {
                 token.style.visibility = '';
             });
-        }));
+        })).finally(() => {
+            targets.forEach(target => target.remove());
+        });
     }
 
     renderOverallPlayerBoards() {
@@ -2635,10 +2788,12 @@ export class Game {
             if (pending) {
                 setTimeout(async () => {
                     try {
-                        await this.animateThrownCardsToDiscard(pending);
-                        await this.wait(THROW_RESULT_PAUSE_MS);
-                        await this.animateCapturedTarget(pending);
-                        await this.animateReplacementTarget(pending);
+                        if (this.getAnimationSpeedFactor() > 0) {
+                            await this.animateThrownCardsToDiscard(pending);
+                            await this.wait(THROW_RESULT_PAUSE_MS);
+                            await this.animateCapturedTarget(pending);
+                            await this.animateReplacementTarget(pending);
+                        }
                         (pending.playedCardIds ?? []).forEach(cardId => this.forgetMovingTomatoKey(cardId));
                         if (pending.targetId) {
                             this.forgetMovingMissionKey(pending.targetId);
@@ -2654,13 +2809,13 @@ export class Game {
                     } finally {
                         this.endActionAnimation();
                     }
-                }, this.getAnimationDuration(THROW_RESOLVE_DELAY_MS));
+                }, this.getResultPreviewDuration(THROW_RESOLVE_DELAY_MS));
                 return;
             }
             this.recentThrow = null;
             this.stageView.renderRecentThrow();
             this.endActionAnimation();
-        }, this.getAnimationDuration(THROW_CUTSCENE_MS));
+        }, this.getResultPreviewDuration(THROW_CUTSCENE_MS));
     }
 
     prepareRecentThrow(args) {
@@ -2764,8 +2919,19 @@ export class Game {
                 this.clearPendingAction();
                 this.afterPublicChange();
             } else {
-                this.applyImmediateThrowHandChange({ ...args, playedCardIds: this.selectedCardIds });
-                this.applyThrowAction({ ...args, playedCardIds: this.selectedCardIds });
+                const selectedIds = [...this.selectedCardIds];
+                this.applyImmediateThrowHandChange({ ...args, playedCardIds: selectedIds });
+                if (this.shouldShowThrowResultPreview()) {
+                    this.beginActionAnimation();
+                    this.pendingThrowResolution = { ...args, playedCardIds: selectedIds };
+                    this.prepareRecentThrow(args);
+                    this.clearSelection();
+                    this.clearPendingAction();
+                    this.updateActionButtons();
+                    this.showRecentThrow(args);
+                    return;
+                }
+                this.applyThrowAction({ ...args, playedCardIds: selectedIds });
                 this.clearSelection();
                 this.clearPendingAction();
                 this.afterPublicChange();
