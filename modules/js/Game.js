@@ -56,10 +56,20 @@ class SpriteStyles {
         return document.getElementById('tomatoss-layout');
     }
 
+    getPositiveWidth(...elements) {
+        for (const element of elements) {
+            const width = Number(element?.clientWidth ?? 0);
+            if (width > 0) {
+                return width;
+            }
+        }
+        return 0;
+    }
+
     getStageWidth() {
         const layoutParent = this.getLayoutElement()?.parentElement;
         const leftSide = document.getElementById('left-side');
-        const available = layoutParent?.clientWidth ?? leftSide?.clientWidth ?? STAGE_DESIGN_WIDTH;
+        const available = this.getPositiveWidth(layoutParent, leftSide) || STAGE_DESIGN_WIDTH;
         const usable = Math.max(
             320,
             Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME - LAYOUT_HORIZONTAL_PADDING
@@ -257,7 +267,7 @@ class MotionLayer {
     }
 
     getStageCanvasRect() {
-        return document.getElementById('festival-stage-canvas')?.getBoundingClientRect() ?? null;
+        return this.getRect(document.getElementById('festival-stage-canvas'));
     }
 
     createWrapper(node, rect, className = '') {
@@ -404,7 +414,20 @@ class MotionLayer {
     }
 
     getRect(element) {
-        return element?.getBoundingClientRect() ?? null;
+        const getIgnoreZoomRect = this.game.bga.gameui?.getBoundingClientRectIgnoreZoom?.bind(this.game.bga.gameui)
+            ?? this.game.bga.getBoundingClientRectIgnoreZoom?.bind(this.game.bga);
+        const rect = element
+            ? (getIgnoreZoomRect?.(element) ?? element.getBoundingClientRect?.())
+            : null;
+        if (!rect) {
+            return null;
+        }
+        return {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+        };
     }
 
     async animateRect(wrapper, fromRect, toRect, {
@@ -490,25 +513,6 @@ class MotionLayer {
 
     getBoardSlotRect(space) {
         return this.getRect(document.querySelector(`.board-token-slot[data-space="${space}"]`));
-    }
-
-    getPlacedTokenRect(space, stackIndex) {
-        const board = document.getElementById('festival-board');
-        const boardRect = this.getRect(board);
-        if (!boardRect) {
-            return null;
-        }
-
-        const slot = TOKEN_SLOTS.find(item => item.space === Number(space));
-        if (!slot) {
-            return null;
-        }
-
-        const width = TOKEN_DESIGN_SIZE * this.sprites.getBoardScale();
-        const height = TOKEN_DESIGN_SIZE * this.sprites.getBoardScale();
-        const left = boardRect.left + (slot.left / 100) * boardRect.width - (width / 2);
-        const top = boardRect.top + (slot.top / 100) * boardRect.height - (height / 2) - (stackIndex * TOKEN_STACK_RISE_PX);
-        return { left, top, width, height };
     }
 
     getBoardTomatoRect(slot) {
@@ -1210,6 +1214,7 @@ export class Game {
         this.discardDialog = null;
         this.missionDialog = null;
         this.resizeRaf = null;
+        this.layoutReadyPollRaf = null;
         this.documentClickBound = false;
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
@@ -1217,7 +1222,7 @@ export class Game {
             }
             this.resizeRaf = requestAnimationFrame(() => {
                 this.resizeRaf = null;
-                this.renderState(this.gamedatas);
+                this.renderWhenLayoutReady();
             });
         };
 
@@ -1300,8 +1305,34 @@ export class Game {
         this.bindRootEvents();
         this.bindDocumentEvents();
         window.addEventListener('resize', this.onWindowResize);
-        this.renderState(gamedatas);
+        this.renderWhenLayoutReady();
         this.setupNotifications();
+    }
+
+    isLayoutReadyForRender() {
+        return this.sprites.getPositiveWidth(
+            this.sprites.getLayoutElement()?.parentElement,
+            document.getElementById('left-side')
+        ) > 0;
+    }
+
+    renderWhenLayoutReady() {
+        if (this.layoutReadyPollRaf !== null) {
+            cancelAnimationFrame(this.layoutReadyPollRaf);
+            this.layoutReadyPollRaf = null;
+        }
+
+        const tryRender = () => {
+            if (this.isLayoutReadyForRender()) {
+                this.layoutReadyPollRaf = null;
+                this.renderState(this.gamedatas);
+                return;
+            }
+
+            this.layoutReadyPollRaf = requestAnimationFrame(tryRender);
+        };
+
+        tryRender();
     }
 
     rememberMovingTomatoKey(cardId) {
@@ -1688,17 +1719,31 @@ export class Game {
     }
 
     animateReserveTokenToSpace(space) {
-        const fromRect = this.motionLayer.getReserveTokenRect();
-        const toRect = this.motionLayer.getPlacedTokenRect(space, this.getActionStackIndex(space));
-        if (!fromRect || !toRect) {
+        const reserveNode = [...document.querySelectorAll('#token-reserve .reserve-token')].pop();
+        const fromRect = this.motionLayer.getRect(reserveNode);
+        if (!fromRect) {
             return Promise.resolve();
         }
+
+        this.stageView.renderPlacedTokens();
+        this.stageView.renderReserveTokens();
+
+        const placedKey = `placed-${Math.max(0, (this.gamedatas.currentTurnActions ?? []).length - 1)}`;
+        const destinationNode = document.querySelector(`#festival-token-layer [data-key="${placedKey}"]`);
+        const toRect = this.motionLayer.getRect(destinationNode);
+        if (!destinationNode || !toRect) {
+            return Promise.resolve();
+        }
+
+        destinationNode.style.visibility = 'hidden';
 
         const tokenNode = this.motionLayer.createReserveTokenNode();
         const wrapper = this.motionLayer.createWrapper(tokenNode, fromRect, 'motion-token');
         const movePromise = this.motionLayer.animateRect(wrapper, fromRect, toRect, {
             duration: this.getAnimationDuration(TOKEN_MOVE_MS),
             easing: TOKEN_EASING,
+        }).finally(() => {
+            destinationNode.style.visibility = '';
         });
         if (Number(space) < 3) {
             return movePromise;
@@ -1861,8 +1906,6 @@ export class Game {
 
     async animateThrowEntry(args, selectedIds) {
         await this.animateReserveTokenToSpace(Number(args.space));
-        this.stageView.renderPlacedTokens();
-        this.stageView.renderReserveTokens();
         await this.animateThrowCards(args, selectedIds);
         await this.animateQuickReveal(args);
     }
@@ -2744,8 +2787,6 @@ export class Game {
         try {
             if (isCollect) {
                 await this.animateReserveTokenToSpace(Number(args.space));
-                this.stageView.renderPlacedTokens();
-                this.stageView.renderReserveTokens();
                 const isLocalCollect = Number(args.player_id) === this.getLocalPlayerId();
                 if (isLocalCollect) {
                     finishInPrivateUpdate = true;
