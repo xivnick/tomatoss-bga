@@ -110,13 +110,15 @@ class SpriteStyles {
         const height = 220 * scale;
         const col = (targetId - 1) % 6;
         const row = Math.floor((targetId - 1) / 6);
+        const xPercent = col === 0 ? 0 : (col / 5) * 100;
+        const yPercent = row === 0 ? 0 : (row / 4) * 100;
         return `
             width:${width}px;
             height:${height}px;
             background-image:url('${g_gamethemeurl}img/mission_cards.jpg');
             background-repeat:no-repeat;
-            background-size:${945 * scale}px ${1100 * scale}px;
-            background-position:-${col * width}px -${row * height}px;
+            background-size:600% 500%;
+            background-position:${xPercent}% ${yPercent}%;
         `;
     }
 
@@ -2372,17 +2374,6 @@ export class Game {
             });
         }
 
-        if (this.pendingSpace !== null || this.selectedCardIds.length > 0) {
-            this.bga.statusBar.addActionButton(_('Clear selection'), () => {
-                this.clearPendingAction();
-                this.clearSelection();
-                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
-                this.stageView.renderActionSlots();
-                this.updateActionButtons();
-            }, {
-                color: 'secondary',
-            });
-        }
     }
 
     renderDiscardButtons() {
@@ -2392,13 +2383,6 @@ export class Game {
             color: 'alert',
             disabled: !hasExactSelection,
         });
-        if (this.selectedCardIds.length > 0) {
-            this.bga.statusBar.addActionButton(_('Clear selection'), () => {
-                this.clearSelection();
-                this.playerZonesView.renderHandArea(this.getLocalPlayerId());
-                this.updateActionButtons();
-            }, { color: 'secondary' });
-        }
     }
 
     confirmCollect() {
