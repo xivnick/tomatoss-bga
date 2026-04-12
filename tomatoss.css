@@ -36,7 +36,7 @@
     z-index: 200;
 }
 
-.motion-floating.motion-card {
+.motion-card.is-flipping {
     backface-visibility: hidden;
     transform-style: preserve-3d;
 }
@@ -78,6 +78,7 @@
 }
 
 #recent-throw-area,
+#stage-rules-summary,
 #mission-deck-slot,
 #mission-slot-0,
 #mission-slot-1,
@@ -96,6 +97,31 @@
     inset: 0;
     pointer-events: none;
     z-index: 5;
+}
+
+#stage-rules-summary {
+    -webkit-text-size-adjust: 100%;
+    color: var(--ink);
+    font-size: calc(100px * var(--stage-scale));
+    font-weight: 500;
+    left: 50%;
+    line-height: 1.1;
+    pointer-events: none;
+    text-size-adjust: 100%;
+    top: calc(60px * var(--stage-scale));
+    transform: translateX(-50%);
+    white-space: nowrap;
+    z-index: 4;
+}
+
+.stage-rules-summary__label {
+    margin-right: calc(18px * var(--stage-scale));
+}
+
+.stage-rules-summary__count {
+    display: inline-block;
+    font-size: 0.75em;
+    opacity: 0.72;
 }
 
 #mission-deck-slot {
@@ -216,7 +242,7 @@
 #mission-slot-0 .slot-card-host > .board-mission-card,
 #mission-slot-1 .slot-card-host > .board-mission-card,
 #mission-slot-2 .slot-card-host > .board-mission-card {
-    clip-path: inset(0 0 2px 0 round var(--card-radius));
+    clip-path: inset(0 0 calc(var(--mission-card-w) * 0.0075) 0 round var(--card-radius));
 }
 
 .mission-slot {
@@ -651,6 +677,15 @@
     justify-content: center;
 }
 
+.mission-popup__card-window {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.mission-popup__card-preview {
+    transform: translateY(-75%);
+}
+
 .mission-popup__content {
     align-items: center;
     display: grid;
@@ -673,7 +708,7 @@
 
 .mission-popup__score {
     color: #5a5a5a;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
     line-height: 1.2;
 }
@@ -693,9 +728,15 @@
     line-height: 1.1;
 }
 
+.tomatoss-card-tooltip__card-window {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
 .tomatoss-card-tooltip__card {
     border-radius: 12px;
     box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.35);
+    transform: translateY(-75%);
 }
 
 .tomatoss-card-tooltip__body {
@@ -708,7 +749,7 @@
 
 .tomatoss-card-tooltip__score {
     color: #5a5a5a;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.2;
 }

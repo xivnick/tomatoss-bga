@@ -325,14 +325,14 @@ class MotionLayer {
         node.style.zIndex = '';
     }
 
-    prepareFloatingNode(node, sourceElement) {
+    prepareFloatingNode(node, sourceElement, sourceRectOverride = null) {
         const layer = this.getLayer();
         const placeOnObject = this.getGameUiMethod('placeOnObject');
         if (!node || !layer || !sourceElement || !placeOnObject) {
             return null;
         }
 
-        const sourceRect = this.getRect(sourceElement);
+        const sourceRect = sourceRectOverride ?? this.getRect(sourceElement);
         node.classList.add('motion-floating');
         node.style.pointerEvents = 'none';
         node.style.position = 'absolute';
@@ -395,12 +395,13 @@ class MotionLayer {
 
     async moveNewNodeToHost(node, sourceElement, destinationHost, {
         duration = CARD_MOVE_MS,
+        sourceRect = null,
     } = {}) {
         if (!node || !sourceElement || !destinationHost) {
             return;
         }
 
-        const movingNode = this.prepareFloatingNode(node, sourceElement);
+        const movingNode = this.prepareFloatingNode(node, sourceElement, sourceRect);
         if (!movingNode) {
             return;
         }
@@ -413,12 +414,13 @@ class MotionLayer {
 
     async moveNewNodeToElementAndDestroy(node, sourceElement, destinationElement, {
         duration = CARD_MOVE_MS,
+        sourceRect = null,
     } = {}) {
         if (!node || !sourceElement || !destinationElement) {
             return;
         }
 
-        const movingNode = this.prepareFloatingNode(node, sourceElement);
+        const movingNode = this.prepareFloatingNode(node, sourceElement, sourceRect);
         if (!movingNode) {
             return;
         }
@@ -557,6 +559,7 @@ class MotionLayer {
         }
 
         const sourceRect = this.getRect(node);
+        node.classList.add('is-flipping');
 
         if (duration <= 0) {
             const frontNode = makeFrontNode();
@@ -565,6 +568,7 @@ class MotionLayer {
                 frontNode.style.height = `${sourceRect.height}px`;
             }
             this.copyVisualNodeState(node, frontNode);
+            node.classList.remove('is-flipping');
             return Promise.resolve();
         }
 
@@ -592,6 +596,8 @@ class MotionLayer {
                 easing: FLIP_OUT_EASING,
                 fill: 'forwards',
             }).finished;
+        }).finally(() => {
+            node.classList.remove('is-flipping');
         });
 
         return first;
@@ -865,6 +871,7 @@ class FestivalStageView {
                 reserve.appendChild(node);
             }
             node.className = `reserve-token reserve-token-${index + 1}`;
+            node.style.visibility = index < this.game.hiddenReserveTokenCount ? 'hidden' : '';
         });
 
         [...reserve.children].forEach(child => {
@@ -1253,7 +1260,12 @@ class PlayerTurnState {
         this.game.currentUiMode = 'playerTurn';
         this.game.isCurrentPlayerActive = isCurrentPlayerActive;
         this.game.clearPendingAction();
-        this.game.renderState(args);
+        const turnCleanupTokens = this.game.captureTurnCleanupForNextTurn(args);
+        this.game.renderState(args, { updateButtons: !turnCleanupTokens });
+        if (turnCleanupTokens) {
+            this.game.startTurnCleanup(turnCleanupTokens);
+            return;
+        }
         this.game.setStatePrompt(isCurrentPlayerActive
             ? this.game.getPlayerTurnPrompt()
             : _('Waiting for the active player.'));
@@ -1263,7 +1275,6 @@ class PlayerTurnState {
     onLeavingState() {
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
-        this.game.bga.statusBar.removeActionButtons();
     }
 }
 
@@ -1278,7 +1289,6 @@ class ResolveBonusState {
         this.game.clearPendingAction();
         this.game.renderState(args);
         this.game.setStatePrompt(_('Resolving bonus'));
-        this.game.bga.statusBar.removeActionButtons();
     }
 }
 
@@ -1302,7 +1312,6 @@ class DiscardDownState {
     onLeavingState() {
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
-        this.game.bga.statusBar.removeActionButtons();
     }
 }
 
@@ -1319,9 +1328,8 @@ export class Game {
         this.pendingCollectAnimation = null;
         this.deferredResolveBonusArgs = null;
         this.deferredBonusHandUpdateArgs = null;
-        this.cleanupDisplayActions = null;
         this.turnCleanupPromise = null;
-        this.deferredTurnCleanupActions = null;
+        this.hiddenReserveTokenCount = 0;
         this.actionAnimationDepth = 0;
         this.movingTomatoKeys = new Set();
         this.movingMissionKeys = new Set();
@@ -1374,6 +1382,16 @@ export class Game {
                             <div id="table-center">
                                 <div id="festival-stage">
                                     <div id="festival-stage-canvas">
+                                        <div id="stage-rules-summary" aria-label="${_('Tomato deck summary')}">
+                                            <span class="stage-rules-summary__label">${_('Tomato Cards:')}</span>
+                                            <span class="stage-rules-summary__item">1<span class="stage-rules-summary__count">(x3)</span></span>,
+                                            <span class="stage-rules-summary__item">2<span class="stage-rules-summary__count">(x3)</span></span>,
+                                            <span class="stage-rules-summary__item">3<span class="stage-rules-summary__count">(x13)</span></span>,
+                                            <span class="stage-rules-summary__item">4<span class="stage-rules-summary__count">(x5)</span></span>,
+                                            <span class="stage-rules-summary__item">5<span class="stage-rules-summary__count">(x8)</span></span>,
+                                            <span class="stage-rules-summary__item">6<span class="stage-rules-summary__count">(x4)</span></span>,
+                                            <span class="stage-rules-summary__item">7<span class="stage-rules-summary__count">(x4)</span></span>
+                                        </div>
                                         <div id="recent-throw-area" data-visible="false"></div>
                                         <div id="mission-deck-slot" class="stage-slot stage-deck-slot"></div>
                                         ${[0, 1, 2].map(index => `
@@ -1468,14 +1486,26 @@ export class Game {
     }
 
     getDisplayedTurnActions() {
-        return this.cleanupDisplayActions ?? this.gamedatas.currentTurnActions ?? [];
+        return this.gamedatas.currentTurnActions ?? [];
     }
 
     getDisplayedPlacementsRemaining() {
-        if (this.cleanupDisplayActions) {
-            return 0;
-        }
         return Number(this.gamedatas.placementsRemaining ?? 0);
+    }
+
+    captureTurnCleanupTokenSnapshots() {
+        const tokens = [...document.querySelectorAll('#festival-token-layer .placed-token')];
+        return tokens.map(token => {
+            const rect = this.motionLayer.getRect(token);
+            if (!rect) {
+                return null;
+            }
+
+            return {
+                rect,
+                face: token.classList.contains('splat') ? 'splat' : 'whole',
+            };
+        }).filter(Boolean);
     }
 
     bindRootEvents() {
@@ -1590,15 +1620,8 @@ export class Game {
         };
     }
 
-    renderState(source) {
-        const previousTurnActions = [...(this.gamedatas?.currentTurnActions ?? [])];
+    renderState(source, { updateButtons = true } = {}) {
         const nextData = { ...this.gamedatas, ...this.buildRenderData(source) };
-        const nextTurnActions = nextData.currentTurnActions ?? [];
-        if (previousTurnActions.length > 0 && nextTurnActions.length === 0 && !this.turnCleanupPromise) {
-            this.deferredTurnCleanupActions = previousTurnActions;
-            this.cleanupDisplayActions = previousTurnActions;
-        }
-
         this.gamedatas = nextData;
         this.stageView.renderAll();
         this.playerZonesView.renderAll();
@@ -1606,8 +1629,9 @@ export class Game {
         this.renderDiscardPopup();
         this.renderMissionPopup();
         this.cleanupMissionNodes();
-        this.updateActionButtons();
-        this.flushDeferredTurnCleanup();
+        if (updateButtons) {
+            this.updateActionButtons();
+        }
     }
 
     cleanupMissionNodes() {
@@ -1642,11 +1666,14 @@ export class Game {
     buildMissionTooltipHtml(targetId) {
         const tooltipCardWidth = Math.max(180, Math.min(300, window.innerWidth - 96));
         const scale = tooltipCardWidth / 157.5;
+        const tooltipCardHeight = 220 * scale;
         const meta = this.getMissionTooltipMeta(Number(targetId));
         return `
             <div class="tomatoss-card-tooltip">
                 <div class="tomatoss-card-tooltip__title">${_('Target card')}</div>
-                <div class="tomatoss-card-tooltip__card" style="${this.sprites.missionCardStyle(Number(targetId), scale)}"></div>
+                <div class="tomatoss-card-tooltip__card-window" style="width:${157.5 * scale}px;height:${tooltipCardHeight * 0.25}px;">
+                    <div class="tomatoss-card-tooltip__card" style="${this.sprites.missionCardStyle(Number(targetId), scale)}"></div>
+                </div>
                 ${meta ? `
                     <div class="tomatoss-card-tooltip__body">${meta.requirement}</div>
                     <div class="tomatoss-card-tooltip__score">
@@ -1659,16 +1686,17 @@ export class Game {
 
     buildMissionInspectionHtml(targetId, popupCardWidth) {
         const scale = popupCardWidth / 157.5;
+        const popupCardHeight = 220 * scale;
         const meta = this.getMissionTooltipMeta(Number(targetId));
         return `
             <div class="mission-popup__content">
                 <div class="mission-popup__card">
                     <div
-                        class="mission-popup__card-host"
-                        style="width:${157.5 * scale}px;height:${220 * scale}px;"
+                        class="mission-popup__card-window"
+                        style="width:${157.5 * scale}px;height:${popupCardHeight * 0.25}px;"
                     >
                         <div
-                            class="card-node board-mission-card"
+                            class="card-node board-mission-card mission-popup__card-preview"
                             style="${this.sprites.missionCardStyle(Number(targetId), scale)}"
                         ></div>
                     </div>
@@ -1683,36 +1711,36 @@ export class Game {
 
     getMissionTooltipMeta(targetId) {
         const shared = {
-            1: { requirement: _('Exactly one 3'), base: 2, quick: 3 },
-            2: { requirement: _('Exactly one 3'), base: 2, quick: 3 },
-            3: { requirement: _('Exactly two matching cards'), base: 3, quick: 6 },
-            4: { requirement: _('Exactly two matching cards'), base: 3, quick: 6 },
-            5: { requirement: _('Three cards: a pair and one higher'), base: 5, quick: 7 },
-            6: { requirement: _('Exactly three matching cards'), base: 5, quick: 10 },
-            7: { requirement: _('Exactly one 5, 6, or 7'), base: 2, quick: 3 },
-            8: { requirement: _('Exactly one 5, 6, or 7'), base: 2, quick: 3 },
-            9: { requirement: _('Exactly one 1 or 2'), base: 3, quick: 6 },
-            10: { requirement: _('Total 8 to 9'), base: 4, quick: 6 },
-            11: { requirement: _('Total 8 to 9'), base: 4, quick: 6 },
-            12: { requirement: _('Total 8 to 9, no 3s'), base: 4, quick: 8 },
-            13: { requirement: _('Exactly one 6 or 7'), base: 3, quick: 5 },
-            14: { requirement: _('Exactly two cards, difference 1'), base: 4, quick: 5 },
-            15: { requirement: _('Exactly two cards, difference 1'), base: 4, quick: 5 },
-            16: { requirement: _('Total 11 to 13'), base: 4, quick: 6 },
-            17: { requirement: _('Total 11 to 13'), base: 4, quick: 6 },
-            18: { requirement: _('Total 11 to 13, no 3s'), base: 4, quick: 7 },
-            19: { requirement: _('Exactly one 2, 4, or 6'), base: 2, quick: 4 },
-            20: { requirement: _('Exactly one 2, 4, or 6'), base: 2, quick: 4 },
-            21: { requirement: _('Total 6 to 8'), base: 3, quick: 4 },
-            22: { requirement: _('Total 6 to 8'), base: 3, quick: 4 },
-            23: { requirement: _('Total 6 to 8, no 3s'), base: 3, quick: 6 },
-            24: { requirement: _('Exactly two cards totaling 10'), base: 4, quick: 8 },
-            25: { requirement: _('Exactly one 4 or 5'), base: 2, quick: 3 },
-            26: { requirement: _('Exactly one 5'), base: 2, quick: 5 },
-            27: { requirement: _('Total 7 to 11'), base: 3, quick: 3 },
-            28: { requirement: _('Total 7 to 11, no 3s'), base: 3, quick: 5 },
-            29: { requirement: _('Exactly two cards, difference 4 to 6'), base: 4, quick: 5 },
-            30: { requirement: _('Exactly two cards, difference 4 to 6'), base: 4, quick: 5 },
+            1: { requirement: _('A Tomato card (3)'), base: 2, quick: 3 },
+            2: { requirement: _('A Tomato card (3)'), base: 2, quick: 3 },
+            3: { requirement: _('2 Tomato cards of the same value'), base: 3, quick: 6 },
+            4: { requirement: _('2 Tomato cards of the same value'), base: 3, quick: 6 },
+            5: { requirement: _('3 Tomato cards with a pair and one higher card'), base: 5, quick: 7 },
+            6: { requirement: _('3 Tomato cards of the same value'), base: 5, quick: 10 },
+            7: { requirement: _('A Tomato card (5, 6, or 7)'), base: 2, quick: 3 },
+            8: { requirement: _('A Tomato card (5, 6, or 7)'), base: 2, quick: 3 },
+            9: { requirement: _('A Tomato card (1 or 2)'), base: 3, quick: 6 },
+            10: { requirement: _('Tomato card(s) totaling 8–9'), base: 4, quick: 6 },
+            11: { requirement: _('Tomato card(s) totaling 8–9'), base: 4, quick: 6 },
+            12: { requirement: _('Tomato card(s) totaling 8–9, without any 3s'), base: 4, quick: 8 },
+            13: { requirement: _('A Tomato card (6 or 7)'), base: 3, quick: 5 },
+            14: { requirement: _('2 Tomato cards with a difference of 1'), base: 4, quick: 5 },
+            15: { requirement: _('2 Tomato cards with a difference of 1'), base: 4, quick: 5 },
+            16: { requirement: _('Tomato card(s) totaling 11–13'), base: 4, quick: 6 },
+            17: { requirement: _('Tomato card(s) totaling 11–13'), base: 4, quick: 6 },
+            18: { requirement: _('Tomato card(s) totaling 11–13, without any 3s'), base: 4, quick: 7 },
+            19: { requirement: _('A Tomato card (2, 4, or 6)'), base: 2, quick: 4 },
+            20: { requirement: _('A Tomato card (2, 4, or 6)'), base: 2, quick: 4 },
+            21: { requirement: _('Tomato card(s) totaling 6–8'), base: 3, quick: 4 },
+            22: { requirement: _('Tomato card(s) totaling 6–8'), base: 3, quick: 4 },
+            23: { requirement: _('Tomato card(s) totaling 6–8, without any 3s'), base: 3, quick: 6 },
+            24: { requirement: _('2 Tomato cards totaling exactly 10'), base: 4, quick: 8 },
+            25: { requirement: _('A Tomato card (4 or 5)'), base: 2, quick: 3 },
+            26: { requirement: _('A Tomato card (5)'), base: 2, quick: 5 },
+            27: { requirement: _('Tomato card(s) totaling 7–11'), base: 3, quick: 3 },
+            28: { requirement: _('Tomato card(s) totaling 7–11, without any 3s'), base: 3, quick: 5 },
+            29: { requirement: _('2 Tomato cards with a difference of 4–6'), base: 4, quick: 5 },
+            30: { requirement: _('2 Tomato cards with a difference of 4–6'), base: 4, quick: 5 },
         };
         return shared[targetId] ?? null;
     }
@@ -1756,7 +1784,7 @@ export class Game {
             case ANIMATION_NONE:
                 return 0;
             case ANIMATION_REDUCED:
-                return 0.6;
+                return 0.4;
             case ANIMATION_FULL:
             default:
                 return 1;
@@ -1769,13 +1797,6 @@ export class Game {
             return 0;
         }
         return Math.max(1, Math.round(baseMs * factor));
-    }
-
-    getResultPreviewDuration(baseMs) {
-        if (this.getAnimationPreferenceValue() === ANIMATION_NONE) {
-            return Math.max(350, Math.round(baseMs * 0.7));
-        }
-        return this.getAnimationDuration(baseMs);
     }
 
     wait(ms) {
@@ -1806,7 +1827,6 @@ export class Game {
 
     endActionAnimation() {
         this.actionAnimationDepth = Math.max(0, this.actionAnimationDepth - 1);
-        this.flushDeferredTurnCleanup();
     }
 
     shouldAnimateNotifications() {
@@ -1815,26 +1835,38 @@ export class Game {
             && this.getAnimationSpeedFactor() > 0;
     }
 
-    shouldShowThrowResultPreview() {
-        return !document.hidden && document.hasFocus();
-    }
-
     isActionAnimationRunning() {
         return this.actionAnimationDepth > 0 || Boolean(this.pendingThrowResolution) || Boolean(this.recentThrow);
     }
 
-    flushDeferredTurnCleanup() {
-        if (this.turnCleanupPromise || !this.deferredTurnCleanupActions || this.isActionAnimationRunning()) {
+    captureTurnCleanupForNextTurn(nextStateArgs) {
+        if (this.turnCleanupPromise || !this.shouldAnimateNotifications()) {
+            return null;
+        }
+
+        const previousTurnActions = this.gamedatas?.currentTurnActions ?? [];
+        const nextTurnActions = nextStateArgs?.currentTurnActions ?? [];
+        if (previousTurnActions.length === 0 || nextTurnActions.length > 0) {
+            return null;
+        }
+
+        const tokenSnapshots = this.captureTurnCleanupTokenSnapshots();
+        return tokenSnapshots.length > 0 ? tokenSnapshots : null;
+    }
+
+    startTurnCleanup(tokenSnapshots) {
+        if (!tokenSnapshots?.length || this.turnCleanupPromise) {
+            this.updateActionButtons();
             return;
         }
 
-        const actions = this.deferredTurnCleanupActions;
-        this.deferredTurnCleanupActions = null;
-        this.turnCleanupPromise = this.animateTurnCleanup(actions).finally(() => {
+        this.setStatePrompt(_('Cleaning up turn...'));
+        this.bga.statusBar.removeActionButtons();
+        this.turnCleanupPromise = this.animateTurnCleanup(tokenSnapshots).finally(() => {
             this.turnCleanupPromise = null;
-            this.cleanupDisplayActions = null;
             this.stageView.renderPlacedTokens();
             this.stageView.renderReserveTokens();
+            this.updateActionButtons();
         });
     }
 
@@ -1993,6 +2025,7 @@ export class Game {
             const backNode = this.motionLayer.createTomatoBackNode(sourceRect);
             const movePromise = this.motionLayer.moveNewNodeToHost(backNode, sourceElement, destinationHost, {
                 duration: this.getAnimationDuration(CARD_MOVE_MS),
+                sourceRect,
             });
             const flipPromise = this.motionLayer.animateFlip(
                 backNode,
@@ -2094,6 +2127,7 @@ export class Game {
             }
             return this.motionLayer.moveNewNodeToElementAndDestroy(node, sourceElement, discardHost, {
                 duration: this.getAnimationDuration(CARD_MOVE_MS),
+                sourceRect,
             });
         });
 
@@ -2202,13 +2236,8 @@ export class Game {
         await Promise.all([movePromise, flipPromise]);
     }
 
-    async animateTurnCleanup(turnActions) {
-        if (!turnActions?.length) {
-            return;
-        }
-
-        const tokens = [...document.querySelectorAll('#festival-token-layer .placed-token')];
-        if (tokens.length === 0) {
+    async animateTurnCleanup(tokenSnapshots) {
+        if (!tokenSnapshots?.length) {
             return;
         }
 
@@ -2217,32 +2246,48 @@ export class Game {
             return;
         }
 
-        const targets = Array.from({ length: Math.min(tokens.length, 3) }, (_, index) => {
-            const target = document.createElement('div');
-            target.className = `reserve-token reserve-token-${index + 1}`;
-            target.style.visibility = 'hidden';
-            reserve.appendChild(target);
-            return target;
-        });
+        this.hiddenReserveTokenCount = Math.min(
+            Number(this.gamedatas.placementsRemaining ?? 0),
+            tokenSnapshots.length
+        );
+        this.stageView.renderReserveTokens();
 
-        await Promise.all(tokens.map((token, index) => {
-            const destinationTarget = targets[Math.min(index, targets.length - 1)];
-            if (!destinationTarget) {
-                return Promise.resolve();
+        try {
+            const reserveTargets = [...reserve.querySelectorAll('.reserve-token')];
+            if (reserveTargets.length === 0) {
+                return;
             }
 
-            const clone = this.motionLayer.createReserveTokenNode(
-                token.classList.contains('splat') ? 'splat' : 'whole'
-            );
-            token.style.visibility = 'hidden';
-            return this.motionLayer.moveNewNodeToElementAndDestroy(clone, token, destinationTarget, {
-                duration: this.getAnimationDuration(TURN_CLEANUP_MS),
-            }).finally(() => {
-                token.style.visibility = '';
-            });
-        })).finally(() => {
-            targets.forEach(target => target.remove());
-        });
+            await Promise.all(tokenSnapshots.map((snapshot, index) => {
+                const destinationTarget = reserveTargets[Math.min(index, reserveTargets.length - 1)];
+                if (!destinationTarget) {
+                    return Promise.resolve();
+                }
+
+                const clone = this.motionLayer.createReserveTokenNode(snapshot.face);
+                clone.style.width = `${snapshot.rect.width}px`;
+                clone.style.height = `${snapshot.rect.height}px`;
+                clone.style.position = 'absolute';
+                clone.style.left = `${snapshot.rect.left}px`;
+                clone.style.top = `${snapshot.rect.top}px`;
+                const layer = this.motionLayer.getLayer();
+                if (!layer) {
+                    return Promise.resolve();
+                }
+
+                layer.appendChild(clone);
+                clone.classList.add('motion-floating');
+                clone.style.pointerEvents = 'none';
+                clone.style.zIndex = '200';
+                return this.motionLayer.slideFloatingNodeToElement(clone, destinationTarget, {
+                    duration: this.getAnimationDuration(TURN_CLEANUP_MS),
+                    destroy: true,
+                });
+            }));
+        } finally {
+            this.hiddenReserveTokenCount = 0;
+            this.stageView.renderReserveTokens();
+        }
     }
 
     renderOverallPlayerBoards() {
@@ -2402,6 +2447,10 @@ export class Game {
     }
 
     canInteract(action) {
+        if (this.turnCleanupPromise) {
+            this.bga.dialogs.showMessage(_('Please wait for turn cleanup to finish'), 'error');
+            return false;
+        }
         if (!this.isCurrentPlayerActive) {
             this.bga.dialogs.showMessage(_('This is not your turn'), 'error');
             return false;
@@ -2530,6 +2579,10 @@ export class Game {
 
     updateActionButtons() {
         this.bga.statusBar.removeActionButtons();
+        if (this.turnCleanupPromise) {
+            this.setStatePrompt(_('Cleaning up turn...'));
+            return;
+        }
         if (this.currentUiMode === 'playerTurn') {
             this.setStatePrompt(this.isCurrentPlayerActive
                 ? this.getPlayerTurnPrompt()
@@ -2809,13 +2862,60 @@ export class Game {
                     } finally {
                         this.endActionAnimation();
                     }
-                }, this.getResultPreviewDuration(THROW_RESOLVE_DELAY_MS));
+                }, this.getAnimationDuration(THROW_RESOLVE_DELAY_MS));
                 return;
             }
             this.recentThrow = null;
             this.stageView.renderRecentThrow();
             this.endActionAnimation();
-        }, this.getResultPreviewDuration(THROW_CUTSCENE_MS));
+        }, this.getAnimationDuration(THROW_CUTSCENE_MS));
+    }
+
+    showRecentThrowWithoutAnimation(args, playedCardIds) {
+        if (this.recentThrowTimeout) {
+            clearTimeout(this.recentThrowTimeout);
+        }
+
+        this.beginActionAnimation();
+        this.pendingThrowResolution = { ...args, playedCardIds };
+        this.prepareRecentThrow(args);
+
+        const values = [
+            ...(args.cards ?? []),
+            ...(args.quickToss && args.revealed?.value ? [args.revealed.value] : []),
+        ];
+        const scale = this.sprites.getCardScale('tomato');
+        this.registry.clearTemporary('recent-preview-');
+        values.forEach((value, index) => {
+            const host = this.stageView.ensureRecentThrowHost(index, [
+                index > 0 ? 'is-overlap' : '',
+                index === values.length - 1 && args.quickToss && args.revealed ? 'reveal' : '',
+            ].filter(Boolean));
+            if (!host) {
+                return;
+            }
+
+            const node = this.registry.getTemporaryTomatoNode(`recent-preview-${index}`, value, scale);
+            this.registry.mount(host, node);
+        });
+
+        this.clearSelection();
+        this.clearPendingAction();
+        this.updateActionButtons();
+
+        this.recentThrowTimeout = setTimeout(async () => {
+            const pending = this.pendingThrowResolution;
+            this.pendingThrowResolution = null;
+            this.registry.clearTemporary('recent-preview-');
+            this.recentThrow = null;
+            this.stageView.renderRecentThrow();
+            if (pending) {
+                this.applyThrowAction(pending);
+                this.afterPublicChange();
+                await this.flushDeferredPostThrowNotifications();
+            }
+            this.endActionAnimation();
+        }, 450);
     }
 
     prepareRecentThrow(args) {
@@ -2919,22 +3019,9 @@ export class Game {
                 this.clearPendingAction();
                 this.afterPublicChange();
             } else {
-                const selectedIds = [...this.selectedCardIds];
-                this.applyImmediateThrowHandChange({ ...args, playedCardIds: selectedIds });
-                if (this.shouldShowThrowResultPreview()) {
-                    this.beginActionAnimation();
-                    this.pendingThrowResolution = { ...args, playedCardIds: selectedIds };
-                    this.prepareRecentThrow(args);
-                    this.clearSelection();
-                    this.clearPendingAction();
-                    this.updateActionButtons();
-                    this.showRecentThrow(args);
-                    return;
-                }
-                this.applyThrowAction({ ...args, playedCardIds: selectedIds });
-                this.clearSelection();
-                this.clearPendingAction();
-                this.afterPublicChange();
+                const playedCardIds = [...this.selectedCardIds];
+                this.applyImmediateThrowHandChange({ ...args, playedCardIds });
+                this.showRecentThrowWithoutAnimation(args, playedCardIds);
             }
             return;
         }
