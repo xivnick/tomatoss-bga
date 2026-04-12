@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `card` (
   `card_type_arg` INT NOT NULL,
   `card_location` VARCHAR(32) NOT NULL,
   `card_location_arg` INT NOT NULL DEFAULT 0,
+  `card_hand_index` INT NOT NULL DEFAULT 0,
   PRIMARY KEY (`card_id`),
   KEY `card_location` (`card_location`, `card_location_arg`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1;

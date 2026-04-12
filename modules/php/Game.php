@@ -102,10 +102,29 @@ class Game extends \Bga\GameFramework\Table
                 . "`card_type_arg` INT NOT NULL,"
                 . "`card_location` VARCHAR(32) NOT NULL," // NOI18N
                 . "`card_location_arg` INT NOT NULL DEFAULT 0,"
+                . "`card_hand_index` INT NOT NULL DEFAULT 0,"
                 . "PRIMARY KEY (`card_id`)," // NOI18N
                 . "KEY `card_location` (`card_location`, `card_location_arg`)" // NOI18N
                 . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1"
             );
+        }
+
+        if (!$this->columnExists('card', 'card_hand_index')) {
+            static::DbQuery("ALTER TABLE `card` ADD `card_hand_index` INT NOT NULL DEFAULT 0 AFTER `card_location_arg`");
+            $handCards = array_values($this->getCollectionFromDb(
+                "SELECT `card_id` AS `id`, `card_location_arg` AS `playerId` "
+                . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' "
+                . "ORDER BY `card_location_arg` ASC, `card_id` ASC"
+            ));
+            $nextIndexByPlayer = [];
+            foreach ($handCards as $card) {
+                $playerId = (int) $card['playerId'];
+                $nextIndex = $nextIndexByPlayer[$playerId] ?? 0;
+                static::DbQuery(
+                    "UPDATE `card` SET `card_hand_index` = $nextIndex WHERE `card_id` = " . (int) $card['id']
+                );
+                $nextIndexByPlayer[$playerId] = $nextIndex + 1;
+            }
         }
 
         $this->ensurePlayerColumn('player_basket_full', "ALTER TABLE `player` ADD `player_basket_full` TINYINT(1) NOT NULL DEFAULT 1");
@@ -504,7 +523,7 @@ class Game extends \Bga\GameFramework\Table
         $rows = $this->getCollectionFromDb(
             "SELECT `card_id` AS `id`, `card_type_arg` AS `value` "
             . "FROM `card` WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId "
-            . 'ORDER BY `card_id` ASC'
+            . 'ORDER BY `card_hand_index` ASC, `card_id` ASC'
         );
 
         return array_map(static fn(array $row): array => [
@@ -965,6 +984,14 @@ class Game extends \Bga\GameFramework\Table
         );
     }
 
+    private function getNextHandIndex(int $playerId): int
+    {
+        return (int) $this->getUniqueValueFromDb(
+            "SELECT COALESCE(MAX(`card_hand_index`), -1) + 1 FROM `card` "
+            . "WHERE `card_type` = 'tomato' AND `card_location` = 'hand' AND `card_location_arg` = $playerId"
+        );
+    }
+
     private function getCardCount(string $cardType, string $location): int
     {
         return (int) $this->getUniqueValueFromDb(
@@ -974,8 +1001,9 @@ class Game extends \Bga\GameFramework\Table
 
     private function moveCardToLocation(int $cardId, string $location, int $locationArg): void
     {
+        $handIndex = $location === 'hand' ? $this->getNextHandIndex($locationArg) : 0;
         static::DbQuery(
-            "UPDATE `card` SET `card_location` = '" . addslashes($location) . "', `card_location_arg` = $locationArg "
+            "UPDATE `card` SET `card_location` = '" . addslashes($location) . "', `card_location_arg` = $locationArg, `card_hand_index` = $handIndex "
             . "WHERE `card_id` = $cardId"
         );
     }
