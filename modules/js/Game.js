@@ -50,6 +50,7 @@ const ANIMATION_FULL = 1;
 const ANIMATION_REDUCED = 2;
 const ANIMATION_NONE = 3;
 const REPEATED_CLICK_CONFIRM_ON = 1;
+const CUSTOM_ACTION_BUTTON_IDS = ['pickup_button', 'toss_button', 'quick_toss_button', 'discard_button'];
 
 class SpriteStyles {
     getLayoutElement() {
@@ -1273,6 +1274,7 @@ class PlayerTurnState {
     }
 
     onLeavingState() {
+        this.game.clearCustomActionButtons();
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
     }
@@ -1287,6 +1289,7 @@ class ResolveBonusState {
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
         this.game.clearPendingAction();
+        this.game.clearCustomActionButtons();
         this.game.renderState(args);
         this.game.setStatePrompt(_('Resolving bonus'));
     }
@@ -1310,6 +1313,7 @@ class DiscardDownState {
     }
 
     onLeavingState() {
+        this.game.clearCustomActionButtons();
         this.game.currentUiMode = null;
         this.game.isCurrentPlayerActive = false;
     }
@@ -1861,7 +1865,7 @@ export class Game {
         }
 
         this.setStatePrompt(_('Cleaning up turn...'));
-        this.bga.statusBar.removeActionButtons();
+        this.clearCustomActionButtons();
         this.turnCleanupPromise = this.animateTurnCleanup(tokenSnapshots).finally(() => {
             this.turnCleanupPromise = null;
             this.stageView.renderPlacedTokens();
@@ -2363,7 +2367,10 @@ export class Game {
         dialog.create('tomatossDiscardDialog');
         dialog.setTitle(_('Discard pile'));
         dialog.setMaxWidth(980);
-        dialog.replaceCloseCallback(() => this.closeDiscardPopup());
+        dialog.replaceCloseCallback(() => {
+            this.closeDiscardPopup();
+            return false;
+        });
         this.discardDialog = dialog;
         return dialog;
     }
@@ -2376,7 +2383,10 @@ export class Game {
         dialog.create('tomatossMissionDialog');
         dialog.setTitle(_('Target card'));
         dialog.setMaxWidth(560);
-        dialog.replaceCloseCallback(() => this.closeMissionPopup());
+        dialog.replaceCloseCallback(() => {
+            this.closeMissionPopup();
+            return false;
+        });
         this.missionDialog = dialog;
         return dialog;
     }
@@ -2577,8 +2587,15 @@ export class Game {
         return _('Choose an action.');
     }
 
+    clearCustomActionButtons() {
+        CUSTOM_ACTION_BUTTON_IDS.forEach(id => document.getElementById(id)?.remove());
+    }
+
+    addCustomActionButton(label, callback, options) {
+        this.bga.statusBar.addActionButton(label, callback, options);
+    }
+
     updateActionButtons() {
-        this.bga.statusBar.removeActionButtons();
         if (this.turnCleanupPromise) {
             this.setStatePrompt(_('Cleaning up turn...'));
             return;
@@ -2593,18 +2610,21 @@ export class Game {
         }
 
         if (this.currentUiMode === 'playerTurn') {
+            this.clearCustomActionButtons();
             this.renderPlayerTurnButtons();
             return;
         }
 
         if (this.currentUiMode === 'discard') {
+            this.clearCustomActionButtons();
             this.renderDiscardButtons();
+            return;
         }
     }
 
     renderPlayerTurnButtons() {
         if (this.pendingSpace !== null && this.pendingSpace < 3) {
-            this.bga.statusBar.addActionButton(_('Pick up'), () => this.confirmCollect(), {
+            this.addCustomActionButton(_('Pick up'), () => this.confirmCollect(), {
                 id: 'pickup_button',
             });
         }
@@ -2613,11 +2633,11 @@ export class Game {
             const target = (this.gamedatas.boardTargets ?? [])[this.pendingSpace - 3];
             const { normal, quick } = target ? this.getThrowOptions(Number(target.targetId)) : { normal: false, quick: false };
 
-            this.bga.statusBar.addActionButton(_('Toss'), () => this.confirmToss(false), {
+            this.addCustomActionButton(_('Toss'), () => this.confirmToss(false), {
                 id: 'toss_button',
                 disabled: !normal,
             });
-            this.bga.statusBar.addActionButton(_('Quick toss'), () => this.confirmToss(true), {
+            this.addCustomActionButton(_('Quick toss'), () => this.confirmToss(true), {
                 id: 'quick_toss_button',
                 disabled: !quick,
             });
@@ -2628,7 +2648,8 @@ export class Game {
     renderDiscardButtons() {
         const discardNeeded = Number(this.gamedatas.discardCountNeeded ?? 0);
         const hasExactSelection = this.selectedCardIds.length === discardNeeded && discardNeeded > 0;
-        this.bga.statusBar.addActionButton(_('Discard selected'), () => this.confirmDiscard(), {
+        this.addCustomActionButton(_('Discard selected'), () => this.confirmDiscard(), {
+            id: 'discard_button',
             color: 'alert',
             disabled: !hasExactSelection,
         });

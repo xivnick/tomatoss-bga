@@ -166,19 +166,24 @@ class Game extends \Bga\GameFramework\Table
 
     protected function getAllDatas(int $currentPlayerId): array
     {
+        $players = $this->getCollectionFromDb(
+            'SELECT ' // NOI18N
+            . '`player_id` AS `id`, ' // NOI18N
+            . '`player_name` AS `name`, ' // NOI18N
+            . '`player_color` AS `color`, ' // NOI18N
+            . '`player_basket_full` AS `basketFull`, ' // NOI18N
+            . '`player_captured_count` AS `capturedCount` ' // NOI18N
+            . 'FROM `player`' // NOI18N
+        );
+        $scoreByPlayer = $this->bga->playerScore->getAll();
+        foreach ($players as $playerId => &$player) {
+            $player['score'] = (int)($scoreByPlayer[(int)$playerId] ?? 0);
+        }
+        unset($player);
+
         return [
             'viewerPlayerId' => $currentPlayerId,
-            // NOI18N
-            'players' => $this->getCollectionFromDb(
-                'SELECT ' // NOI18N
-                . '`player_id` AS `id`, ' // NOI18N
-                . '`player_name` AS `name`, ' // NOI18N
-                . '`player_color` AS `color`, ' // NOI18N
-                . '`player_score` AS `score`, ' // NOI18N
-                . '`player_basket_full` AS `basketFull`, ' // NOI18N
-                . '`player_captured_count` AS `capturedCount` ' // NOI18N
-                . 'FROM `player`' // NOI18N
-            ),
+            'players' => $players,
             'turnNo' => $this->getTurnNo(),
             'placementsRemaining' => $this->getPlacementsRemaining(),
             'boardTomatoes' => $this->getBoardTomatoSlots(),
