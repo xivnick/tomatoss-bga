@@ -177,7 +177,10 @@ class Game extends \Bga\GameFramework\Table
         );
         $scoreByPlayer = $this->bga->playerScore->getAll();
         foreach ($players as $playerId => &$player) {
+            $player['id'] = (int) $player['id'];
             $player['score'] = (int)($scoreByPlayer[(int)$playerId] ?? 0);
+            $player['basketFull'] = (int) $player['basketFull'] === 1;
+            $player['capturedCount'] = (int) $player['capturedCount'];
         }
         unset($player);
 
@@ -542,8 +545,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function getCurrentTurnActionLog(): array
     {
-        // NOI18N
-        return array_values($this->getCollectionFromDb(
+        $rows = array_values($this->getCollectionFromDb(
             'SELECT ' // NOI18N
             . '`turn_action_id` AS `id`, ' // NOI18N
             . '`player_id` AS `playerId`, ' // NOI18N
@@ -559,6 +561,21 @@ class Game extends \Bga\GameFramework\Table
             . 'WHERE `turn_no` = ' . $this->getTurnNo() . ' '
             . 'ORDER BY `action_index` ASC'
         ));
+
+        return array_map(static function (array $row): array {
+            return [
+                'id' => (int) $row['id'],
+                'playerId' => (int) $row['playerId'],
+                'actionIndex' => (int) $row['actionIndex'],
+                'space' => (int) $row['space'],
+                'actionKind' => (string) $row['actionKind'],
+                'cardsJson' => (string) $row['cardsJson'],
+                'quickToss' => (int) $row['quickToss'] === 1,
+                'targetId' => $row['targetId'] === null ? null : (int) $row['targetId'],
+                'revealedCard' => $row['revealedCard'] === null ? null : (int) $row['revealedCard'],
+                'scoreGained' => (int) $row['scoreGained'],
+            ];
+        }, $rows);
     }
 
     public function getHandCountsByPlayer(): array

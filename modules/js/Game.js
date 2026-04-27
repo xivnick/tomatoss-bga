@@ -1145,7 +1145,7 @@ class PlayerZonesView {
         const basketAnchor = document.getElementById(`basket-anchor-${playerId}`);
         const player = this.game.gamedatas.players?.[playerId];
         if (basketAnchor && player) {
-            basketAnchor.innerHTML = `<div class="basket-token ${player.basketFull ? 'full' : 'empty'}"></div>`;
+            basketAnchor.innerHTML = `<div class="basket-token ${this.game.isBasketFull(player.basketFull) ? 'full' : 'empty'}"></div>`;
         }
     }
 
@@ -2323,7 +2323,7 @@ export class Game {
             counter.querySelector('.tomatoss-overall-hand__count').textContent = `${count}/8`;
             const basketLabel = counter.querySelector('.tomatoss-overall-basket__label');
             const basketIcon = counter.querySelector('.tomatoss-overall-basket__icon');
-            const basketFull = Boolean(this.gamedatas.players?.[playerId]?.basketFull);
+            const basketFull = this.isBasketFull(this.gamedatas.players?.[playerId]?.basketFull);
             basketLabel.textContent = basketFull ? _('Full') : _('Empty');
             basketIcon.className = `tomatoss-overall-basket__icon ${basketFull ? 'is-full' : 'is-empty'}`;
         });
@@ -2585,6 +2585,10 @@ export class Game {
         }
 
         return _('Choose an action.');
+    }
+
+    isBasketFull(value) {
+        return value === true || Number(value) === 1;
     }
 
     clearCustomActionButtons() {
