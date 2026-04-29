@@ -1373,6 +1373,7 @@ export class Game {
         this.openMissionPopupIndex = null;
         this.discardDialog = null;
         this.missionDialog = null;
+        this.registeredBotPanelIds = new Set();
         this.resizeRaf = null;
         this.layoutReadyPollRaf = null;
         this.documentClickBound = false;
@@ -2357,7 +2358,7 @@ export class Game {
             }
             root.appendChild(panel);
             if (player.isBot) {
-                keepBotPanelIds.add(`overall_player_board_${playerId}`);
+                keepBotPanelIds.add(this.getPanelPlayerId(playerId, true));
             }
 
             const count = Number(this.gamedatas.handCountsByPlayer?.[playerId] ?? 0);
@@ -2377,18 +2378,21 @@ export class Game {
             }
 
             if (player.isBot) {
-                const scoreNode = panel.querySelector(`#player_score_${playerId}`);
-                if (scoreNode) {
-                    scoreNode.textContent = String(Number(player.score ?? 0));
-                }
+                this.bga.playerPanels.getScoreCounter(this.getPanelPlayerId(playerId, true))
+                    ?.setValue(Number(player.score ?? 0));
             }
         });
 
         [...root.querySelectorAll('.tomatoss-bot-player-board')].forEach(panel => {
-            if (!keepBotPanelIds.has(panel.id)) {
+            const panelPlayerId = Number(panel.dataset.playerPanelId ?? 0);
+            if (!keepBotPanelIds.has(panelPlayerId)) {
                 panel.remove();
             }
         });
+    }
+
+    getPanelPlayerId(playerId, isBot = false) {
+        return isBot ? -Math.abs(Number(playerId)) : Number(playerId);
     }
 
     ensureOverallPlayerPanel(player) {
@@ -2397,7 +2401,7 @@ export class Game {
             return this.ensureBotOverallPlayerPanel(playerId, player.name ?? `P${player.id}`);
         }
 
-        const content = document.getElementById(`player_board_${playerId}`);
+        const content = this.bga.playerPanels.getElement(playerId);
         if (!content) {
             return null;
         }
@@ -2409,65 +2413,58 @@ export class Game {
             content.appendChild(status);
         }
 
-        return document.getElementById(`overall_player_board_${playerId}`);
+        return content.closest('.player-board');
     }
 
     ensureBotOverallPlayerPanel(playerId, playerName) {
-        const root = document.getElementById('player_boards');
-        if (!root) {
-            return null;
-        }
-
         const player = this.gamedatas.players?.[playerId] ?? {};
         const playerColor = player.color ?? '7b7b7b';
         const difficultyLabel = this.getBotDifficultyLabel(player.botDifficulty);
         const activeSeatId = Number(this.gamedatas.currentSeatId ?? 0);
         const isActive = activeSeatId === playerId;
+        const panelPlayerId = this.getPanelPlayerId(playerId, true);
 
-        let panel = document.getElementById(`overall_player_board_${playerId}`);
-        if (!panel) {
-            root.insertAdjacentHTML('beforeend', `
-                <div id="overall_player_board_${playerId}" class="player-board current-player-board tomatoss-bot-player-board" style="border-color: #${playerColor};">
-                    <div class="player_board_inner" id="player_board_inner_${playerColor}">
-                        <div class="emblemwrap tomatoss-bot-avatar-wrap" id="avatarwrap_${playerId}" style="display: ${isActive ? 'none' : 'block'};">
-                            <div class="avatar emblem tomatoss-bot-avatar" id="avatar_${playerId}" style="--bot-color: #${playerColor};"></div>
-                        </div>
-                        <div id="rtc_placeholder_${playerId}" class="rtc_placeholder"></div>
-                        <div class="emblemwrap" id="avatar_active_wrap_${playerId}" style="display: ${isActive ? 'block' : 'none'};">
-                            <div class="avatar avatar_active tomatoss-bot-avatar-active" id="avatar_active_${playerId}" style="--bot-color: #${playerColor};"></div>
-                        </div>
-                        <div class="player-name tomatoss-player-panel__name" id="player_name_${playerId}">
-                            <span style="color: #${playerColor}">${playerName}</span>
-                            <span class="tomatoss-bot-badge">${_('AI')} ${difficultyLabel}</span>
-                        </div>
-                        <div id="player_board_${playerId}" class="player_board_content">
-                            <div class="player_score">
-                                <span id="player_score_${playerId}" class="player_score_value">0</span> <i class="fa fa-star" id="icon_point_${playerId}"></i>
-                            </div>
-                            <div class="tomatoss-player-panel__status"></div>
-                        </div>
-                    </div>
-                </div>
-            `);
-            panel = document.getElementById(`overall_player_board_${playerId}`);
+        if (!this.registeredBotPanelIds.has(panelPlayerId)) {
+            this.bga.playerPanels.addAutomataPlayerPanel(panelPlayerId, playerName, {
+                color: `#${playerColor}`,
+                iconClass: 'tomatoss-bot-avatar',
+                score: Number(player.score ?? 0),
+            });
+            this.registeredBotPanelIds.add(panelPlayerId);
         }
 
+        const content = this.bga.playerPanels.getElement(panelPlayerId);
+        const panel = content?.closest('.player-board');
+        if (!content || !panel) {
+            return null;
+        }
+
+        panel.classList.add('tomatoss-bot-player-board');
+        panel.dataset.playerPanelId = String(panelPlayerId);
         panel.style.borderColor = `#${playerColor}`;
-        const avatarWrap = panel.querySelector(`#avatarwrap_${playerId}`);
-        const activeWrap = panel.querySelector(`#avatar_active_wrap_${playerId}`);
-        if (avatarWrap) {
-            avatarWrap.style.display = isActive ? 'none' : 'block';
+        panel.classList.toggle('current-player-board', isActive);
+
+        let status = content.querySelector('.tomatoss-player-panel__status');
+        if (!status) {
+            status = document.createElement('div');
+            status.className = 'tomatoss-player-panel__status';
+            content.appendChild(status);
         }
-        if (activeWrap) {
-            activeWrap.style.display = isActive ? 'block' : 'none';
-        }
-        const nameNode = panel.querySelector(`#player_name_${playerId}`);
+
+        const nameNode = panel.querySelector('.player-name');
         if (nameNode) {
             nameNode.innerHTML = `
                 <span style="color: #${playerColor}">${playerName}</span>
                 <span class="tomatoss-bot-badge">${_('AI')} ${difficultyLabel}</span>
             `;
         }
+
+        const avatar = panel.querySelector('.avatar');
+        if (avatar) {
+            avatar.classList.add('tomatoss-bot-avatar');
+            avatar.style.setProperty('--bot-color', `#${playerColor}`);
+        }
+
         return panel;
     }
 
