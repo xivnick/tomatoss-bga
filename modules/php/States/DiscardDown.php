@@ -22,6 +22,8 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
     public function getArgs(): array
     {
         return [
+            'turnNo' => $this->game->getTurnNo(),
+            'currentSeatId' => $this->game->getCurrentSeatId(),
             'discardCountNeeded' => $this->game->getDiscardCountNeeded((int) $this->game->getActivePlayerId()),
             'currentTurnActions' => $this->game->getCurrentTurnActionLog(),
             'placementsRemaining' => $this->game->getPlacementsRemaining(),
@@ -43,28 +45,7 @@ class DiscardDown extends \Bga\GameFramework\States\GameState
         if (!is_array($cardIds)) {
             throw new UserException(clienttranslate('Invalid discard choice'));
         }
-
-        $result = $this->game->discardCardsByIds($activePlayerId, $cardIds);
-        $discardValues = array_map(static fn(array $card): int => (int) $card['value'], $result['discarded']);
-        $this->bga->playerStats->inc('tomatoesDiscarded', count($discardValues), $activePlayerId);
-
-        $this->bga->notify->all('discardCard', clienttranslate('${player_name} discards ${cards_text}'), [
-            'player_id' => $activePlayerId,
-            'player_name' => $this->game->getPlayerNameById($activePlayerId),
-            'cards_text' => implode(', ', array_map(static fn(int $value): string => (string) $value, $discardValues)),
-            'cardValues' => $discardValues,
-            'publicDiscardCount' => $result['publicDiscardCount'],
-            'latestDiscardTomato' => $result['latestDiscardTomato'],
-            'discardTomatoes' => $result['discardTomatoes'],
-            'handCount' => count($result['remainingHand']),
-        ]);
-        $this->bga->notify->player($activePlayerId, 'privateHandUpdate', '', [
-            'player_id' => $activePlayerId,
-            'mode' => 'discard',
-            'playerHand' => $result['remainingHand'],
-        ]);
-
-        return $this->game->shouldEnterDiscardDown($activePlayerId) ? DiscardDown::class : NextPlayer::class;
+        return $this->game->performDiscardAction($activePlayerId, $cardIds);
     }
 
     public function zombie(int $playerId)

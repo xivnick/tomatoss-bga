@@ -912,10 +912,10 @@ class FestivalStageView {
         return cards;
     }
 
-    ensureRecentThrowHost(index, classes = []) {
+    ensureRecentThrowHost(index, classes = [], targetIndex = null, success = null) {
         const cards = this.ensureRecentThrowWrap(
-            Math.max(0, Number(this.game.recentThrow?.targetIndex ?? 0)),
-            Boolean(this.game.recentThrow?.success)
+            Math.max(0, Number(targetIndex ?? this.game.recentThrow?.targetIndex ?? 0)),
+            Boolean(success ?? this.game.recentThrow?.success)
         );
         if (!cards) {
             return null;
@@ -955,7 +955,12 @@ class FestivalStageView {
         const total = (recent.cards?.length ?? 0) + (recent.revealed ? 1 : 0);
         for (let index = 0; index < total; index += 1) {
             keep.add(`recent-host-${index}`);
-            const host = this.ensureRecentThrowHost(index, [index > 0 ? 'is-overlap' : '', index === total - 1 && recent.revealed ? 'reveal' : ''].filter(Boolean));
+            const host = this.ensureRecentThrowHost(
+                index,
+                [index > 0 ? 'is-overlap' : '', index === total - 1 && recent.revealed ? 'reveal' : ''].filter(Boolean),
+                recent.targetIndex,
+                recent.success
+            );
             if (host && !host.firstElementChild) {
                 host.dataset.empty = 'true';
             }
@@ -1003,11 +1008,12 @@ class PlayerZonesView {
         root.innerHTML = '';
         this.getOrderedPlayers().forEach(player => {
             const isSelf = Number(player.id) === this.game.getLocalPlayerId();
+            const botBadge = player.isBot ? ` <span class="tomatoss-bot-badge">${_('AI')}</span>` : '';
             root.insertAdjacentHTML('beforeend', `
                 <div class="tomatoss-player-zone whiteblock ${isSelf ? 'is-self' : ''}" id="player-zone-${player.id}">
                     <div class="tomatoss-player-zone__top" id="player-zone-top-${player.id}"></div>
                     <div class="tomatoss-player-zone__namebar">
-                        <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}</div>
+                        <div class="tomatoss-player-zone__name">${player.name ?? `P${player.id}`}${botBadge}</div>
                     </div>
                     <div class="tomatoss-player-zone__bottom">
                         <div class="captured-band" id="captured-band-${player.id}">
@@ -1319,6 +1325,31 @@ class DiscardDownState {
     }
 }
 
+class TurnDispatchState {
+    constructor(game) {
+        this.game = game;
+    }
+
+    onEnteringState(args) {
+        this.game.currentUiMode = null;
+        this.game.isCurrentPlayerActive = false;
+        this.game.clearPendingAction();
+        this.game.clearSelection();
+        this.game.clearCustomActionButtons();
+        const turnCleanupTokens = this.game.captureTurnCleanupForNextTurn(args);
+        this.game.renderState(args, { updateButtons: !turnCleanupTokens });
+        if (turnCleanupTokens) {
+            this.game.startTurnCleanup(turnCleanupTokens);
+        }
+        const seat = args?.currentSeatId !== undefined ? this.game.gamedatas.players?.[args.currentSeatId] : null;
+        if (args?.isBotSeat && seat) {
+            this.game.setStatePrompt(_('${player_name} is taking a turn.').replace('${player_name}', seat.name ?? `P${seat.id}`));
+            return;
+        }
+        this.game.setStatePrompt(_('Preparing next turn...'));
+    }
+}
+
 export class Game {
     constructor(bga) {
         this.bga = bga;
@@ -1330,6 +1361,7 @@ export class Game {
         this.recentThrowTimeout = null;
         this.pendingThrowResolution = null;
         this.pendingCollectAnimation = null;
+        this.deferredCollectHandUpdateArgs = null;
         this.deferredResolveBonusArgs = null;
         this.deferredBonusHandUpdateArgs = null;
         this.turnCleanupPromise = null;
@@ -1360,10 +1392,12 @@ export class Game {
         this.stageView = new FestivalStageView(this, this.sprites, this.registry);
         this.playerZonesView = new PlayerZonesView(this, this.sprites, this.registry);
 
+        this.turnDispatch = new TurnDispatchState(this);
         this.playerTurn = new PlayerTurnState(this);
         this.resolveBonus = new ResolveBonusState(this);
         this.discardDown = new DiscardDownState(this);
 
+        this.bga.states.register('TurnDispatch', this.turnDispatch);
         this.bga.states.register('PlayerTurn', this.playerTurn);
         this.bga.states.register('ResolveBonus', this.resolveBonus);
         this.bga.states.register('DiscardDown', this.discardDown);
@@ -1587,6 +1621,8 @@ export class Game {
     buildRenderData(source) {
         const base = {
             viewerPlayerId: source.viewerPlayerId ?? this.gamedatas.viewerPlayerId ?? null,
+            turnNo: source.turnNo ?? this.gamedatas.turnNo ?? 1,
+            currentSeatId: source.currentSeatId ?? this.gamedatas.currentSeatId ?? null,
             players: source.players ?? this.gamedatas.players ?? {},
             boardTomatoes: source.boardTomatoes ?? this.gamedatas.boardTomatoes ?? [null, null, null],
             boardTargets: source.boardTargets ?? this.gamedatas.boardTargets ?? [null, null, null],
@@ -2008,7 +2044,12 @@ export class Game {
             const sourceElement = isLocalPlayer
                 ? sourceNode
                 : (document.querySelector(`#player-zone-top-${playerId} .player-hand-fan`) ?? document.querySelector(`#player-zone-top-${playerId}`));
-            const destinationHost = this.stageView.ensureRecentThrowHost(index, [index > 0 ? 'is-overlap' : '']);
+            const destinationHost = this.stageView.ensureRecentThrowHost(
+                index,
+                [index > 0 ? 'is-overlap' : ''],
+                Number(args.targetIndex),
+                Boolean(args.success)
+            );
             if ((!sourceNode && isLocalPlayer) || !sourceElement || !destinationHost) {
                 return;
             }
@@ -2059,10 +2100,15 @@ export class Game {
         return recyclePromise.then(() => {
         const sourceElement = document.querySelector('#tomato-deck-slot .card-node');
         const sourceRect = this.motionLayer.getRect(sourceElement);
-        const destinationHost = this.stageView.ensureRecentThrowHost((args.cards ?? []).length, [
-            (args.cards?.length ?? 0) > 0 ? 'is-overlap' : '',
-            'reveal',
-        ].filter(Boolean));
+        const destinationHost = this.stageView.ensureRecentThrowHost(
+            (args.cards ?? []).length,
+            [
+                (args.cards?.length ?? 0) > 0 ? 'is-overlap' : '',
+                'reveal',
+            ].filter(Boolean),
+            Number(args.targetIndex),
+            Boolean(args.success)
+        );
         if (!sourceRect || !sourceElement || !destinationHost) {
             return Promise.resolve();
         }
@@ -2295,38 +2341,145 @@ export class Game {
     }
 
     renderOverallPlayerBoards() {
-        Object.values(this.gamedatas.players ?? {}).forEach(player => {
+        const root = document.getElementById('player_boards');
+        if (!root) {
+            return;
+        }
+
+        const players = this.playerZonesView.getOrderedPlayers();
+        const keepBotPanelIds = new Set();
+
+        players.forEach(player => {
             const playerId = Number(player.id);
-            const panel = this.bga.playerPanels.getElement(playerId);
+            const panel = this.ensureOverallPlayerPanel(player);
             if (!panel) {
                 return;
             }
-
-            let counter = panel.querySelector('.tomatoss-overall-hand');
-            if (!counter) {
-                counter = document.createElement('div');
-                counter.className = 'tomatoss-overall-hand';
-                panel.appendChild(counter);
+            root.appendChild(panel);
+            if (player.isBot) {
+                keepBotPanelIds.add(`overall_player_board_${playerId}`);
             }
-            if (!counter.querySelector('.tomatoss-overall-basket')) {
-                counter.innerHTML = `
-                    <div class="tomatoss-overall-hand__icon"></div>
-                    <span class="tomatoss-overall-hand__count"></span>
-                    <div class="tomatoss-overall-basket">
-                        <div class="tomatoss-overall-basket__icon"></div>
-                        <span class="tomatoss-overall-basket__label"></span>
+
+            const count = Number(this.gamedatas.handCountsByPlayer?.[playerId] ?? 0);
+            const basketFull = this.isBasketFull(this.gamedatas.players?.[playerId]?.basketFull);
+            const status = panel.querySelector('.tomatoss-player-panel__status');
+            if (status) {
+                status.innerHTML = `
+                    <div class="tomatoss-overall-hand">
+                        <div class="tomatoss-overall-hand__icon"></div>
+                        <span class="tomatoss-overall-hand__count">${count}/8</span>
+                        <div class="tomatoss-overall-basket">
+                            <div class="tomatoss-overall-basket__icon ${basketFull ? 'is-full' : 'is-empty'}"></div>
+                            <span class="tomatoss-overall-basket__label">${basketFull ? _('Full') : _('Empty')}</span>
+                        </div>
                     </div>
                 `;
             }
 
-            const count = Number(this.gamedatas.handCountsByPlayer?.[playerId] ?? 0);
-            counter.querySelector('.tomatoss-overall-hand__count').textContent = `${count}/8`;
-            const basketLabel = counter.querySelector('.tomatoss-overall-basket__label');
-            const basketIcon = counter.querySelector('.tomatoss-overall-basket__icon');
-            const basketFull = this.isBasketFull(this.gamedatas.players?.[playerId]?.basketFull);
-            basketLabel.textContent = basketFull ? _('Full') : _('Empty');
-            basketIcon.className = `tomatoss-overall-basket__icon ${basketFull ? 'is-full' : 'is-empty'}`;
+            if (player.isBot) {
+                const scoreNode = panel.querySelector(`#player_score_${playerId}`);
+                if (scoreNode) {
+                    scoreNode.textContent = String(Number(player.score ?? 0));
+                }
+            }
         });
+
+        [...root.querySelectorAll('.tomatoss-bot-player-board')].forEach(panel => {
+            if (!keepBotPanelIds.has(panel.id)) {
+                panel.remove();
+            }
+        });
+    }
+
+    ensureOverallPlayerPanel(player) {
+        const playerId = Number(player.id);
+        if (player.isBot) {
+            return this.ensureBotOverallPlayerPanel(playerId, player.name ?? `P${player.id}`);
+        }
+
+        const content = document.getElementById(`player_board_${playerId}`);
+        if (!content) {
+            return null;
+        }
+
+        let status = content.querySelector('.tomatoss-player-panel__status');
+        if (!status) {
+            status = document.createElement('div');
+            status.className = 'tomatoss-player-panel__status';
+            content.appendChild(status);
+        }
+
+        return document.getElementById(`overall_player_board_${playerId}`);
+    }
+
+    ensureBotOverallPlayerPanel(playerId, playerName) {
+        const root = document.getElementById('player_boards');
+        if (!root) {
+            return null;
+        }
+
+        const player = this.gamedatas.players?.[playerId] ?? {};
+        const playerColor = player.color ?? '7b7b7b';
+        const difficultyLabel = this.getBotDifficultyLabel(player.botDifficulty);
+        const activeSeatId = Number(this.gamedatas.currentSeatId ?? 0);
+        const isActive = activeSeatId === playerId;
+
+        let panel = document.getElementById(`overall_player_board_${playerId}`);
+        if (!panel) {
+            root.insertAdjacentHTML('beforeend', `
+                <div id="overall_player_board_${playerId}" class="player-board current-player-board tomatoss-bot-player-board" style="border-color: #${playerColor};">
+                    <div class="player_board_inner" id="player_board_inner_${playerColor}">
+                        <div class="emblemwrap tomatoss-bot-avatar-wrap" id="avatarwrap_${playerId}" style="display: ${isActive ? 'none' : 'block'};">
+                            <div class="avatar emblem tomatoss-bot-avatar" id="avatar_${playerId}" style="--bot-color: #${playerColor};"></div>
+                        </div>
+                        <div id="rtc_placeholder_${playerId}" class="rtc_placeholder"></div>
+                        <div class="emblemwrap" id="avatar_active_wrap_${playerId}" style="display: ${isActive ? 'block' : 'none'};">
+                            <div class="avatar avatar_active tomatoss-bot-avatar-active" id="avatar_active_${playerId}" style="--bot-color: #${playerColor};"></div>
+                        </div>
+                        <div class="player-name tomatoss-player-panel__name" id="player_name_${playerId}">
+                            <span style="color: #${playerColor}">${playerName}</span>
+                            <span class="tomatoss-bot-badge">${_('AI')} ${difficultyLabel}</span>
+                        </div>
+                        <div id="player_board_${playerId}" class="player_board_content">
+                            <div class="player_score">
+                                <span id="player_score_${playerId}" class="player_score_value">0</span> <i class="fa fa-star" id="icon_point_${playerId}"></i>
+                            </div>
+                            <div class="tomatoss-player-panel__status"></div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            panel = document.getElementById(`overall_player_board_${playerId}`);
+        }
+
+        panel.style.borderColor = `#${playerColor}`;
+        const avatarWrap = panel.querySelector(`#avatarwrap_${playerId}`);
+        const activeWrap = panel.querySelector(`#avatar_active_wrap_${playerId}`);
+        if (avatarWrap) {
+            avatarWrap.style.display = isActive ? 'none' : 'block';
+        }
+        if (activeWrap) {
+            activeWrap.style.display = isActive ? 'block' : 'none';
+        }
+        const nameNode = panel.querySelector(`#player_name_${playerId}`);
+        if (nameNode) {
+            nameNode.innerHTML = `
+                <span style="color: #${playerColor}">${playerName}</span>
+                <span class="tomatoss-bot-badge">${_('AI')} ${difficultyLabel}</span>
+            `;
+        }
+        return panel;
+    }
+
+    getBotDifficultyLabel(level) {
+        switch (Number(level ?? 1)) {
+            case 3:
+                return _('Advanced');
+            case 2:
+                return _('Intermediate');
+            default:
+                return _('Beginner');
+        }
     }
 
     openMissionPopup(index) {
@@ -2371,6 +2524,7 @@ export class Game {
             this.closeDiscardPopup();
             return false;
         });
+        this.bindDialogCloseInterception('tomatossDiscardDialog', () => this.closeDiscardPopup());
         this.discardDialog = dialog;
         return dialog;
     }
@@ -2387,8 +2541,34 @@ export class Game {
             this.closeMissionPopup();
             return false;
         });
+        this.bindDialogCloseInterception('tomatossMissionDialog', () => this.closeMissionPopup());
         this.missionDialog = dialog;
         return dialog;
+    }
+
+    bindDialogCloseInterception(dialogId, onClose) {
+        const popin = document.getElementById(`popin_${dialogId}`) ?? document.getElementById(dialogId);
+        if (!popin || popin.dataset.closeInterceptBound === 'true') {
+            return;
+        }
+
+        popin.addEventListener('click', event => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const closeTarget = target.closest('a[href="#"], .popin_close, .closeicon, .popin_closeicon');
+            if (!closeTarget || !popin.contains(closeTarget)) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+            onClose();
+        }, true);
+        popin.dataset.closeInterceptBound = 'true';
     }
 
     renderMissionPopup() {
@@ -2403,6 +2583,7 @@ export class Game {
         const popupCardWidth = Math.max(220, Math.min(window.innerWidth - 120, 315));
         dialog.setContent(this.buildMissionInspectionHtml(Number(card.targetId), popupCardWidth));
         dialog.show();
+        this.bindDialogCloseInterception('tomatossMissionDialog', () => this.closeMissionPopup());
     }
 
     closeDiscardPopup() {
@@ -2437,6 +2618,7 @@ export class Game {
             </div>
         `);
         dialog.show();
+        this.bindDialogCloseInterception('tomatossDiscardDialog', () => this.closeDiscardPopup());
     }
 
     getLocalPlayerId() {
@@ -2767,6 +2949,48 @@ export class Game {
 
     setupNotifications() {
         this.bga.notifications.setupPromiseNotifications({});
+        this.bga.notifications.setSynchronous?.('botPause', 1200);
+    }
+
+    async notif_botPause(args) {
+        await this.synchronizeDisplayedTurnState(args?.turnNo, args?.currentSeatId ?? args?.player_id);
+        const duration = Number(args?.durationMs ?? 0);
+        if (duration > 0) {
+            await this.wait(duration);
+        }
+    }
+
+    async synchronizeDisplayedTurnState(nextTurnNo, nextSeatId = null) {
+        const targetTurnNo = Number(nextTurnNo ?? 0);
+        const currentTurnNo = Number(this.gamedatas.turnNo ?? 0);
+        const targetSeatId = nextSeatId === null ? null : Number(nextSeatId);
+
+        if (targetTurnNo > 0 && targetTurnNo > currentTurnNo) {
+            const tokenSnapshots = this.shouldAnimateNotifications() ? this.captureTurnCleanupTokenSnapshots() : [];
+            this.gamedatas.turnNo = targetTurnNo;
+            if (targetSeatId !== null) {
+                this.gamedatas.currentSeatId = targetSeatId;
+            }
+            this.gamedatas.currentTurnActions = [];
+            this.gamedatas.placementsRemaining = 3;
+            this.stageView.renderPlacedTokens();
+            this.stageView.renderReserveTokens();
+            this.renderOverallPlayerBoards();
+            if (tokenSnapshots.length > 0) {
+                this.startTurnCleanup(tokenSnapshots);
+                if (this.turnCleanupPromise) {
+                    await this.turnCleanupPromise;
+                }
+            } else {
+                this.updateActionButtons();
+            }
+            return;
+        }
+
+        if (targetSeatId !== null && targetSeatId !== Number(this.gamedatas.currentSeatId ?? 0)) {
+            this.gamedatas.currentSeatId = targetSeatId;
+            this.renderOverallPlayerBoards();
+        }
     }
 
     pushTurnAction(action) {
@@ -2823,6 +3047,11 @@ export class Game {
             this.gamedatas.discardTomatoes = args.discardTomatoes;
         }
         this.updateHandCount(args.player_id, args.handCount ?? (this.gamedatas.handCountsByPlayer?.[args.player_id] ?? 0));
+        if (args.success && this.gamedatas.players?.[args.player_id]) {
+            this.gamedatas.players[args.player_id].score = Number(this.gamedatas.players[args.player_id].score ?? 0) + Number(args.scoreGained ?? 0);
+            this.gamedatas.players[args.player_id].capturedCount = Number(this.gamedatas.players[args.player_id].capturedCount ?? 0) + 1;
+            this.renderOverallPlayerBoards();
+        }
     }
 
     applyImmediateThrowHandChange(args) {
@@ -2912,10 +3141,15 @@ export class Game {
         const scale = this.sprites.getCardScale('tomato');
         this.registry.clearTemporary('recent-preview-');
         values.forEach((value, index) => {
-            const host = this.stageView.ensureRecentThrowHost(index, [
-                index > 0 ? 'is-overlap' : '',
-                index === values.length - 1 && args.quickToss && args.revealed ? 'reveal' : '',
-            ].filter(Boolean));
+            const host = this.stageView.ensureRecentThrowHost(
+                index,
+                [
+                    index > 0 ? 'is-overlap' : '',
+                    index === values.length - 1 && args.quickToss && args.revealed ? 'reveal' : '',
+                ].filter(Boolean),
+                Number(args.targetIndex),
+                Boolean(args.success)
+            );
             if (!host) {
                 return;
             }
@@ -3015,6 +3249,12 @@ export class Game {
     }
 
     async flushDeferredPostThrowNotifications() {
+        if (this.deferredCollectHandUpdateArgs) {
+            const args = this.deferredCollectHandUpdateArgs;
+            this.deferredCollectHandUpdateArgs = null;
+            await this.applyPrivateHandUpdateNotification(args);
+        }
+
         if (this.deferredResolveBonusArgs) {
             const args = this.deferredResolveBonusArgs;
             this.deferredResolveBonusArgs = null;
@@ -3029,6 +3269,7 @@ export class Game {
     }
 
     async notif_turnAction(args) {
+        await this.synchronizeDisplayedTurnState(args?.turnNo, args?.currentSeatId ?? args?.player_id);
         const isCollect = Object.prototype.hasOwnProperty.call(args, 'refill');
         if (!this.shouldAnimateNotifications()) {
             this.pushTurnAction({
@@ -3071,6 +3312,11 @@ export class Game {
                     this.pendingCollectAnimation = args;
                     this.clearPendingAction();
                     this.updateActionButtons();
+                    if (this.deferredCollectHandUpdateArgs) {
+                        const deferredArgs = this.deferredCollectHandUpdateArgs;
+                        this.deferredCollectHandUpdateArgs = null;
+                        await this.applyPrivateHandUpdateNotification(deferredArgs);
+                    }
                     return;
                 }
 
@@ -3146,6 +3392,16 @@ export class Game {
     async notif_privateHandUpdate(args) {
         if (args.mode === 'bonus' && (this.recentThrow || this.pendingThrowResolution)) {
             this.deferredBonusHandUpdateArgs = args;
+            return;
+        }
+
+        if (
+            this.shouldAnimateNotifications() &&
+            args.mode === 'collect' &&
+            Number(args.player_id) === this.getLocalPlayerId() &&
+            !this.pendingCollectAnimation
+        ) {
+            this.deferredCollectHandUpdateArgs = args;
             return;
         }
 
