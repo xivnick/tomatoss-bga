@@ -798,7 +798,8 @@ class FestivalStageView {
             deck.insertAdjacentHTML('beforeend', `<div class="deck-count">${this.game.gamedatas.tomatoDeckCount ?? 0}</div>`);
         }
 
-        this.registry.removeMissing(['tomato-'], [...keepKeys, ...this.game.movingTomatoKeys]);
+        const handKeys = (this.game.gamedatas.playerHand ?? []).map(card => `tomato-${card.id}`);
+        this.registry.removeMissing(['tomato-'], [...keepKeys, ...handKeys, ...this.game.movingTomatoKeys]);
     }
 
     renderActionSlots() {
@@ -3215,6 +3216,10 @@ export class Game {
 
     async applyPrivateHandUpdateNotification(args) {
         const isLocalPlayer = Number(args.player_id) === this.getLocalPlayerId();
+        if (args.mode === 'bonus' && isLocalPlayer && args.bonusCard) {
+            this.rememberMovingTomatoKey(args.bonusCard.id);
+        }
+
         if (Array.isArray(args.playerHand)) {
             this.gamedatas.playerHand = args.playerHand;
             this.updateHandCount(args.player_id, args.playerHand.length);
