@@ -329,14 +329,6 @@ class Game extends \Bga\GameFramework\Table
         $this->setGameStateInitialValue(self::G_END_AFTER_TURN, 0);
         $this->setGameStateInitialValue(self::G_CURRENT_SEAT_INDEX, 0);
 
-        $this->bga->tableStats->init([
-            'totalNormalTosses',
-            'totalQuickTosses',
-            'totalFailedTosses',
-            'totalBonusCardsDrawn',
-            'timesTomatoDiscardRecycled',
-        ], 0);
-
         $this->bga->playerStats->init([
             'tomatoCollected',
             'normalTosses',
@@ -535,7 +527,6 @@ class Game extends \Bga\GameFramework\Table
 
         $humanPlayerId = $this->getHumanPlayerIdForSeat($seatId);
         if ($quickToss) {
-            $this->bga->tableStats->inc('totalQuickTosses', 1);
             if ($humanPlayerId !== null) {
                 $this->bga->playerStats->inc('quickTossAttempts', 1, $humanPlayerId);
                 if ($result['success']) {
@@ -547,20 +538,13 @@ class Game extends \Bga\GameFramework\Table
                 }
                 $this->updateQuickTossSuccessRate($humanPlayerId);
             }
-            if (!$result['success']) {
-                $this->bga->tableStats->inc('totalFailedTosses', 1);
-            }
         } else {
-            $this->bga->tableStats->inc('totalNormalTosses', 1);
             if ($humanPlayerId !== null) {
                 $this->bga->playerStats->inc('normalTosses', 1, $humanPlayerId);
                 if ($result['success']) {
                     $this->bga->playerStats->inc('pointsFromNormalToss', $result['scoreGained'], $humanPlayerId);
                     $this->bga->playerStats->inc('targetsCaptured', 1, $humanPlayerId);
                 }
-            }
-            if (!$result['success']) {
-                $this->bga->tableStats->inc('totalFailedTosses', 1);
             }
         }
 
@@ -632,10 +616,6 @@ class Game extends \Bga\GameFramework\Table
             if ($result['bonusCard'] !== null) {
                 $this->bga->playerStats->inc('bonusCardsDrawn', 1, $humanPlayerId);
             }
-        }
-
-        if ($result['bonusCard'] !== null) {
-            $this->bga->tableStats->inc('totalBonusCardsDrawn', 1);
         }
 
         $message = '';
@@ -1422,7 +1402,6 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $this->tomatoDiscardRecycledOnLastDraw = true;
-        $this->bga->tableStats->inc('timesTomatoDiscardRecycled', 1);
 
         shuffle($discardCards);
         foreach ($discardCards as $index => $card) {

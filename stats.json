@@ -1,31 +1,5 @@
 {
-    "table": {
-        "totalNormalTosses": {
-            "id": 10,
-            "name": "Total normal tosses",
-            "type": "int"
-        },
-        "totalQuickTosses": {
-            "id": 11,
-            "name": "Total quick tosses",
-            "type": "int"
-        },
-        "totalFailedTosses": {
-            "id": 12,
-            "name": "Total failed tosses",
-            "type": "int"
-        },
-        "totalBonusCardsDrawn": {
-            "id": 13,
-            "name": "Total bonus cards drawn",
-            "type": "int"
-        },
-        "timesTomatoDiscardRecycled": {
-            "id": 14,
-            "name": "Times the tomato discard was recycled",
-            "type": "int"
-        }
-    },
+    "table": {},
     "player": {
         "tomatoCollected": {
             "id": 20,

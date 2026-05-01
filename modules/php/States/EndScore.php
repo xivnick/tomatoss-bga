@@ -21,11 +21,7 @@ class EndScore extends \Bga\GameFramework\States\GameState
 
     public function onEnteringState()
     {
-        $result = $this->game->finalizeScores();
-
-        $this->bga->notify->all('gameEndSummary', clienttranslate('The festival ends'), [
-            'winnerIds' => $result['winnerIds'],
-        ]);
+        $this->game->finalizeScores();
 
         return ST_END_GAME;
     }
