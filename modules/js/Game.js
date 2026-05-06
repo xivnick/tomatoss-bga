@@ -22,6 +22,8 @@ const PLAYER_BOARD_DESIGN_SIZE = 880;
 const MAX_LAYOUT_WIDTH = 700;
 const LAYOUT_HORIZONTAL_CHROME = 40;
 const LAYOUT_HORIZONTAL_PADDING = 32;
+const PLAYER_COLUMN_PREFERRED_WIDTH = 520;
+const WIDE_LAYOUT_GAP = 18;
 const TARGET_CARD_POSITIONS = [
     { x: 841, y: 370 },
     { x: 1592, y: 370 },
@@ -51,6 +53,13 @@ const ANIMATION_REDUCED = 2;
 const ANIMATION_NONE = 3;
 const REPEATED_CLICK_CONFIRM_ON = 1;
 const CUSTOM_ACTION_BUTTON_IDS = ['pickup_button', 'toss_button', 'quick_toss_button', 'discard_button'];
+const LONG_PRESS_MS = 620;
+const LONG_PRESS_MOVE_CANCEL_PX = 10;
+const LOCAL_STORAGE_UI_SCALE_KEY = 'Tomatoss-ui-scale';
+const UI_SCALE_DEFAULT = 1;
+const UI_SCALE_MIN = 0.5;
+const UI_SCALE_MAX = 1.35;
+const UI_SCALE_STEP = 0.07;
 
 class SpriteStyles {
     getLayoutElement() {
@@ -68,12 +77,16 @@ class SpriteStyles {
     }
 
     getStageWidth() {
+        const layout = this.getLayoutElement();
         const layoutParent = this.getLayoutElement()?.parentElement;
         const leftSide = document.getElementById('left-side');
         const available = this.getPositiveWidth(layoutParent, leftSide) || STAGE_DESIGN_WIDTH;
+        const userScale = Number(layout?.dataset.uiScale ?? 1) || 1;
+        const baseLayoutWidth = Math.min(available, MAX_LAYOUT_WIDTH);
+        const scaledLayoutWidth = baseLayoutWidth * userScale;
         const usable = Math.max(
             320,
-            Math.min(available, MAX_LAYOUT_WIDTH) - LAYOUT_HORIZONTAL_CHROME - LAYOUT_HORIZONTAL_PADDING
+            scaledLayoutWidth - LAYOUT_HORIZONTAL_CHROME - LAYOUT_HORIZONTAL_PADDING
         );
         return Math.min(STAGE_DESIGN_WIDTH, usable);
     }
@@ -94,9 +107,19 @@ class SpriteStyles {
         const boardScale = this.getBoardScale();
         const sharedCardWidth = CARD_DESIGN_WIDTH * stageScale;
         const sharedCardHeight = CARD_DESIGN_HEIGHT * stageScale;
+        const layoutWidth = stageWidth + LAYOUT_HORIZONTAL_CHROME;
+        const userScale = Number(layout?.dataset.uiScale ?? 1) || 1;
+        const playerColumnMinWidth = PLAYER_COLUMN_PREFERRED_WIDTH * userScale;
+        const playerColumnMaxWidth = layoutWidth;
 
         if (layout) {
-            layout.style.setProperty('--layout-width', `${stageWidth + LAYOUT_HORIZONTAL_CHROME}px`);
+            const available = this.getPositiveWidth(layout.parentElement, document.getElementById('left-side'));
+            const wideLayoutMinWidth = layoutWidth + playerColumnMinWidth + WIDE_LAYOUT_GAP;
+            const wideLayoutWidth = layoutWidth + playerColumnMaxWidth + WIDE_LAYOUT_GAP;
+            layout.dataset.wideLayout = available >= wideLayoutMinWidth ? 'true' : 'false';
+            layout.style.setProperty('--wide-layout-width', `${wideLayoutWidth}px`);
+            layout.style.setProperty('--player-column-width', `${playerColumnMinWidth}px`);
+            layout.style.setProperty('--layout-width', `${layoutWidth}px`);
             layout.style.setProperty('--stage-width', `${stageWidth}px`);
             layout.style.setProperty('--stage-height', `${STAGE_DESIGN_HEIGHT * stageScale}px`);
             layout.style.setProperty('--tomato-card-w', `${sharedCardWidth}px`);
@@ -1378,6 +1401,10 @@ export class Game {
         this.resizeRaf = null;
         this.layoutReadyPollRaf = null;
         this.documentClickBound = false;
+        this.longPressState = null;
+        this.suppressNextClick = false;
+        this.suppressNextClickTimer = null;
+        this.uiScale = this.getStoredUiScale();
         this.onWindowResize = () => {
             if (this.resizeRaf !== null) {
                 cancelAnimationFrame(this.resizeRaf);
@@ -1416,7 +1443,8 @@ export class Game {
         this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', `
                 <div id="tomatoss-layout">
                     <div id="animation-layer"></div>
-                    <div id="full-table">
+                    <div id="bga-zoom-wrapper">
+                    <div id="full-table" class="bga-zoom-inner" data-smooth="true">
                     <div id="centered-table">
                         <div id="tables-and-center">
                             <div id="table-center">
@@ -1439,12 +1467,6 @@ export class Game {
                                                 <button class="stage-slot-button mission-slot-button" data-space="${index + 3}">
                                                     <div class="slot-card-host" data-empty="true"></div>
                                                 </button>
-                                                <button
-                                                    class="mission-zoom-button"
-                                                    data-role="open-mission-popup"
-                                                    data-target-index="${index}"
-                                                    aria-label="${_('View target card')}"
-                                                >?</button>
                                             </div>
                                         `).join('')}
                                         <div id="festival-board-wrap">
@@ -1472,9 +1494,15 @@ export class Game {
                         </div>
                     </div>
                 </div>
+                    <div id="tomatoss-zoom-controls" aria-label="${_('Table size')}">
+                        <button type="button" class="tomatoss-zoom-button" data-zoom-action="out" aria-label="${_('Smaller table')}"></button>
+                        <button type="button" class="tomatoss-zoom-button" data-zoom-action="in" aria-label="${_('Larger table')}"></button>
+                    </div>
+                </div>
             </div>
         `);
 
+        this.applyUiScale();
         this.playerZonesView.setup();
         this.bindRootEvents();
         this.bindDocumentEvents();
@@ -1555,10 +1583,24 @@ export class Game {
         }
 
         root.addEventListener('click', event => {
+            if (this.suppressNextClick) {
+                this.suppressNextClick = false;
+                if (this.suppressNextClickTimer !== null) {
+                    clearTimeout(this.suppressNextClickTimer);
+                    this.suppressNextClickTimer = null;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+
             const target = event.target;
-            const missionZoomButton = target.closest('.mission-zoom-button');
-            if (missionZoomButton) {
-                this.openMissionPopup(Number(missionZoomButton.dataset.targetIndex));
+            const zoomButton = target.closest('#tomatoss-zoom-controls button');
+            if (zoomButton) {
+                if (zoomButton.classList.contains('disabled')) {
+                    return;
+                }
+                this.changeUiScale(zoomButton.dataset.zoomAction === 'in' ? UI_SCALE_STEP : -UI_SCALE_STEP);
                 return;
             }
 
@@ -1589,7 +1631,125 @@ export class Game {
             }
         });
 
+        root.addEventListener('pointerdown', event => this.onRootPointerDown(event));
+        root.addEventListener('pointermove', event => this.onRootPointerMove(event));
+        root.addEventListener('pointerup', () => this.clearLongPressState());
+        root.addEventListener('pointercancel', () => this.clearLongPressState());
+        root.addEventListener('contextmenu', event => {
+            if (this.shouldHandleMissionLongPress(event.target)) {
+                event.preventDefault();
+            }
+        });
+
         root.dataset.bound = 'true';
+    }
+
+    shouldHandleMissionLongPress(target) {
+        if (!(target instanceof Element)) {
+            return false;
+        }
+
+        const button = target.closest('.mission-slot-button');
+        if (!button) {
+            return false;
+        }
+
+        const targetIndex = Number(button.dataset.space) - 3;
+        return Boolean((this.gamedatas.boardTargets ?? [])[targetIndex]);
+    }
+
+    onRootPointerDown(event) {
+        if (event.pointerType === 'mouse' || !this.shouldHandleMissionLongPress(event.target)) {
+            return;
+        }
+
+        const button = event.target.closest('.mission-slot-button');
+        const targetIndex = Number(button.dataset.space) - 3;
+        this.clearLongPressState();
+        this.longPressState = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            timerId: setTimeout(() => {
+                this.longPressState = null;
+                this.suppressNextRootClick();
+                this.openMissionPopup(targetIndex);
+            }, LONG_PRESS_MS),
+        };
+    }
+
+    onRootPointerMove(event) {
+        const state = this.longPressState;
+        if (!state || state.pointerId !== event.pointerId) {
+            return;
+        }
+
+        const distance = Math.hypot(event.clientX - state.startX, event.clientY - state.startY);
+        if (distance > LONG_PRESS_MOVE_CANCEL_PX) {
+            this.clearLongPressState();
+        }
+    }
+
+    suppressNextRootClick() {
+        this.suppressNextClick = true;
+        if (this.suppressNextClickTimer !== null) {
+            clearTimeout(this.suppressNextClickTimer);
+        }
+        this.suppressNextClickTimer = setTimeout(() => {
+            this.suppressNextClick = false;
+            this.suppressNextClickTimer = null;
+        }, 700);
+    }
+
+    clearLongPressState() {
+        if (this.longPressState?.timerId) {
+            clearTimeout(this.longPressState.timerId);
+        }
+        this.longPressState = null;
+    }
+
+    getStoredUiScale() {
+        const raw = localStorage.getItem(LOCAL_STORAGE_UI_SCALE_KEY);
+        if (raw === null) {
+            return UI_SCALE_DEFAULT;
+        }
+
+        const stored = Number(raw);
+        if (Number.isFinite(stored)) {
+            return Math.max(UI_SCALE_MIN, Math.min(UI_SCALE_MAX, stored));
+        }
+        return UI_SCALE_DEFAULT;
+    }
+
+    applyUiScale() {
+        const layout = document.getElementById('tomatoss-layout');
+        if (!layout) {
+            return;
+        }
+
+        const value = Math.max(UI_SCALE_MIN, Math.min(UI_SCALE_MAX, this.uiScale));
+        this.uiScale = value;
+        layout.dataset.uiScale = String(value);
+        localStorage.setItem(LOCAL_STORAGE_UI_SCALE_KEY, String(value));
+        this.updateZoomControls();
+    }
+
+    changeUiScale(delta) {
+        this.uiScale = Math.max(UI_SCALE_MIN, Math.min(UI_SCALE_MAX, this.uiScale + delta));
+        this.applyUiScale();
+        this.renderWhenLayoutReady();
+    }
+
+    updateZoomControls() {
+        const controls = document.getElementById('tomatoss-zoom-controls');
+        if (!controls) {
+            return;
+        }
+
+        const outButton = controls.querySelector('[data-zoom-action="out"]');
+        const inButton = controls.querySelector('[data-zoom-action="in"]');
+        outButton?.classList.toggle('disabled', this.uiScale <= UI_SCALE_MIN + 0.001);
+        inButton?.classList.toggle('disabled', this.uiScale >= UI_SCALE_MAX - 0.001);
     }
 
     bindDocumentEvents() {
@@ -1604,7 +1764,7 @@ export class Game {
             }
 
             if (this.openMissionPopupIndex !== null) {
-                if (!target.closest('#tomatossMissionDialog') && !target.closest('.mission-zoom-button')) {
+                if (!target.closest('#tomatossMissionDialog')) {
                     this.closeMissionPopup();
                     return;
                 }
@@ -2372,7 +2532,7 @@ export class Game {
                         <span class="tomatoss-overall-hand__count">${count}/8</span>
                         <div class="tomatoss-overall-basket">
                             <div class="tomatoss-overall-basket__icon ${basketFull ? 'is-full' : 'is-empty'}"></div>
-                            <span class="tomatoss-overall-basket__label">${basketFull ? _('Full') : _('Empty')}</span>
+                            <span class="tomatoss-overall-basket__label">${basketFull ? _('Filled') : _('Empty')}</span>
                         </div>
                     </div>
                 `;
