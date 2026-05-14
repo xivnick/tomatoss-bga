@@ -301,6 +301,11 @@
     box-shadow: 0 0 0 3px rgba(217, 72, 59, 0.45);
 }
 
+.stage-slot-button.is-selectable-hint .slot-card-host {
+    border-radius: var(--card-radius);
+    outline: 3px dashed rgba(217, 72, 59, 0.85);
+}
+
 .slot-card-host,
 .hand-card-host {
     height: var(--card-h);

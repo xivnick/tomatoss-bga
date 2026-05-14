@@ -48,10 +48,12 @@ const FLIP_IN_EASING = 'cubic-bezier(0.55, 0.08, 0.68, 0.53)';
 const FLIP_OUT_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const PREF_ANIMATION_SPEED = 100;
 const PREF_REPEATED_CLICK_CONFIRM = 101;
+const PREF_SELECTABLE_CARD_HINTS = 102;
 const ANIMATION_FULL = 1;
 const ANIMATION_REDUCED = 2;
 const ANIMATION_NONE = 3;
 const REPEATED_CLICK_CONFIRM_ON = 1;
+const SELECTABLE_CARD_HINTS_ON = 1;
 const CUSTOM_ACTION_BUTTON_IDS = ['pickup_button', 'toss_button', 'quick_toss_button', 'discard_button'];
 const LONG_PRESS_MS = 620;
 const LONG_PRESS_MOVE_CANCEL_PX = 10;
@@ -191,7 +193,7 @@ class CardRegistry {
             style: this.sprites.missionCardStyle(Number(card.targetId), scale),
             classes: ['card-node', 'board-mission-card', ...classes],
         });
-        this.game.bindMissionTooltip(node, Number(card.targetId));
+        node.dataset.targetId = String(card.targetId);
         return node;
     }
 
@@ -221,7 +223,7 @@ class CardRegistry {
             style: this.sprites.missionCardStyle(Number(targetId), scale),
             classes: ['card-node', 'board-mission-card', ...classes],
         });
-        this.game.bindMissionTooltip(node, Number(targetId));
+        node.dataset.targetId = String(targetId);
         return node;
     }
 
@@ -239,6 +241,16 @@ class CardRegistry {
         if (node.parentElement !== parent || parent.firstElementChild !== node || parent.childElementCount !== 1) {
             parent.replaceChildren(node);
         }
+        this.bindMountedMissionTooltip(node);
+    }
+
+    bindMountedMissionTooltip(node) {
+        const targetId = Number(node?.dataset?.targetId);
+        if (!Number.isFinite(targetId)) {
+            return;
+        }
+
+        this.game.bindMissionTooltip(node, targetId);
     }
 
     removeMissing(prefixes, keepKeys) {
@@ -836,7 +848,9 @@ class FestivalStageView {
         `).join('');
 
         document.querySelectorAll('.stage-slot-button').forEach(button => {
-            button.classList.toggle('is-pending', Number(button.dataset.space) === this.game.pendingSpace);
+            const space = Number(button.dataset.space);
+            button.classList.toggle('is-pending', space === this.game.pendingSpace);
+            button.classList.toggle('is-selectable-hint', this.game.shouldShowSelectableHint(space));
         });
     }
 
@@ -1506,6 +1520,7 @@ export class Game {
         this.playerZonesView.setup();
         this.bindRootEvents();
         this.bindDocumentEvents();
+        this.bindPreferenceEvents();
         window.addEventListener('resize', this.onWindowResize);
         this.renderWhenLayoutReady();
         this.setupNotifications();
@@ -1780,6 +1795,22 @@ export class Game {
         this.documentClickBound = true;
     }
 
+    bindPreferenceEvents() {
+        const preferences = this.bga.userPreferences;
+        if (!preferences || preferences.tomatossBound) {
+            return;
+        }
+
+        const previousOnChange = preferences.onChange;
+        preferences.onChange = (prefId, value) => {
+            previousOnChange?.(prefId, value);
+            if (Number(prefId) === PREF_SELECTABLE_CARD_HINTS) {
+                this.stageView.renderActionSlots();
+            }
+        };
+        preferences.tomatossBound = true;
+    }
+
     buildRenderData(source) {
         const base = {
             viewerPlayerId: source.viewerPlayerId ?? this.gamedatas.viewerPlayerId ?? null,
@@ -1975,6 +2006,37 @@ export class Game {
             ?? this.bga.getGameUserPreference?.(PREF_REPEATED_CLICK_CONFIRM)
             ?? REPEATED_CLICK_CONFIRM_ON;
         return Number(value) === REPEATED_CLICK_CONFIRM_ON;
+    }
+
+    isSelectableCardHintsEnabled() {
+        const value = this.bga.userPreferences?.get?.(PREF_SELECTABLE_CARD_HINTS)
+            ?? this.bga.gameui?.getGameUserPreference?.(PREF_SELECTABLE_CARD_HINTS)
+            ?? this.bga.getGameUserPreference?.(PREF_SELECTABLE_CARD_HINTS)
+            ?? SELECTABLE_CARD_HINTS_ON;
+        return Number(value) === SELECTABLE_CARD_HINTS_ON;
+    }
+
+    shouldShowSelectableHint(space) {
+        if (
+            this.currentUiMode !== 'playerTurn'
+            || !this.isCurrentPlayerActive
+            || this.turnCleanupPromise
+            || this.pendingSpace !== null
+            || this.getDisplayedPlacementsRemaining() <= 0
+            || !this.isSelectableCardHintsEnabled()
+        ) {
+            return false;
+        }
+
+        if (space >= 0 && space <= 2) {
+            return Boolean((this.gamedatas.boardTomatoes ?? [])[space]);
+        }
+
+        if (space >= 3 && space <= 5) {
+            return Boolean((this.gamedatas.boardTargets ?? [])[space - 3]);
+        }
+
+        return false;
     }
 
     getAnimationSpeedFactor() {
@@ -2818,6 +2880,9 @@ export class Game {
 
     onHandCardClick(button) {
         if (this.currentUiMode !== 'playerTurn' && this.currentUiMode !== 'discard') {
+            return;
+        }
+        if (!this.isCurrentPlayerActive) {
             return;
         }
 

@@ -27,5 +27,18 @@
       }
     },
     "default": 1
+  },
+  "102": {
+    "name": "Selectable card hints",
+    "needReload": false,
+    "values": {
+      "1": {
+        "name": "Show"
+      },
+      "2": {
+        "name": "Hide"
+      }
+    },
+    "default": 1
   }
 }
